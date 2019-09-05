@@ -1,0 +1,175 @@
+#lang rosette/safe
+
+; This file contains the specification of the 3 primitive temporal data types
+; in the MADE RIM (viz. DateTime, Duration and Schedule).
+
+; The loop-unwind parameter determines if the recursive date-time operations
+; should be unwound a finite number of times or not, and if so, the number
+; of unwindings. It must take the value #f or a natural number.
+(define loop-unwind 0)
+
+; Duration contains a day, hour, minute and second. Months (and therefore
+; year) are not included as a month can contain a variable number of days.
+; Durations support comparison as well as arithmetic operations.
+(define-generics dur
+  [dur=? dur elem]
+  [dur>? dur elem]
+  [dur<? dur elem]
+  [dur+ dur elem]
+  [dur- dur elem]
+  [dur* dur elem]
+  [dur/ dur elem])
+
+(struct duration (day hour minute second)
+  #:methods gen:dur
+  [(define-syntax-rule (compare-with-duration op self dur)
+     (op (duration->second self) (duration->second dur)))
+   (define (dur=? self dur) (compare-with-duration = self dur))
+   (define (dur>? self dur) (compare-with-duration > self dur))
+   (define (dur<? self dur) (compare-with-duration < self dur))
+
+   (define-syntax-rule (add/sub-with-duration op self dur)
+    (duration (op (duration-day self) (duration-day dur))
+              (op (duration-hour self) (duration-hour dur))
+              (op (duration-minute self) (duration-minute dur))
+              (op (duration-second self) (duration-second dur))))
+   (define (dur+ self dur) (add/sub-with-duration + self dur))
+   (define (dur- self dur) (add/sub-with-duration - self dur))
+
+   (define-syntax-rule (mul/div-with-duration op self num)
+     (duration (op (duration-day self) num)
+               (op (duration-hour self) num)
+               (op (duration-minute self) num)
+               (op (duration-second self) num)))
+   (define (dur* self num) (mul/div-with-duration * self num))
+   (define (dur/ self num) (mul/div-with-duration / self num))])
+
+; Helper function to convert a duration into seconds for comparison.
+(define (duration->second dur)
+  (+ (duration-second dur)
+     (* 60 (+ (duration-minute dur)
+              (* 60 (+ (duration-hour dur)
+                       (* 24 (duration-day dur))))))))
+
+; As expected, a datetime contains a year, month, day, hour, minute and second.
+; It supports comparisons as well as addition and subtraction with durations.
+; Values are truncated if the duration is not exact.
+(define-generics dt
+  [dt=? dt elem]
+  [dt>? dt elem]
+  [dt<? dt elem]
+  [dt+ dt elem]
+  [dt- dt elem])
+
+(struct datetime (year month day hour minute second)
+  #:methods gen:dt
+  [(define-syntax-rule (compare-with-datetime op self dt)
+     (op (datetime->number self) (datetime->number dt)))
+   (define (dt=? self dt) (compare-with-datetime = self dt))
+   (define (dt>? self dt) (compare-with-datetime > self dt))
+   (define (dt<? self dt) (compare-with-datetime < self dt))
+
+   (define-syntax-rule (add/sub-with-datetime op self dur)
+     (datetime
+      (datetime-year self)
+      (datetime-month self)
+      (truncate (op (datetime-day self) (duration-day dur)))
+      (truncate (op (datetime-hour self) (duration-hour dur)))
+      (truncate (op (datetime-minute self) (duration-minute dur)))
+      (truncate (op (datetime-second self) (duration-second dur)))))
+   (define (dt+ self dur) (add/sub-with-datetime + self dur))
+   (define (dt- self dur) (add/sub-with-datetime - self dur))])
+
+; Helper function to determine if a year is a leap year.
+(define (leap-year? year)
+  (and (= (remainder year 4) 0)
+       (implies (= (remainder year 100) 0)
+                (= (remainder year 400) 0))))
+
+; Helper function to determine the number of days in a month.
+(define (days-in-month year month)
+  (cond
+    [(= month 1) 31]
+    [(= month 2) (if (leap-year? year) 29 28)]
+    [(= month 3) 31]
+    [(= month 4) 30]
+    [(= month 5) 31]
+    [(= month 6) 30]
+    [(= month 7) 31]
+    [(= month 8) 31]
+    [(= month 9) 30]
+    [(= month 10) 31]
+    [(= month 11) 30]
+    [(= month 12) 31]))
+
+; Helper function to normalize a date-time stamp, i.e. return another
+; date-time with all components in the appropriate ranges.
+(define (normalize-datetime year month day hour minute second)
+  (normalize-datetime-rec year month day hour minute second loop-unwind))
+
+(define (normalize-datetime-rec year month day hour minute second unwind)
+  (let* ([sec-norm (if (< second 0)
+                       (+ (remainder second 60) 60)
+                       (remainder second 60))]
+       
+         [min-carry (if (< second 0)
+                        (+ minute (quotient second 60) -1)
+                        (+ minute (quotient second 60)))]
+
+         [min-norm (if (< min-carry 0)
+                       (+ (remainder min-carry 60) 60)
+                       (remainder min-carry 60))]
+
+         [hr-carry (if (< min-carry 0)
+                       (+ hour (quotient min-carry 60) -1)
+                       (+ hour (quotient min-carry 60)))]
+
+         [hr-norm (if (< hr-carry 0)
+                      (+ (remainder hr-carry 24) 24)
+                      (remainder hr-carry 24))]
+
+         [day-carry (if (< hr-carry 0)
+                        (+ day (quotient hr-carry 24) -1)
+                        (+ day (quotient hr-carry 24)))]
+
+         [mth-norm (if (< month 1)
+                       (+ (remainder (- month 1) 12) 12 1)
+                       (+ (remainder (- month 1) 12) 1))]
+
+         [yr-norm (if (< month 1)
+                      (+ year (quotient (- month 1) 12) -1)
+                      (+ year (quotient (- month 1) 12)))])
+
+    (cond
+      [(and (< day-carry 1) (not (eq? unwind 0)))
+       (normalize-datetime-rec yr-norm (- mth-norm 1)
+                           (+ day-carry
+                              (days-in-month yr-norm
+                                             (+ (remainder
+                                                 (+ (remainder (- mth-norm 1 1) 12) 12) 12) 1)))
+                           hr-norm min-norm sec-norm
+                           (if (not unwind) #f (- unwind 1)))]
+      
+      [(and (> day-carry (days-in-month yr-norm mth-norm)) (not (eq? unwind 0)))
+       (normalize-datetime-rec yr-norm (+ mth-norm 1)
+                           (- day-carry (days-in-month yr-norm mth-norm))
+                           hr-norm min-norm sec-norm
+                           (if (not unwind) #f (- unwind 1)))]
+
+      [else (datetime yr-norm mth-norm day-carry hr-norm min-norm sec-norm)])))
+
+; Helper function for converting a date-time into a number for comparisons.
+(define (datetime->number dt)
+  (let ([dt-norm (normalize-datetime
+                  (datetime-year dt)
+                  (datetime-month dt)
+                  (datetime-day dt)
+                  (datetime-hour dt)
+                  (datetime-minute dt)
+                  (datetime-second dt))])
+    (+ (datetime-second dt-norm)
+       (* 100 (+ (datetime-minute dt-norm)
+                 (* 100 (+ (datetime-hour dt-norm)
+                           (* 100 (+ (datetime-day dt-norm)
+                                     (* 100 (+ (datetime-month dt-norm)
+                                               (* 100 (datetime-year dt-norm)))))))))))))
