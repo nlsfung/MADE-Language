@@ -70,7 +70,7 @@
    (define (dt<? self dt) (compare-with-datetime < self dt))
 
    (define-syntax-rule (add/sub-with-datetime op self dur)
-     (datetime
+     (normalize-datetime
       (datetime-year self)
       (datetime-month self)
       (truncate (op (datetime-day self) (duration-day dur)))
