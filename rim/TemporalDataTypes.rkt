@@ -3,11 +3,16 @@
 ; This file contains the specification of the 3 primitive temporal data types
 ; in the MADE RIM (viz. DateTime, Duration and Schedule).
 
-; The loop-unwind parameter determines if the recursive date-time operations
+; The datetime-unwind parameter determines if the recursive date-time operations
 ; should be unwound a finite number of times or not, and if so, the number
 ; of unwindings. It must take the value #f or a natural number.
 ; Set to 2 by default.
-(define loop-unwind 2)
+(define datetime-unwind 2)
+
+; The schedule-unwind parameter determines how many times the on-schedule
+; operation should be unwound, if any. 
+; Set to 5 by default.
+(define schedule-unwind 5)
 
 ; Duration contains a day, hour, minute and second. Months (and therefore
 ; year) are not included as a month can contain a variable number of days.
@@ -108,7 +113,7 @@
 ; Helper function to normalize a date-time stamp, i.e. return another
 ; date-time with all components in the appropriate ranges.
 (define (normalize-datetime year month day hour minute second)
-  (normalize-datetime-rec year month day hour minute second loop-unwind))
+  (normalize-datetime-rec year month day hour minute second datetime-unwind))
 
 (define (normalize-datetime-rec year month day hour minute second unwind)
   (let* ([sec-norm (if (< second 0)
@@ -190,6 +195,35 @@
                                      (* 100 (+ (datetime-month dt-norm)
                                                (* 100 (datetime-year dt-norm)))))))))))))
 
+; Schedules are modelled as a pair containing a set of starting pattern and
+; a duration indicating the period with which the pattern repeats. If the
+; duration is set to #f, then the starting pattern is never repeated. If the
+; starting pattern is null, then the scheduled activity will never occur.
+(define-generics sched
+  [on-schedule? sched elem])
+
+(struct schedule (pattern interval)
+  #:transparent
+  #:methods gen:sched
+  [(define (update-interval self)
+     (map (lambda (sched-dt) (dt+ sched-dt (schedule-interval self)))
+          (schedule-pattern self)))
+
+   (define (on-schedule-rec? self dt unwind)
+     (if (memf (lambda (sched-dt) (dt=? sched-dt dt)) (schedule-pattern self))
+         #t
+         (if (or (eq? unwind 0)
+                 (not (schedule-interval self))
+                 (null? (schedule-pattern self)))
+             #f
+             (on-schedule-rec?
+              (schedule (update-interval self) (schedule-interval self))
+              dt
+              (if (not unwind) #f (- unwind 1))))))
+   
+   (define (on-schedule? self dt)
+     (on-schedule-rec? self dt schedule-unwind))])
+
 ; Symbolic constants for checking properties of date-time manipulation.
 (define-symbolic dt-year dt-month dt-day dt-hour dt-minute dt-second integer?)
 (define-symbolic dur-day dur-hour dur-minute dur-second integer?)
@@ -204,7 +238,7 @@
           #:guarantee (assert (normalized? (dt+ dt-sym dur-sym)))))
 
 ; Check that date-time manipulations are reversible.
-; Tested with loop-unwind set to 0.
+; Tested with datetime-unwind set to 0.
 (define (verify-reversible dt-sym dur-sym)
   (verify #:assume (assert (and (= dt-year 2000)
                                 (normalized? dt-sym)
