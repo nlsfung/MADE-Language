@@ -6,7 +6,8 @@
 ; The loop-unwind parameter determines if the recursive date-time operations
 ; should be unwound a finite number of times or not, and if so, the number
 ; of unwindings. It must take the value #f or a natural number.
-(define loop-unwind 0)
+; Set to 2 by default.
+(define loop-unwind 2)
 
 ; Duration contains a day, hour, minute and second. Months (and therefore
 ; year) are not included as a month can contain a variable number of days.
@@ -21,6 +22,7 @@
   [dur/ dur elem])
 
 (struct duration (day hour minute second)
+  #:transparent
   #:methods gen:dur
   [(define-syntax-rule (compare-with-duration op self dur)
      (op (duration->second self) (duration->second dur)))
@@ -62,6 +64,7 @@
   [dt- dt elem])
 
 (struct datetime (year month day hour minute second)
+  #:transparent
   #:methods gen:dt
   [(define-syntax-rule (compare-with-datetime op self dt)
      (op (datetime->number self) (datetime->number dt)))
@@ -111,7 +114,7 @@
   (let* ([sec-norm (if (< second 0)
                        (+ (remainder second 60) 60)
                        (remainder second 60))]
-       
+
          [min-carry (if (< second 0)
                         (+ minute (quotient second 60) -1)
                         (+ minute (quotient second 60)))]
@@ -158,6 +161,19 @@
 
       [else (datetime yr-norm mth-norm day-carry hr-norm min-norm sec-norm)])))
 
+; Helper function to check if a date-time is normalized.
+(define (normalized? dt)
+  (and (>= (datetime-month dt) 1)
+       (<= (datetime-month dt) 12)
+       (>= (datetime-day dt) 1)
+       (<= (datetime-day dt) (days-in-month (datetime-year dt) (datetime-month dt)))
+       (>= (datetime-hour dt) 0)
+       (<= (datetime-hour dt) 24)
+       (>= (datetime-minute dt) 0)
+       (<= (datetime-minute dt) 60)
+       (>= (datetime-second dt) 0)
+       (<= (datetime-second dt) 60)))
+
 ; Helper function for converting a date-time into a number for comparisons.
 (define (datetime->number dt)
   (let ([dt-norm (normalize-datetime
@@ -173,3 +189,25 @@
                            (* 100 (+ (datetime-day dt-norm)
                                      (* 100 (+ (datetime-month dt-norm)
                                                (* 100 (datetime-year dt-norm)))))))))))))
+
+; Symbolic constants for checking properties of date-time manipulation.
+(define-symbolic dt-year dt-month dt-day dt-hour dt-minute dt-second integer?)
+(define-symbolic dur-day dur-hour dur-minute dur-second integer?)
+(define dt-sym (datetime dt-year dt-month dt-day dt-hour dt-minute dt-second))
+(define dur-sym (duration dur-day dur-hour dur-minute dur-second))
+
+; Check that date-times can be normalized after adding/subtracting 31 days max.
+(define (verify-normalize dt-sym dur-sym)
+  (verify #:assume (assert (and (normalized? dt-sym)
+                                (dur>? dur-sym (duration -31 0 0 0))
+                                (dur<? dur-sym (duration  31 0 0 0))))
+          #:guarantee (assert (normalized? (dt+ dt-sym dur-sym)))))
+
+; Check that date-time manipulations are reversible.
+; Tested with loop-unwind set to 0.
+(define (verify-reversible dt-sym dur-sym)
+  (verify #:assume (assert (and (= dt-year 2000)
+                                (normalized? dt-sym)
+                                (dur>? dur-sym (duration -3 0 0 0))
+                                (dur<? dur-sym (duration 3 0 0 0))))
+          #:guarantee (assert (dt=? dt-sym (dt- (dt+ dt-sym dur-sym) dur-sym)))))
