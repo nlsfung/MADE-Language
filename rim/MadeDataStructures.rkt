@@ -1,5 +1,9 @@
 #lang rosette/safe
 
+; This file contains the implementation of the 6 main datatypes in the MADE RIM,
+; viz. measurement, observation, abstraction, action plan, action instruction
+; and control instruction.
+
 ; Measurement is implemented as containing a valid date time and a value. Thus,
 ; it follows the MADE RIM with the following two exceptions:
 ; 1) Id is not a field as it is inherently provided by Racket.
@@ -25,7 +29,8 @@
 (struct culminating-action action-instruction (start-datetime goal-state))
 
 ; Control instruction is implemented as containing the Id of the target process,
-; the valid date-time, an optional schedule and an optional process status.
+; the valid date-time, an optional schedule and an optional process status, 
+; which can take the values #t for running, #f for paused or null if not set.
 (struct control-instruction (target-process valid-datetime schedule status))
 
 ; Action plan is implemented as containing a valid date-time as well as a set of
