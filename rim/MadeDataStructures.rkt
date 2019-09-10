@@ -27,14 +27,14 @@
 ; that is inherited by homogeneous action and culminating action, which in
 ; turn are implemented similarly in accordnace to the MADE RIM.
 (struct action-instruction ())
-(struct homogeneous-action action-instruction (start-datetime rate duration))
-(struct culminating-action action-instruction (start-datetime goal-state))
+(struct homogeneous-action action-instruction (start-datetime rate duration) #:transparent)
+(struct culminating-action action-instruction (start-datetime goal-state) #:transparent)
 
 ; Control instruction is implemented as containing the Id of the target process,
 ; the valid date-time, an optional schedule and an optional process status, 
 ; which can take the values #t for running, #f for paused or null if not set.
-(struct control-instruction (target-process valid-datetime schedule status))
+(struct control-instruction (target-process valid-datetime schedule status) #:transparent)
 
 ; Action plan is implemented as containing a valid date-time as well as a set of
 ; schedule control and action instructions.
-(struct action-plan (valid-datetime instruction-set))
+(struct action-plan (valid-datetime instruction-set) #:transparent)

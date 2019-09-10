@@ -3,6 +3,13 @@
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
 
+(provide gen:made-proc execute update-data-state generate-data
+         update-control-state make-copy)
+(provide gen-proc-execute gen-proc-update-data-state
+         gen-proc-generate-data gen-proc-update-control-state)
+(provide (struct-out made-process))
+(provide (struct-out control-state))
+
 ; This file contains the base implementation of a generic MADE process that
 ; will be inherited by the different types of MADE processes.
   
@@ -23,7 +30,7 @@
 
 ; Control state contains a schedule as well as a status flag which indicates
 ; if the process is running or paused.
-(struct control-state (schedule status))
+(struct control-state (schedule status) #:transparent)
 
 ; The following are generic implementations of execute, update data state,
 ; generate data and update control, the latter three of which must be
@@ -42,7 +49,7 @@
     ; Output the updated process and the generated data
     (list new-proc proc-output)))  
 
-(define (gen-proc-update-data-state proc-type made-proc in-data)
+(define (gen-proc-update-data-state made-proc in-data)
   ; Updating the data state involves adding the input data into the data state,
   ; ignoring any duplicates.
   (make-copy made-proc (remove-duplicates
@@ -65,26 +72,30 @@
         
 
 (define
-  (gen-proc-update-control-state proc-type made-proc in-data datetime)
+  (gen-proc-update-control-state made-proc in-data datetime)
   ; Updating the control state involves:
   ; 1) Finding a control instruction with the appropriate id and valid datetime.
   ; 2) Updating the control state of the process if such instruction is found.
-  (let* ([new-control (findf (lambda (d) (if (control-instruction? d)
-                                             (and (eq? (made-process-id made-proc)
-                                                       (control-instruction-target-process d))
-                                                  (dt=? datetime
-                                                        (control-instruction-valid-datetime d)))
-                                             #f)) in-data)]
-         [new-schedule (control-instruction-schedule new-control)]
-         [new-status (control-instruction-status new-control)]
-         
-         [old-schedule (control-state-schedule (made-process-control-state made-proc))]
+  (let* ([old-schedule (control-state-schedule (made-process-control-state made-proc))]
          [old-status (control-state-status (made-process-control-state made-proc))]
          
-         [new-state (if (not new-control)
-                        (control-state old-schedule old-status)
-                        (control-state
-                         (if (eq? null new-schedule) old-schedule new-schedule)
-                         (if (eq? null new-status) old-status new-status)))])
+         [new-control (findf (lambda (d) (and (control-instruction? d)
+                                              (eq? (made-process-id made-proc)
+                                                   (control-instruction-target-process d))
+                                              (dt=? datetime
+                                                    (control-instruction-valid-datetime d))))
+                             in-data)]
+         
+         [new-schedule (if (and (control-instruction? new-control)
+                                (not (eq? null (control-instruction-schedule new-control))))
+                           (control-instruction-schedule new-control)
+                           old-schedule)]
+         
+         [new-status (if (and (control-instruction? new-control)
+                              (not (eq? null (control-instruction-status new-control))))
+                         (control-instruction-status new-control)
+                         old-status)]        
+         
+         [new-state (control-state new-schedule new-status)])
     
     (make-copy made-proc new-state)))
