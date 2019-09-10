@@ -1,5 +1,8 @@
 #lang rosette/safe
 
+(provide dt=?)
+(provide on-schedule?)
+
 ; This file contains the specification of the 3 primitive temporal data types
 ; in the MADE RIM (viz. DateTime, Duration and Schedule).
 

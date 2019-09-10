@@ -1,5 +1,7 @@
 #lang rosette/safe
 
+(provide (struct-out control-instruction))
+
 ; This file contains the implementation of the 6 main datatypes in the MADE RIM,
 ; viz. measurement, observation, abstraction, action plan, action instruction
 ; and control instruction.

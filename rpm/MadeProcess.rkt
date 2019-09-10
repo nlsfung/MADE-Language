@@ -1,18 +1,25 @@
 #lang rosette/safe
 
+(require "../rim/TemporalDataTypes.rkt")
+(require "../rim/MadeDataStructures.rkt")
+
 ; This file contains the base implementation of a generic MADE process that
 ; will be inherited by the different types of MADE processes.
   
 ; All MADE processes contain an Id, data state, control state, proxy flag and
-; main body. They support four operations: execute, update data state,
-; generate data and update control state. 
+; main body. They support four main operations: execute, update data state,
+; generate data and update control state. One helper functions, make-copy,
+; is also supported.
 (define-generics made-proc
   [execute made-proc in-data datetime]
   [update-data-state made-proc in-data]
   [generate-data made-proc datetime]
-  [update-control-state made-proc in-data datetime])
+  [update-control-state made-proc in-data datetime]
+  [make-copy made-proc elem])
 
-(struct made-process (id data-state control-state proxy-flag) #:transparent)
+(struct made-process (id data-state control-state proxy-flag)
+  #:transparent
+  #:methods gen:made-proc [])
 
 ; Control state contains a schedule as well as a status flag which indicates
 ; if the process is running or paused.
@@ -21,7 +28,7 @@
 ; The following are generic implementations of execute, update data state,
 ; generate data and update control, the latter three of which must be
 ; specialised for each type of process.
-(define-syntax-rule (gen-proc-execute self in-data datetime)
+(define (gen-proc-execute self in-data datetime)
   ; Executing a process comprise three steps:
   ; 1) Updating its data state given the input data.
   ; 2) Generate data given its new data state and current date-time.
@@ -35,14 +42,13 @@
     ; Output the updated process and the generated data
     (list new-proc proc-output)))  
 
-(define-syntax-rule (gen-proc-update-data-state proc-type made-proc in-data)
+(define (gen-proc-update-data-state proc-type made-proc in-data)
   ; Updating the data state involves adding the input data into the data state,
-  ; ignoring any duplicates.  
-  (struct-copy proc-type made-proc
-               [data-state (remove-duplicates
-                            (append (process-data-state made-proc) in-data))]))
+  ; ignoring any duplicates.
+  (make-copy made-proc (remove-duplicates
+                        (append (made-process-data-state made-proc) in-data))))
 
-(define-syntax-rule (gen-proc-generate-data proc-func made-proc datatime)
+(define (gen-proc-generate-data proc-func made-proc datetime)
   ; Generating new data involves:
   ; 1) Checking if input datetime lies on the process schedule.
   ; 2) If yes, execute the input process function. Otherwise, return null. 
@@ -52,13 +58,13 @@
 
 ; Helper function for determining if the process is executed or not given its
 ; control state as well as the current datetime.
-(define-syntax-rule (is-proc-executed? c-state datetime)
+(define (is-proc-executed? c-state datetime)
   (let ([sched (control-state-schedule c-state)]
         [stat (control-state-status c-state)])
     (and stat (on-schedule? sched datetime))))
         
 
-(define-syntax-rule
+(define
   (gen-proc-update-control-state proc-type made-proc in-data datetime)
   ; Updating the control state involves:
   ; 1) Finding a control instruction with the appropriate id and valid datetime.
@@ -70,7 +76,7 @@
                                                         (control-instruction-valid-datetime d)))
                                              #f)) in-data)]
          [new-schedule (control-instruction-schedule new-control)]
-         [new-status (control-instruction-status new-status)]
+         [new-status (control-instruction-status new-control)]
          
          [old-schedule (control-state-schedule (made-process-control-state made-proc))]
          [old-status (control-state-status (made-process-control-state made-proc))]
@@ -81,4 +87,4 @@
                          (if (eq? null new-schedule) old-schedule new-schedule)
                          (if (eq? null new-status) old-status new-status)))])
     
-    (struct-copy proc-type made-proc [control-state new-state])))
+    (make-copy made-proc new-state)))
