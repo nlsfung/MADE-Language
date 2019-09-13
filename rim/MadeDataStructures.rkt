@@ -1,6 +1,11 @@
 #lang rosette/safe
 
-(provide (struct-out control-instruction))
+(provide
+ (struct-out observed-property)
+ (struct-out observed-event)
+ (struct-out datetime-range)
+ (struct-out abstraction)
+ (struct-out control-instruction))
 
 ; This file contains the implementation of the 6 main datatypes in the MADE RIM,
 ; viz. measurement, observation, abstraction, action plan, action instruction
@@ -19,6 +24,9 @@
 (struct observation ())
 (struct observed-property observation (valid-datetime value) #:transparent)
 (struct observed-event observation (valid-datetime-range value) #:transparent)
+
+; A date-time range comprises a start and end datetime.
+(struct datetime-range (start end) #:transparent)
 
 ; Abstraction is implemented similarly to observation.
 (struct abstraction (valid-datetime-range value) #:transparent)

@@ -60,8 +60,8 @@
   ; 1) Checking if input datetime lies on the process schedule.
   ; 2) If yes, execute the input process function. Otherwise, return null. 
   (if (is-proc-executed? (made-process-control-state made-proc) datetime)
-      (proc-func (made-process-data-state made-proc))
-      null))
+      (proc-func (made-process-data-state made-proc) datetime)
+      (void)))
 
 ; Helper function for determining if the process is executed or not given its
 ; control state as well as the current datetime.

@@ -1,7 +1,8 @@
 #lang rosette/safe
 
-(provide (struct-out datetime) dt=? normalized?)
+(provide (struct-out datetime) dt=? dt- dt+ dt>? dt<? normalized?)
 (provide (struct-out schedule) on-schedule?)
+(provide (struct-out duration))
 
 ; This file contains the specification of the 3 primitive temporal data types
 ; in the MADE RIM (viz. DateTime, Duration and Schedule).
@@ -226,6 +227,8 @@
    
    (define (on-schedule? self dt)
      (on-schedule-rec? self dt schedule-unwind))])
+
+; For 62383044
 
 ;; Symbolic constants for checking properties of date-time manipulation.
 ;(define-symbolic dt-year dt-month dt-day dt-hour dt-minute dt-second integer?)
