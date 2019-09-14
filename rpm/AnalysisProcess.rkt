@@ -54,41 +54,48 @@
   ;    functions, one of which may produce a non-void output value.
   ; 3) If an output value is produced, determine its valid datetime range.
   ; 4) Generate the output abstraction, if any.
-  (let* ([filtered-data (filter-expired-data d-state (dt- dt t-window) dt)]
+  (let* ([filtered-data (sort (filter-expired-data d-state (dt- dt t-window) dt)
+                              observed-after?)]
          [output-body (findf (lambda (f) (not (void? (f filtered-data)))) body)]
          [output-value (if output-body (output-body filtered-data) (void))]
 
-         [candidate-start-times
+         [latest-significant-data
           (if (void? output-value)
               (void)
-              (sort (remove* (list (void))
-                             (map (lambda (d)
-                                    (cond [(observed-property? d)
-                                           (observed-property-valid-datetime d)]
-                                          [(observed-event? d)
-                                           (datetime-range-end
-                                            (observed-event-valid-datetime-range d))]))
-                                  filtered-data))
-                    dt>?))]
-         
+              (first (memf (lambda (d)
+                             (eq? output-value
+                                  (output-body
+                                   (member d (reverse filtered-data)))))
+                           filtered-data)))]
+
          [latest-start-time
           (if (void? output-value)
               (void)
-              (foldl (lambda (inner-dt result)
-                       (if (void? result)
-                           (if (eq? output-value
-                                    (output-body (filter-expired-data
-                                                  filtered-data inner-dt dt)))
-                               inner-dt
-                               (void))
-                           result))
-                     (void)
-                     candidate-start-times))])
+              (cond [(observed-property? latest-significant-data)
+                     (observed-property-valid-datetime
+                      latest-significant-data)]
+                    [(observed-event? latest-significant-data)
+                     (datetime-range-end
+                      (observed-event-valid-datetime-range
+                       latest-significant-data))]))])
 
     (if (void? output-value)
         (void)
         (out-type (datetime-range dt (dt+ latest-start-time t-window))
                   output-value))))
+
+; Helper function to determine the temporal order of two observations.
+(define (observed-after? ob1 ob2)
+  (dt>? (cond [(observed-property? ob1)
+               (observed-property-valid-datetime ob1)]
+              [(observed-event? ob1)
+               (datetime-range-end
+                (observed-event-valid-datetime-range ob1))])
+        (cond [(observed-property? ob2)
+               (observed-property-valid-datetime ob2)]
+              [(observed-event? ob2)
+               (datetime-range-end
+                (observed-event-valid-datetime-range ob2))])))
 
 ; Helper function for filtering out data that lies outside a given range.
 (define (filter-expired-data d-state dt-start dt-end)
@@ -159,91 +166,90 @@
 ;                                           (and (= p-sched c-inst-sched)
 ;                                                (= p-stat c-inst-stat)))))))
 
-; Symbolic constants for verifying generate data.
-(define (gen-dt-part) (define-symbolic* dt-part integer?) dt-part)
-(define (gen-datetime)
-  (let ([dt (datetime 7 9 12 (gen-dt-part) 0 0)])
-    (assert (normalized? dt))
-    dt))
-
-(struct room-temperature observed-property () #:transparent)
-(define (gen-temp-value) (define-symbolic* temp integer?) temp)
-(define (gen-temp)
-  (room-temperature (gen-datetime) (gen-temp-value)))
-
-(struct room-temperature-grade abstraction () #:transparent)
-(define (grade-temp-low d-state)
-  (if (>= (length (filter (lambda (d)
-                            (and (room-temperature? d)
-                                 (< (observed-property-value d) 5)))
-                         d-state)) 3)
-      'low
-      (void)))
-(define (grade-temp-high d-state)
-  (if (>= (length (filter (lambda (d)
-                            (and (room-temperature? d)
-                                 (> (observed-property-value d) 10)))
-                         d-state)) 4)
-      'high
-      (void)))
-
-(define d-state (list (gen-temp) (gen-temp) (gen-temp) (gen-temp) (gen-temp)))
-(define sched-dt (gen-datetime))
-(define cur-dt (gen-datetime))
-(define-symbolic proc-status boolean?)
-(define-symbolic win-length integer?)
-(assert (eq? (length d-state)
-             (length
-              (remove-duplicates
-               (map (lambda (d) (observed-property-valid-datetime d)) d-state)))))
-(assert (eq? (length d-state)
-             (length
-              (remove-duplicates
-               (map (lambda (d) (observed-property-value d)) d-state)))))
-(assert (eq? (length d-state)
-             (length (filter
-                      (lambda (d) (<= (datetime-hour
-                                       (observed-property-valid-datetime d))
-                                      (datetime-hour cur-dt)))
-                      d-state))))
-
-(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
-(define t-window (duration 0 win-length 0 0))
-(define out-type room-temperature-grade)
-(define body (list grade-temp-low grade-temp-high))
-(define room-temp-proc
-  (analysis-process 'id d-state c-state #f t-window room-temperature-grade body))
-
-(define output (generate-data room-temp-proc cur-dt))
-
-; Verify the implementation of the control state.
-; Executed with abstraction end-datetime always set to current datetime.
-(define (verify-is-executed)
-  (verify (assert (implies (or (not (eq? sched-dt cur-dt))
-                               (not proc-status))
-                           (void? output)))))
-
-; Verify the implementation of the time window.
-; Executed with abstraction end-datetime always set to current datetime.
-(define (verify-time-window)
-  (verify (assert (implies (< win-length 2) (void? output)))))
-
-(define (verify-proc-body)
-  (verify
-   (assert
-    (implies (eq? (length d-state)
-                  (length (filter
-                           (lambda (d)
-                             (and (< 5 (observed-property-value d))
-                                  (> 20 (observed-property-value d))))
-                           d-state)))
-             (void? output)))))
-
-; TO-DO: Verify the implementation of determining abstraction validity range.
-(define (verify-valid-range)
-  (verify #:assume
-          (assert (room-temperature-grade? output))
-          #:guarantee
-          (assert (dt<? (datetime-range-end
-                         (abstraction-valid-datetime-range output))
-                        (dt+ cur-dt t-window)))))
+;; Symbolic constants for verifying generate data.
+;(define (gen-dt-part) (define-symbolic* dt-part integer?) dt-part)
+;(define (gen-datetime)
+;  (let ([dt (datetime 7 9 12 (gen-dt-part) 0 0)])
+;    (assert (normalized? dt))
+;    dt))
+;
+;(struct room-temperature observed-property () #:transparent)
+;(define (gen-temp-value) (define-symbolic* temp integer?) temp)
+;(define (gen-temp)
+;  (room-temperature (gen-datetime) (gen-temp-value)))
+;
+;(struct room-temperature-grade abstraction () #:transparent)
+;(define (grade-temp-low d-state)
+;  (if (>= (length (filter (lambda (d)
+;                            (and (room-temperature? d)
+;                                 (< (observed-property-value d) 5)))
+;                         d-state)) 3)
+;      'low
+;      (void)))
+;(define (grade-temp-high d-state)
+;  (if (>= (length (filter (lambda (d)
+;                            (and (room-temperature? d)
+;                                 (> (observed-property-value d) 10)))
+;                         d-state)) 4)
+;      'high
+;      (void)))
+;
+;(define d-state (list (gen-temp) (gen-temp) (gen-temp) (gen-temp) (gen-temp)))
+;(define sched-dt (gen-datetime))
+;(define cur-dt (gen-datetime))
+;(define-symbolic proc-status boolean?)
+;(define-symbolic win-length integer?)
+;(assert (eq? (length d-state)
+;             (length
+;              (remove-duplicates
+;               (map (lambda (d) (observed-property-valid-datetime d)) d-state)))))
+;(assert (eq? (length d-state)
+;             (length
+;              (remove-duplicates
+;               (map (lambda (d) (observed-property-value d)) d-state)))))
+;(assert (eq? (length d-state)
+;             (length (filter
+;                      (lambda (d) (<= (datetime-hour
+;                                       (observed-property-valid-datetime d))
+;                                      (datetime-hour cur-dt)))
+;                      d-state))))
+;
+;(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
+;(define t-window (duration 0 win-length 0 0))
+;(define out-type room-temperature-grade)
+;(define body (list grade-temp-low grade-temp-high))
+;(define room-temp-proc
+;  (analysis-process 'id d-state c-state #f t-window room-temperature-grade body))
+;
+;(define output (generate-data room-temp-proc cur-dt))
+;
+;; Verify the implementation of the control state.
+;(define (verify-is-executed)
+;  (verify (assert (implies (or (not (eq? sched-dt cur-dt))
+;                               (not proc-status))
+;                           (void? output)))))
+;
+;; Verify the implementation of the time window.
+;(define (verify-time-window)
+;  (verify (assert (implies (< win-length 2) (void? output)))))
+;
+;; Verify the implementation of the main process body.
+;(define (verify-proc-body)
+;  (verify
+;   (assert
+;    (implies (eq? (length d-state)
+;                  (length (filter
+;                           (lambda (d)
+;                             (and (< (observed-property-value d) 14)
+;                                  (> (observed-property-value d) 2)))
+;                           d-state)))
+;             (void? output)))))
+;
+;; Verify the implementation of determining abstraction validity range.
+;(define (verify-valid-range)
+;  (verify #:assume
+;          (assert (room-temperature-grade? output))
+;          #:guarantee
+;          (assert (dt<? (datetime-range-end
+;                         (abstraction-valid-datetime-range output))
+;                        (dt+ cur-dt t-window)))))
