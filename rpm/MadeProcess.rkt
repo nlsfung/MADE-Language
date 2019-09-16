@@ -57,10 +57,13 @@
 
 (define (gen-proc-generate-data proc-func made-proc datetime)
   ; Generating new data involves:
-  ; 1) Checking if input datetime lies on the process schedule.
-  ; 2) If yes, execute the input process function. Otherwise, return null. 
+  ; 1) Checking that the input datetime lies on the process schedule.
+  ; 2) Filtering out all data for which the proxy flag is set (to #t).
+  ; 3) Executing the input process function (or return void if not executed). 
   (if (is-proc-executed? (made-process-control-state made-proc) datetime)
-      (proc-func (made-process-data-state made-proc) datetime)
+      (let ([input (filter (lambda (d) (not (made-data-proxy-flag d)))
+                           (made-process-data-state made-proc))])
+        (proc-func input datetime))
       (void)))
 
 ; Helper function for determining if the process is executed or not given its

@@ -24,7 +24,8 @@
                                dt
                                (analysis-process-time-window self)
                                (analysis-process-output-type self)
-                               (analysis-process-main-body self)))
+                               (analysis-process-main-body self)
+                               (made-process-proxy-flag self)))
       self
       datetime))
    
@@ -47,7 +48,7 @@
        (analysis-process id d-state c-state p-flag t-window out-type body)))])
 
 ; Helper function for defining the main behaviour of analysis processes.
-(define (execute-analysis-body d-state dt t-window out-type body)
+(define (execute-analysis-body d-state dt t-window out-type body proxy-flag)
   ; To generate output data, an Analysis process follows the following steps:
   ; 1) Filter out any data that falls outside the time window.
   ; 2) Feed the filtered data into the main body, which comprises a list of
@@ -81,7 +82,8 @@
 
     (if (void? output-value)
         (void)
-        (out-type (datetime-range dt (dt+ latest-start-time t-window))
+        (out-type proxy-flag
+                  (datetime-range dt (dt+ latest-start-time t-window))
                   output-value))))
 
 ; Helper function to determine the temporal order of two observations.
@@ -174,9 +176,10 @@
 ;    dt))
 ;
 ;(struct room-temperature observed-property () #:transparent)
+;(define (gen-temp-proxy) (define-symbolic* proxy boolean?) proxy)
 ;(define (gen-temp-value) (define-symbolic* temp integer?) temp)
 ;(define (gen-temp)
-;  (room-temperature (gen-datetime) (gen-temp-value)))
+;  (room-temperature (gen-temp-proxy) (gen-datetime) (gen-temp-value)))
 ;
 ;(struct room-temperature-grade abstraction () #:transparent)
 ;(define (grade-temp-low d-state)
@@ -219,7 +222,8 @@
 ;(define out-type room-temperature-grade)
 ;(define body (list grade-temp-low grade-temp-high))
 ;(define room-temp-proc
-;  (analysis-process 'id d-state c-state #f t-window room-temperature-grade body))
+;  (analysis-process 'id d-state c-state (gen-temp-proxy)
+;                    t-window room-temperature-grade body))
 ;
 ;(define output (generate-data room-temp-proc cur-dt))
 ;
@@ -244,6 +248,21 @@
 ;                                  (> (observed-property-value d) 2)))
 ;                           d-state)))
 ;             (void? output)))))
+;
+;; Verify the implementation of the proxy flags.
+;(define (verify-data-proxy)
+;  (verify
+;   (assert
+;    (implies (<= 3 (length (filter (lambda (d) (made-data-proxy-flag d)) d-state)))
+;             (void? output)))))
+;
+;(define (verify-proc-proxy)
+;  (verify #:assume
+;          (assert (room-temperature-grade? output))
+;          #:guarantee
+;          (assert
+;           (implies (made-process-proxy-flag room-temp-proc)
+;                    (made-data-proxy-flag output)))))
 ;
 ;; Verify the implementation of determining abstraction validity range.
 ;(define (verify-valid-range)
