@@ -6,7 +6,10 @@
  (struct-out observed-event)
  (struct-out datetime-range)
  (struct-out abstraction)
- (struct-out control-instruction))
+ (struct-out control-instruction)
+ (struct-out scheduled-control)
+ (struct-out scheduled-homogeneous-action)
+ (struct-out scheduled-culminating-action))
 
 ; This file contains the implementation of the 6 main datatypes in the MADE RIM,
 ; viz. measurement, observation, abstraction, action plan, action instruction

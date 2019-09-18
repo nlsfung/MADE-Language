@@ -111,11 +111,6 @@
                       (datetime-range dt-start dt-end)))))
           d-state))
 
-; Helper function to determine if a datetime is in between a given range.
-(define (dt-between? dt dt-low dt-high)
-  (and (or (dt>? dt dt-low) (dt=? dt dt-low))
-       (or (dt<? dt dt-high) (dt=? dt dt-high))))
-
 ; Helper function to determine if a datetime range intersects with another.
 (define (dt-range-overlap? range-1 range-2)
   (and (or (dt<? (datetime-range-start range-1)

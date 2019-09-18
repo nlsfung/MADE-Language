@@ -1,8 +1,8 @@
 #lang rosette/safe
 
-(provide (struct-out datetime) dt=? dt- dt+ dt>? dt<? normalized?)
+(provide (struct-out datetime) dt=? dt- dt+ dt>? dt<? normalized? dt-between?)
 (provide (struct-out schedule) on-schedule?)
-(provide (struct-out duration) dur-)
+(provide (struct-out duration) dur- duration->second)
 
 ; This file contains the specification of the 3 primitive temporal data types
 ; in the MADE RIM (viz. DateTime, Duration and Schedule).
@@ -199,6 +199,11 @@
                                      (* 100 (+ (datetime-month dt-norm)
                                                (* 100 (datetime-year dt-norm)))))))))))))
 
+; Helper function to determine if a datetime is in between a given range.
+(define (dt-between? dt dt-low dt-high)
+  (and (or (dt>? dt dt-low) (dt=? dt dt-low))
+       (or (dt<? dt dt-high) (dt=? dt dt-high))))
+
 ; Schedules are modelled as a pair containing a set of starting pattern and
 ; a duration indicating the period with which the pattern repeats. If the
 ; duration is set to #f, then the starting pattern is never repeated. If the
@@ -227,8 +232,6 @@
    
    (define (on-schedule? self dt)
      (on-schedule-rec? self dt schedule-unwind))])
-
-; For 62383044
 
 ;; Symbolic constants for checking properties of date-time manipulation.
 ;(define-symbolic dt-year dt-month dt-day dt-hour dt-minute dt-second integer?)
