@@ -122,47 +122,6 @@
            (dt=? (datetime-range-end range-1)
                  (datetime-range-start range-2)))))
 
-;; Symbolic constants for verifying update data state and update control state.
-;(define-symbolic p-id integer?)
-;(define-symbolic p-data integer?)
-;(define-symbolic p-sched p-stat integer?)
-;(define a-proc
-;  (analysis-process p-id (list p-data) (control-state p-sched p-stat) 1 2 3 4))
-;
-;(define-symbolic in1 in2 integer?)
-;(define in-data (list in1 in2))
-;
-;(define new-data-proc (update-data-state a-proc in-data))
-;
-;(define-symbolic t-id integer?)
-;(define-symbolic v-dt-y v-dt-mth v-dt-d v-dt-h v-dt-min v-dt-s integer?)
-;(define-symbolic c-inst-sched c-inst-stat integer?)
-;(define v-dt (datetime v-dt-y v-dt-mth v-dt-d v-dt-h v-dt-min v-dt-s))
-;(define c-inst (control-instruction t-id v-dt c-inst-sched c-inst-stat))
-;
-;(define-symbolic dt-y dt-mth dt-d dt-h dt-min dt-s integer?)
-;(define cur-dt (datetime dt-y dt-mth dt-d dt-h dt-min dt-s))
-;
-;(define new-ctrl-proc (update-control-state a-proc (list c-inst) cur-dt))
-;
-;; Verify implementation of update data state.
-;(define (verify-update-data-state)
-;  (verify (assert (implies (< (length (made-process-data-state
-;                                       new-data-proc)) 3)
-;                           (or (= p-data in1)
-;                               (= p-data in2)
-;                               (= in1 in2))))))
-;
-;; Verify implementation of update control state.
-;(define (verify-update-control-state)
-;  (verify #:assume (assert (and (normalized? v-dt)
-;                                (normalized? cur-dt)))
-;          #:guarantee (assert (implies (eq? a-proc new-ctrl-proc)
-;                                       (or (not (dt=? v-dt cur-dt))
-;                                           (not (= p-id t-id))
-;                                           (and (= p-sched c-inst-sched)
-;                                                (= p-stat c-inst-stat)))))))
-
 ;; Symbolic constants for verifying generate data.
 ;(define (gen-dt-part) (define-symbolic* dt-part integer?) dt-part)
 ;(define (gen-datetime)
