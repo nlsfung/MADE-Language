@@ -120,35 +120,35 @@
   (normalize-datetime-rec year month day hour minute second datetime-unwind))
 
 (define (normalize-datetime-rec year month day hour minute second unwind)
-  (let* ([sec-norm (if (< second 0)
+  (let* ([sec-norm (if (and (< second 0) (not (= 0 (remainder second 60))))
                        (+ (remainder second 60) 60)
                        (remainder second 60))]
 
-         [min-carry (if (< second 0)
+         [min-carry (if (and (< second 0) (not (= 0 (remainder second 60))))
                         (+ minute (quotient second 60) -1)
                         (+ minute (quotient second 60)))]
 
-         [min-norm (if (< min-carry 0)
+         [min-norm (if (and (< min-carry 0) (not (= 0 (remainder min-carry 60))))
                        (+ (remainder min-carry 60) 60)
                        (remainder min-carry 60))]
 
-         [hr-carry (if (< min-carry 0)
+         [hr-carry (if (and (< min-carry 0) (not (= 0 (remainder min-carry 60))))
                        (+ hour (quotient min-carry 60) -1)
                        (+ hour (quotient min-carry 60)))]
 
-         [hr-norm (if (< hr-carry 0)
+         [hr-norm (if (and (< hr-carry 0) (not (= 0 (remainder hr-carry 24))))
                       (+ (remainder hr-carry 24) 24)
                       (remainder hr-carry 24))]
 
-         [day-carry (if (< hr-carry 0)
+         [day-carry (if (and (< hr-carry 0) (not (= 0 (remainder hr-carry 24))))
                         (+ day (quotient hr-carry 24) -1)
                         (+ day (quotient hr-carry 24)))]
 
-         [mth-norm (if (< month 1)
+         [mth-norm (if (and (< month 1) (not (= 0 (remainder (- month 1) 12))))
                        (+ (remainder (- month 1) 12) 12 1)
                        (+ (remainder (- month 1) 12) 1))]
 
-         [yr-norm (if (< month 1)
+         [yr-norm (if (and (< month 1) (not (= 0 (remainder (- month 1) 12))))
                       (+ year (quotient (- month 1) 12) -1)
                       (+ year (quotient (- month 1) 12)))])
 
@@ -177,11 +177,11 @@
        (>= (datetime-day dt) 1)
        (<= (datetime-day dt) (days-in-month (datetime-year dt) (datetime-month dt)))
        (>= (datetime-hour dt) 0)
-       (<= (datetime-hour dt) 24)
+       (<= (datetime-hour dt) 23)
        (>= (datetime-minute dt) 0)
-       (<= (datetime-minute dt) 60)
+       (<= (datetime-minute dt) 59)
        (>= (datetime-second dt) 0)
-       (<= (datetime-second dt) 60)))
+       (<= (datetime-second dt) 59)))
 
 ; Helper function for converting a date-time into a number for comparisons.
 (define (datetime->number dt)
@@ -251,6 +251,6 @@
 ;(define (verify-reversible dt-sym dur-sym)
 ;  (verify #:assume (assert (and (= dt-year 2000)
 ;                                (normalized? dt-sym)
-;                                (dur>? dur-sym (duration -3 0 0 0))
-;                                (dur<? dur-sym (duration 3 0 0 0))))
+;                                (dur>? dur-sym (duration -1 0 0 0))
+;                                (dur<? dur-sym (duration 1 0 0 0))))
 ;          #:guarantee (assert (dt=? dt-sym (dt- (dt+ dt-sym dur-sym) dur-sym)))))
