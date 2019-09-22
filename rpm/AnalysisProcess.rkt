@@ -63,11 +63,13 @@
          [latest-significant-data
           (if (void? output-value)
               (void)
-              (first (memf (lambda (d)
-                             (eq? output-value
-                                  (output-body
-                                   (member d (reverse filtered-data)))))
-                           filtered-data)))]
+              (foldl (lambda (d result)
+                       (if (eq? output-value
+                                (output-body (member d (reverse filtered-data))))
+                           (if result result d)
+                           #f))
+                     #f
+                     filtered-data))]
 
          [latest-start-time
           (if (void? output-value)
@@ -170,6 +172,7 @@
 ;                                       (observed-property-valid-datetime d))
 ;                                      (datetime-hour cur-dt)))
 ;                      d-state))))
+;(assert (> win-length 0))
 ;
 ;(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
 ;(define t-window (duration 0 win-length 0 0))
@@ -219,10 +222,16 @@
 ;                    (made-data-proxy-flag output)))))
 ;
 ;; Verify the implementation of determining abstraction validity range.
+;(define new-dt (datetime 7 9 12 (gen-dt-part) 0 0))
+;(assert (normalized? new-dt))
+;(define new-output (execute-analysis-body d-state new-dt t-window out-type body #f))
 ;(define (verify-valid-range)
-;  (verify #:assume
-;          (assert (room-temperature-grade? output))
-;          #:guarantee
-;          (assert (dt<? (datetime-range-end
-;                         (abstraction-valid-datetime-range output))
-;                        (dt+ cur-dt t-window)))))
+;  (verify (assert
+;           (implies (and (room-temperature-grade? output)
+;                         (dt>? new-dt (datetime-range-start
+;                                       (abstraction-valid-datetime-range output)))
+;                         (dt<? new-dt (datetime-range-end
+;                                       (abstraction-valid-datetime-range output))))
+;                    (and (room-temperature-grade? new-output)
+;                         (eq? (abstraction-value new-output)
+;                              (abstraction-value output)))))))
