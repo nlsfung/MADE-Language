@@ -1,12 +1,16 @@
 #lang rosette/safe
 
 (provide
+ gen:made-d get-type
  (struct-out made-data)
  (struct-out observed-property)
  (struct-out observed-event)
  (struct-out datetime-range)
  (struct-out abstraction)
  (struct-out control-instruction)
+ (struct-out culminating-action)
+ (struct-out homogeneous-action)
+ (struct-out action-plan)
  (struct-out scheduled-control)
  (struct-out scheduled-homogeneous-action)
  (struct-out scheduled-culminating-action))
@@ -16,13 +20,16 @@
 ; and control instruction.
 
 ; Measurement is implemented as containing a valid date time and a value. Thus,
-; it follows the MADE RIM with the following two exceptions:
+; it follows the MADE RIM with the following exceptions:
 ; 1) Id is not a field as it is inherently provided by Racket.
 ; 2) Proxy flag is added to indicate whether the data can be used automatically
 ;    as an input to by the MADE processes. 
 ; 3) Transaction date-time is not a field as this implementation focuses
 ;    on the clinical requirements only.
-(struct made-data (proxy-flag) #:transparent)
+; 4) An function (required for abstractions) is added to retrieve the specific
+;    structure of MADE data (e.g. blood glucose).
+(define-generics made-d [get-type made-d])
+(struct made-data (proxy-flag) #:transparent #:methods gen:made-d [])
 (struct measurement made-data (valid-datetime value) #:transparent)
 
 ; Observation is implemented as an empty structure that is inherited by

@@ -1,6 +1,7 @@
 #lang rosette/safe
 
 (require "./MadeProcess.rkt")
+(require "./AnalysisProcess.rkt")
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
 
@@ -69,18 +70,29 @@
          (map (lambda (inst) (instantiate inst dt))
               (plan-template-instruction-set plan-template))))))
          
-
-; Helper function for filtering out data that not valid at the input datetime.
+; Helper function for filtering out abstractions that are:
+; 1) Not valid at the input datetime.
+; 2) Overriden by another abstraction.
 (define (filter-expired-data d-state dt)
-  (filter
-   (lambda (d)
-     (and (abstraction? d)
-          (dt-between? dt
-                       (datetime-range-start
-                        (abstraction-valid-datetime-range d))
-                       (datetime-range-end
-                        (abstraction-valid-datetime-range d)))))
-   d-state))
+  (let* ([filtered-data
+          (filter
+           (lambda (d)
+             (and (abstraction? d)
+                  (dt-between?
+                   dt
+                   (datetime-range-start (abstraction-valid-datetime-range d))
+                   (datetime-range-end (abstraction-valid-datetime-range d)))))
+           d-state)]
+
+         [sorted-data
+          (sort filtered-data dt>?
+                #:key (lambda (d) (datetime-range-start (abstraction-valid-datetime-range d))))]
+
+         [type-list (remove-duplicates
+                     (map (lambda (d) (get-type d)) sorted-data))])
+    
+    (map (lambda (t) (findf (lambda (d) (eq? (get-type d) t)) sorted-data))
+         type-list)))
 
 ; A plan template comprises a plan type and a set of three different types of
 ; instruction templates, one for control instructions, homogeneous action
@@ -156,3 +168,152 @@
                             (datetime-second dt)))]
          [extra-sec (- (* round-sec (ceiling (/ dt-sec round-sec))) dt-sec)])
     (dt+ dt (duration 0 0 0 extra-sec))))
+
+; Symbolic constants for verifying generate data.
+(define (gen-dt-part) (define-symbolic* dt-part integer?) dt-part)
+(define (gen-datetime)
+  (let ([dt (datetime 7 9 21 (gen-dt-part) 0 0)])
+    (assert (normalized? dt))
+    dt))
+(define (gen-dt-range)
+  (let* ([start (gen-datetime)]
+         [end (gen-datetime)])
+    (assert (or (dt<? start end) (dt=? start end)))
+    (datetime-range start end)))
+
+(define (gen-proxy) (define-symbolic* proxy boolean?) proxy)
+
+(define headache-grades (list 'none 'low 'medium 'high))
+(define (gen-headache-grade)
+  (define-symbolic* h-grade integer?)
+  (list-ref headache-grades h-grade))
+(struct headache-level abstraction ()
+  #:transparent
+  #:methods gen:made-d
+  [(define (get-type self) headache-level)])
+
+(define (gen-temp) (define-symbolic* temp integer?) temp)
+(struct avg-body-temp abstraction ()
+  #:transparent
+  #:methods gen:made-d
+  [(define (get-type self) avg-body-temp)])
+
+(define (gen-headache-level)
+  (headache-level (gen-proxy) (gen-dt-range) (gen-headache-grade)))
+(define (gen-avg-body-temp)
+  (avg-body-temp (gen-proxy) (gen-dt-range) (gen-temp)))
+
+(struct ibuprofen culminating-action ())
+(struct treadmill-exercise homogeneous-action ())
+(struct analyze-heart-rate analysis-process ())
+(struct fever-treatment action-plan ())
+
+(define (gen-round) (define-symbolic* rounding integer?) rounding)
+
+(define ibuprofen-template
+  (culminating-action-template
+   ibuprofen
+   (relative-schedule
+    (duration (gen-round) (gen-round) (gen-round) (gen-round))
+     (duration 0 (gen-round) 0 0)
+     (list (duration 0 0 (gen-round) (gen-round)))
+     (void))
+   #f))
+
+(define treadmill-template
+  (homogeneous-action-template
+   treadmill-exercise
+   (relative-schedule
+    (duration 1 0 0 0)
+    (duration 0 0 0 0)
+    (list (duration 0 13 0 0)
+          (duration 0 21 0 0))
+    (duration 2 0 0 0))
+   10
+   20))
+
+(define analyze-heart-rate-template
+  (control-template
+   analyze-heart-rate
+   (relative-schedule (duration 0 0 0 0) (duration 0 0 0 0) null #f)
+   #f))
+
+(define fever-treatment-template-one
+  (plan-template
+   fever-treatment
+   (list ibuprofen-template treadmill-template)))
+
+(define fever-treatment-template-two
+  (plan-template
+   fever-treatment
+   (list analyze-heart-rate-template)))
+
+(define (abstraction-predicate-one d-state)
+  (and (memf (lambda (d) (and (avg-body-temp? d)
+                              (> (abstraction-value d) 40)))
+             d-state)
+       (memf (lambda (d) (and (headache-level? d)
+                              (eq? 'high (abstraction-value d))))
+             d-state)))
+
+(define (abstraction-predicate-two d-state)
+  (and (memf (lambda (d) (and (avg-body-temp? d)
+                              (> (abstraction-value d) 37)
+                              (< (abstraction-value d) 40)))
+             d-state)
+       (memf (lambda (d) (and (headache-level? d)
+                              (not (eq? 'high (abstraction-value d)))))
+             d-state)))
+
+(define d-state
+  (list (gen-headache-level) (gen-headache-level)
+        (gen-avg-body-temp) (gen-avg-body-temp)))
+(assert (= 4 (length (remove-duplicates d-state))))
+
+
+(define sched-dt (gen-datetime))
+(define cur-dt (gen-datetime))
+(define-symbolic proc-status boolean?)
+(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
+
+(define d-proc
+  (decision-process 'id d-state c-state (gen-proxy)
+                    (list (decision-pair abstraction-predicate-one
+                                         fever-treatment-template-one)
+                          (decision-pair abstraction-predicate-two
+                                         fever-treatment-template-two))))
+
+; Verify the implementation of the data filter.
+(define (verify-filtered-data-length)
+  (verify (assert
+           (let* ([filtered-data (filter-expired-data d-state cur-dt)])
+             (and (<= (count (lambda (d) (headache-level? d)) filtered-data) 1)
+                  (<= (count (lambda (d) (avg-body-temp? d)) filtered-data) 1))))))
+
+(define (verify-filtered-data-content)
+  (verify #:assume
+          (assert (= 4 (length
+                        (remove-duplicates
+                         (map (lambda (d) (datetime-range-start
+                                           (abstraction-valid-datetime-range d)))
+                              d-state)))))
+          
+          #:guarantee
+          (assert
+           (let* ([filtered-data (filter-expired-data d-state cur-dt)])
+             (andmap (lambda (d)
+                       (implies (not (member d filtered-data))
+                                (or (not (dt-between?
+                                          cur-dt
+                                          (datetime-range-start
+                                           (abstraction-valid-datetime-range d))
+                                          (datetime-range-end
+                                           (abstraction-valid-datetime-range d))))
+                                    (andmap (lambda (f)
+                                              (or (not (eq? (get-type d) (get-type f)))
+                                                  (dt>? (datetime-range-start
+                                                         (abstraction-valid-datetime-range f))
+                                                        (datetime-range-start
+                                                         (abstraction-valid-datetime-range d)))))
+                                            filtered-data))))
+                     d-state)))))

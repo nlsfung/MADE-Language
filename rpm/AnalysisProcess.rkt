@@ -4,6 +4,8 @@
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
 
+(provide (struct-out analysis-process))
+
 ; This file contains the implementation of Analysis processes.
 
 ; Analysis process inherit from the generic MADE process, extending it with
