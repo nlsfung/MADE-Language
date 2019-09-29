@@ -25,7 +25,7 @@
         (execute-decision-body d-state
                                dt
                                (decision-process-main-body self)
-                               (made-process-proxy-flag)))
+                               (made-process-proxy-flag self)))
       self
       datetime))
    
@@ -59,8 +59,8 @@
                                  ((decision-pair-abstraction-predicate dp)
                                   filtered-data))
                                body)]
-         [plan-template (if (decision-pair)
-                            (cdr decision-pair)
+         [plan-template (if decision-pair
+                            (decision-pair-plan-template decision-pair)
                             (void))])
     (if (void? plan-template)
         (void)
@@ -218,88 +218,89 @@
 (define (gen-avg-body-temp)
   (avg-body-temp (gen-proxy) (gen-dt-range) (gen-temp)))
 
-;(struct ibuprofen culminating-action ())
-;(struct treadmill-exercise homogeneous-action ())
-;(struct analyze-heart-rate analysis-process ())
-;(struct fever-treatment action-plan ())
+(struct ibuprofen culminating-action ())
+(struct treadmill-exercise homogeneous-action ())
+(struct analyze-heart-rate analysis-process ())
+(struct fever-treatment action-plan ())
 
 (define (gen-round) (define-symbolic* rounding integer?) rounding)
 (define r-fact (duration (gen-round) 0 0 0))
 (define offset (duration (gen-round) 0 0 0))
-(define r-patt (duration 0 0 0 0))
+(define r-patt (duration (gen-round) 0 0 0))
 
 (define ibuprofen-rel-sched
   (relative-schedule r-fact offset (list r-patt) #f))
 (define ibuprofen-template
   (culminating-action-template
-   'ibuprofen
+   ibuprofen
    ibuprofen-rel-sched
    #t))
 
-;(define treadmill-template
-;  (homogeneous-action-template
-;   treadmill-exercise
-;   (relative-schedule
-;    (duration 1 0 0 0)
-;    (duration 0 0 0 0)
-;    (list (duration 0 13 0 0)
-;          (duration 0 21 0 0))
-;    (duration 2 0 0 0))
-;   10
-;   20))
-;
-;(define analyze-heart-rate-template
-;  (control-template
-;   analyze-heart-rate
-;   (relative-schedule (duration 0 0 0 0) (duration 0 0 0 0) null #f)
-;   #f))
-;
-;(define fever-treatment-template-one
-;  (plan-template
-;   fever-treatment
-;   (list ibuprofen-template treadmill-template)))
-;
-;(define fever-treatment-template-two
-;  (plan-template
-;   fever-treatment
-;   (list analyze-heart-rate-template)))
-;
-;(define (abstraction-predicate-one d-state)
-;  (and (memf (lambda (d) (and (avg-body-temp? d)
-;                              (> (abstraction-value d) 40)))
-;             d-state)
-;       (memf (lambda (d) (and (headache-level? d)
-;                              (eq? 'high (abstraction-value d))))
-;             d-state)))
-;
-;(define (abstraction-predicate-two d-state)
-;  (and (memf (lambda (d) (and (avg-body-temp? d)
-;                              (> (abstraction-value d) 37)
-;                              (< (abstraction-value d) 40)))
-;             d-state)
-;       (memf (lambda (d) (and (headache-level? d)
-;                              (not (eq? 'high (abstraction-value d)))))
-;             d-state)))
-;
+(define treadmill-template
+  (homogeneous-action-template
+   treadmill-exercise
+   (relative-schedule
+    (duration 1 0 0 0)
+    (duration 0 0 0 0)
+    (list (duration 0 13 0 0)
+          (duration 0 21 0 0))
+    (duration 2 0 0 0))
+   10
+   20))
+
+(define analyze-heart-rate-template
+  (control-template
+   analyze-heart-rate
+   (relative-schedule (duration 0 0 0 0) (duration 0 0 0 0) null #f)
+   #f))
+
+(define fever-treatment-template-one
+  (plan-template
+   fever-treatment
+   (list ibuprofen-template treadmill-template)))
+
+(define fever-treatment-template-two
+  (plan-template
+   fever-treatment
+   (list analyze-heart-rate-template)))
+
+(define (abstraction-predicate-one d-state)
+  (and (memf (lambda (d) (and (avg-body-temp? d)
+                              (> (abstraction-value d) 40)))
+             d-state)
+       (memf (lambda (d) (and (headache-level? d)
+                              (eq? 'high (abstraction-value d))))
+             d-state)))
+
+(define (abstraction-predicate-two d-state)
+  (and (memf (lambda (d) (and (avg-body-temp? d)
+                              (> (abstraction-value d) 37)
+                              (< (abstraction-value d) 40)))
+             d-state)
+       (memf (lambda (d) (and (headache-level? d)
+                              (not (eq? 'high (abstraction-value d)))))
+             d-state)))
+
 (define d-state
   (let* ([headaches (list (gen-headache-level) (gen-headache-level))]
          [body-temps (list (gen-avg-body-temp) (gen-avg-body-temp))])
     (assert (= 2 (length (remove-duplicates headaches))))
     (assert (= 2 (length (remove-duplicates body-temps))))
     (append headaches body-temps)))
-;
-;
-;(define sched-dt (gen-datetime))
+
+(define sched-dt (gen-datetime))
 (define cur-dt (gen-datetime))
-;(define-symbolic proc-status boolean?)
-;(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
-;
-;(define d-proc
-;  (decision-process 'id d-state c-state (gen-proxy)
-;                    (list (decision-pair abstraction-predicate-one
-;                                         fever-treatment-template-one)
-;                          (decision-pair abstraction-predicate-two
-;                                         fever-treatment-template-two))))
+(define-symbolic proc-status boolean?)
+(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
+
+(define d-proc
+  (decision-process 'id d-state c-state (gen-proxy)
+                    (list (decision-pair abstraction-predicate-one
+                                         fever-treatment-template-one)
+                          (decision-pair abstraction-predicate-two
+                                         fever-treatment-template-two))))
+
+(define output (generate-data d-proc cur-dt))
 
 ; Verify the implementation of the data filter.
 (define (verify-filtered-data-length)
@@ -337,6 +338,31 @@
                      d-state)))))
 
 ; Verify implementation of schedule instantiation.
+(define (verify-rounding-factor)
+  (verify #:assume
+          (assert
+           (normalized?
+            (list-ref (schedule-pattern
+                       (sched-instantiate ibuprofen-rel-sched cur-dt))
+                      0)))
+
+          #:guarantee
+          (assert
+           (let* ([sched-patt (list-ref
+                               (schedule-pattern
+                                (sched-instantiate ibuprofen-rel-sched cur-dt))
+                               0)])
+             (implies (and (dur=? offset (duration 0 0 0 0))
+                           (dur=? r-patt (duration 0 0 0 0)))
+                      (and (implies (ormap (lambda (n) (dur=? r-fact (duration n 0 0 0)))
+                                           (list 0 1 2 3 4 5 6 7 8 9 10))
+                                    (or (dt>? sched-patt cur-dt)
+                                        (dt=? sched-patt cur-dt)))
+                           (implies (ormap (lambda (n) (dur=? r-fact (duration (- n) 0 0 0)))
+                                           (list 0 1 2 3 4 5 6 7 8 9 10))
+                                    (or (dt<? sched-patt cur-dt)
+                                        (dt=? sched-patt cur-dt)))))))))
+
 (define (verify-relative-schedule)
   (verify #:assume
           (assert
@@ -351,9 +377,30 @@
                                (schedule-pattern
                                 (sched-instantiate ibuprofen-rel-sched cur-dt))
                                0)])
-             (implies (and (or (dur>? r-fact (duration 0 0 0 0))
-                               (dur=? r-fact (duration 0 0 0 0)))
-                           (or (dur>? offset (duration 0 0 0 0))
-                               (dur=? offset (duration 0 0 0 0))))
-                      (or (dt>? sched-patt cur-dt)
-                          (dt=? sched-patt cur-dt)))))))
+             (implies (dur=? r-fact (duration 0 0 0 0))
+                      (implies (and (ormap (lambda (n) (dur=? offset (duration n 0 0 0)))
+                                           (list 0 1 2 3 4 5 6 7 8 9 10))
+                                    (ormap (lambda (n) (dur=? r-patt (duration n 0 0 0)))
+                                           (list 0 1 2 3 4 5 6 7 8 9 10)))
+                               (dt=? sched-patt (dt+ cur-dt (dur+ offset r-patt)))))))))
+
+; Verify the implementation of the control state.
+(define (verify-is-executed)
+  (verify (assert (implies (or (not (eq? sched-dt cur-dt))
+                               (not proc-status))
+                           (void? output)))))
+
+; Verify the implementation of the proxy flags.
+(define (verify-data-proxy)
+  (verify
+   (assert
+    (implies (<= 3 (length (filter (lambda (d) (made-data-proxy-flag d)) d-state)))
+             (void? output)))))
+
+(define (verify-proc-proxy)
+  (verify #:assume
+          (assert (action-plan? output))
+          #:guarantee
+          (assert
+           (implies (made-process-proxy-flag d-proc)
+                    (made-data-proxy-flag output)))))
