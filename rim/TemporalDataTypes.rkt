@@ -2,7 +2,7 @@
 
 (provide (struct-out datetime) dt=? dt- dt+ dt>? dt<? normalized? dt-between?)
 (provide (struct-out schedule) on-schedule?)
-(provide (struct-out duration) dur- duration->second)
+(provide (struct-out duration) dur- dur+ dur<? dur>? dur=? duration->second)
 
 ; This file contains the specification of the 3 primitive temporal data types
 ; in the MADE RIM (viz. DateTime, Duration and Schedule).

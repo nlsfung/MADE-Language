@@ -86,7 +86,8 @@
 
          [sorted-data
           (sort filtered-data dt>?
-                #:key (lambda (d) (datetime-range-start (abstraction-valid-datetime-range d))))]
+                #:key (lambda (d) (datetime-range-start
+                                   (abstraction-valid-datetime-range d))))]
 
          [type-list (remove-duplicates
                      (map (lambda (d) (get-type d)) sorted-data))])
@@ -108,7 +109,7 @@
   [(define (instantiate self dt)
      (scheduled-control
       (control-template-target-process self)
-      (instantiate (control-template-relative-schedule self) dt)
+      (sched-instantiate (control-template-relative-schedule self) dt)
       (control-template-status self)))])
 
 (struct homogeneous-action-template (action-type relative-schedule rate duration)
@@ -117,7 +118,7 @@
   [(define (instantiate self dt)
      (scheduled-homogeneous-action
       (homogeneous-action-template-action-type self)
-      (instantiate (homogeneous-action-template-relative-schedule self) dt)
+      (sched-instantiate (homogeneous-action-template-relative-schedule self) dt)
       (homogeneous-action-template-rate self)
       (homogeneous-action-template-duration self)))])
 
@@ -127,65 +128,79 @@
   [(define (instantiate self dt)
      (scheduled-culminating-action
       (culminating-action-template-action-type self)
-      (instantiate (culminating-action-template-relative-schedule self) dt)
+      (sched-instantiate (culminating-action-template-relative-schedule self) dt)
       (culminating-action-template-goal-state self)))])
 
 ; A relative schedule contains a rounding factor, an offset, a relative starting
 ; pattern, and a repeat interval (all of which are expressed as durations).
+(define-generics rel-sched [sched-instantiate rel-sched dt])
 (struct relative-schedule (rounding-factor offset relative-pattern interval)
   #:transparent
-  #:methods gen:inst-template
-  [(define (instantiate self dt)
+  #:methods gen:rel-sched
+  [(define (sched-instantiate self dt)
      ; To following steps are required to instantiate a schedule:
      ; 1) Round the input datetime using the rounding factor.
      ; 2) Add the offset to the rounded datetime.
      ; 3) Added the offset datetime to the relative pattern.
-     ; 4) Create a schedule from the interval and resulting pattern.
-     (let* ([rounded-dt (dt (relative-schedule-rounding-factor self))]
-            [offset-dt (dt+ rounded-dt (relative-schedule-offset self))]
-            [pattern (map (lambda (dur) (dt+ offset-dt dur))
-                          (relative-schedule-relative-pattern self))])
-       (schedule pattern (relative-schedule-interval self))))])
+     ; 4) instantiate a schedule from the interval and resulting pattern.
+     (let* ([rounded-dur (get-round-amount dt (relative-schedule-rounding-factor self))]
+            [offset-dur (relative-schedule-offset self)]
+            [pattern-dt (map (lambda (dur)
+                               (dt+ dt (dur+ dur (dur+ offset-dur rounded-dur))))
+                             (relative-schedule-relative-pattern self))])
+       (schedule pattern-dt (relative-schedule-interval self))))])
 
-; Helper function for rounding up a datetime given a rounding factor.
-; The greatest non-zero unit in the rounding factor determines the
-; reference at which the rounding starts.
-; E.g. (round-dt (datetime 2019 9 18 6 52 0) (duration 0 7 0 0)) returns
-;      (datetime 2019 9 18 7 0 0), but (round-dt (datetime 2019 9 18 6 52 0)
-;      (duration 7/24 0 0 0)) returns (datetime 2019 9 18 9 0 0).
-(define (round-dt dt rounding-factor)
+; Helper function for computing the duration to round up a datetime given a
+; rounding factor. The greatest non-zero unit in the rounding factor
+; determines the reference at which the rounding starts.
+; E.g. (dt+ (datetime 2019 9 18 6 52 0) (get-round-amount (datetime 2019 9 18 6 52 0)
+;      (duration 0 7 0 0))) returns (datetime 2019 9 18 7 0 0), but
+;      (dt+ (datetime 2019 9 18 6 52 0) (get-round-amount (datetime 2019 9 18 6 52 0)
+;      (duration 0 6 24 0))) returns (datetime 2019 9 18 12 48 0).
+(define (get-round-amount dt rounding-factor)
   (let* ([round-sec (duration->second rounding-factor)]
-         [dt-sec (duration->second
-                  (duration (if (= (duration-day rounding-factor) 0)
-                                0 (datetime-day dt))
-                            (if (and (= (duration-day rounding-factor) 0)
-                                     (= (duration-hour rounding-factor) 0))
-                                0 (datetime-hour dt))
-                            (if (and (= (duration-day rounding-factor) 0)
-                                     (= (duration-hour rounding-factor) 0)
-                                     (= (duration-minute rounding-factor) 0))
-                                0 (datetime-minute dt))
-                            (datetime-second dt)))]
-         [extra-sec (- (* round-sec (ceiling (/ dt-sec round-sec))) dt-sec)])
-    (dt+ dt (duration 0 0 0 extra-sec))))
+         [reference (if (= round-sec 0)
+                        null
+                        (memf (lambda (f) (not (= 0 (f rounding-factor))))
+                              (list duration-day duration-hour
+                                    duration-minute duration-second)))]
+         [dt-sec (if (= round-sec 0)
+                     (void)
+                     (duration->second
+                      (duration (if (member duration-day reference)
+                                    (datetime-day dt)
+                                    0)
+                                (if (member duration-hour reference)
+                                    (datetime-hour dt)
+                                    0)
+                                (if (member duration-minute reference)
+                                    (datetime-minute dt)
+                                    0)
+                                (datetime-second dt))))]
+         [extra-sec (if (= round-sec 0)
+                        0
+                        (- (* round-sec (ceiling (/ dt-sec round-sec))) dt-sec))])
+    (duration 0 0 0 extra-sec)))
 
 ; Symbolic constants for verifying generate data.
 (define (gen-dt-part) (define-symbolic* dt-part integer?) dt-part)
 (define (gen-datetime)
-  (let ([dt (datetime 7 9 21 (gen-dt-part) 0 0)])
-    (assert (normalized? dt))
-    dt))
+  (let ([hour (gen-dt-part)])
+    (assert (and (>= hour 0) (< hour 24)))
+    (datetime 7 9 21 hour 0 0)))
 (define (gen-dt-range)
-  (let* ([start (gen-datetime)]
-         [end (gen-datetime)])
-    (assert (or (dt<? start end) (dt=? start end)))
-    (datetime-range start end)))
+  (let* ([start-hour (gen-dt-part)]
+         [end-hour (gen-dt-part)])
+    (assert (and (>= start-hour 0) (<= start-hour end-hour) (< end-hour 24)))
+    (datetime-range (datetime 7 9 21 start-hour 0 0)
+                    (datetime 7 9 21 end-hour 0 0))))
 
 (define (gen-proxy) (define-symbolic* proxy boolean?) proxy)
 
 (define headache-grades (list 'none 'low 'medium 'high))
 (define (gen-headache-grade)
   (define-symbolic* h-grade integer?)
+  (assert (and (>= h-grade 0) (<= h-grade 3)))
   (list-ref headache-grades h-grade))
 (struct headache-level abstraction ()
   #:transparent
@@ -203,85 +218,88 @@
 (define (gen-avg-body-temp)
   (avg-body-temp (gen-proxy) (gen-dt-range) (gen-temp)))
 
-(struct ibuprofen culminating-action ())
-(struct treadmill-exercise homogeneous-action ())
-(struct analyze-heart-rate analysis-process ())
-(struct fever-treatment action-plan ())
+;(struct ibuprofen culminating-action ())
+;(struct treadmill-exercise homogeneous-action ())
+;(struct analyze-heart-rate analysis-process ())
+;(struct fever-treatment action-plan ())
 
 (define (gen-round) (define-symbolic* rounding integer?) rounding)
+(define r-fact (duration (gen-round) 0 0 0))
+(define offset (duration (gen-round) 0 0 0))
+(define r-patt (duration 0 0 0 0))
 
+(define ibuprofen-rel-sched
+  (relative-schedule r-fact offset (list r-patt) #f))
 (define ibuprofen-template
   (culminating-action-template
-   ibuprofen
-   (relative-schedule
-    (duration (gen-round) (gen-round) (gen-round) (gen-round))
-     (duration 0 (gen-round) 0 0)
-     (list (duration 0 0 (gen-round) (gen-round)))
-     (void))
-   #f))
+   'ibuprofen
+   ibuprofen-rel-sched
+   #t))
 
-(define treadmill-template
-  (homogeneous-action-template
-   treadmill-exercise
-   (relative-schedule
-    (duration 1 0 0 0)
-    (duration 0 0 0 0)
-    (list (duration 0 13 0 0)
-          (duration 0 21 0 0))
-    (duration 2 0 0 0))
-   10
-   20))
-
-(define analyze-heart-rate-template
-  (control-template
-   analyze-heart-rate
-   (relative-schedule (duration 0 0 0 0) (duration 0 0 0 0) null #f)
-   #f))
-
-(define fever-treatment-template-one
-  (plan-template
-   fever-treatment
-   (list ibuprofen-template treadmill-template)))
-
-(define fever-treatment-template-two
-  (plan-template
-   fever-treatment
-   (list analyze-heart-rate-template)))
-
-(define (abstraction-predicate-one d-state)
-  (and (memf (lambda (d) (and (avg-body-temp? d)
-                              (> (abstraction-value d) 40)))
-             d-state)
-       (memf (lambda (d) (and (headache-level? d)
-                              (eq? 'high (abstraction-value d))))
-             d-state)))
-
-(define (abstraction-predicate-two d-state)
-  (and (memf (lambda (d) (and (avg-body-temp? d)
-                              (> (abstraction-value d) 37)
-                              (< (abstraction-value d) 40)))
-             d-state)
-       (memf (lambda (d) (and (headache-level? d)
-                              (not (eq? 'high (abstraction-value d)))))
-             d-state)))
-
+;(define treadmill-template
+;  (homogeneous-action-template
+;   treadmill-exercise
+;   (relative-schedule
+;    (duration 1 0 0 0)
+;    (duration 0 0 0 0)
+;    (list (duration 0 13 0 0)
+;          (duration 0 21 0 0))
+;    (duration 2 0 0 0))
+;   10
+;   20))
+;
+;(define analyze-heart-rate-template
+;  (control-template
+;   analyze-heart-rate
+;   (relative-schedule (duration 0 0 0 0) (duration 0 0 0 0) null #f)
+;   #f))
+;
+;(define fever-treatment-template-one
+;  (plan-template
+;   fever-treatment
+;   (list ibuprofen-template treadmill-template)))
+;
+;(define fever-treatment-template-two
+;  (plan-template
+;   fever-treatment
+;   (list analyze-heart-rate-template)))
+;
+;(define (abstraction-predicate-one d-state)
+;  (and (memf (lambda (d) (and (avg-body-temp? d)
+;                              (> (abstraction-value d) 40)))
+;             d-state)
+;       (memf (lambda (d) (and (headache-level? d)
+;                              (eq? 'high (abstraction-value d))))
+;             d-state)))
+;
+;(define (abstraction-predicate-two d-state)
+;  (and (memf (lambda (d) (and (avg-body-temp? d)
+;                              (> (abstraction-value d) 37)
+;                              (< (abstraction-value d) 40)))
+;             d-state)
+;       (memf (lambda (d) (and (headache-level? d)
+;                              (not (eq? 'high (abstraction-value d)))))
+;             d-state)))
+;
 (define d-state
-  (list (gen-headache-level) (gen-headache-level)
-        (gen-avg-body-temp) (gen-avg-body-temp)))
-(assert (= 4 (length (remove-duplicates d-state))))
-
-
-(define sched-dt (gen-datetime))
+  (let* ([headaches (list (gen-headache-level) (gen-headache-level))]
+         [body-temps (list (gen-avg-body-temp) (gen-avg-body-temp))])
+    (assert (= 2 (length (remove-duplicates headaches))))
+    (assert (= 2 (length (remove-duplicates body-temps))))
+    (append headaches body-temps)))
+;
+;
+;(define sched-dt (gen-datetime))
 (define cur-dt (gen-datetime))
-(define-symbolic proc-status boolean?)
-(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
-
-(define d-proc
-  (decision-process 'id d-state c-state (gen-proxy)
-                    (list (decision-pair abstraction-predicate-one
-                                         fever-treatment-template-one)
-                          (decision-pair abstraction-predicate-two
-                                         fever-treatment-template-two))))
+;(define-symbolic proc-status boolean?)
+;(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
+;
+;(define d-proc
+;  (decision-process 'id d-state c-state (gen-proxy)
+;                    (list (decision-pair abstraction-predicate-one
+;                                         fever-treatment-template-one)
+;                          (decision-pair abstraction-predicate-two
+;                                         fever-treatment-template-two))))
 
 ; Verify the implementation of the data filter.
 (define (verify-filtered-data-length)
@@ -317,3 +335,25 @@
                                                          (abstraction-valid-datetime-range d)))))
                                             filtered-data))))
                      d-state)))))
+
+; Verify implementation of schedule instantiation.
+(define (verify-relative-schedule)
+  (verify #:assume
+          (assert
+           (normalized?
+            (list-ref (schedule-pattern
+                       (sched-instantiate ibuprofen-rel-sched cur-dt))
+                      0)))
+
+          #:guarantee
+          (assert
+           (let* ([sched-patt (list-ref
+                               (schedule-pattern
+                                (sched-instantiate ibuprofen-rel-sched cur-dt))
+                               0)])
+             (implies (and (or (dur>? r-fact (duration 0 0 0 0))
+                               (dur=? r-fact (duration 0 0 0 0)))
+                           (or (dur>? offset (duration 0 0 0 0))
+                               (dur=? offset (duration 0 0 0 0))))
+                      (or (dt>? sched-patt cur-dt)
+                          (dt=? sched-patt cur-dt)))))))
