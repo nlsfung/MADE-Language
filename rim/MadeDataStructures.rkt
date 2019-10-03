@@ -54,7 +54,7 @@
 
 ; Control instruction is implemented as containing the Id of the target process,
 ; the valid date-time, an optional schedule and an optional process status, 
-; which can take the values #t for running, #f for paused or null if not set.
+; which can take the values #t for running, #f for paused or void if not set.
 (struct control-instruction made-data (target-process valid-datetime schedule status) #:transparent)
 
 ; Action plan is implemented as containing a valid date-time as well as a set of
