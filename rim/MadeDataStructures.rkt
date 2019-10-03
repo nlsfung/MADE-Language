@@ -61,13 +61,36 @@
 ; schedule control and action instructions.
 (struct action-plan made-data (valid-datetime instruction-set) #:transparent)
 
-; A scheduled control comprises a target process, a schedule and a status.
-; The schedule or status can be optional (but not both).
-(struct scheduled-control (target-process schedule status) #:transparent)
+; A scheduled control comprises a control type, a target process, a schedule
+; and a status. The schedule or status can be optional (but not both).
+(define-generics sched-inst [instantiate sched-inst p-flag dt])
+(struct scheduled-control (control-type target-process schedule status)
+  #:transparent
+  #:methods gen:sched-inst
+  [(define (instantiate self proxy-flag valid-datetime)
+    ((scheduled-control-control-type self) proxy-flag
+                                           (scheduled-control-target-process self)
+                                           valid-datetime
+                                           (scheduled-control-schedule self)
+                                           (scheduled-control-status self)))])
 
 ; As with action instructions, there are two types of scheduled actions,
 ; scheduled homogeneous and scheduled culminating actions. The former comprises
 ; an action type, a schedule, rate and duration, while the latter comprises
 ; an action type, a schedule and a goal state.
-(struct scheduled-homogeneous-action (action-type schedule rate duration) #:transparent)
-(struct scheduled-culminating-action (action-type schedule goal-state) #:transparent)
+(struct scheduled-homogeneous-action (action-type schedule rate duration)
+  #:transparent
+  #:methods gen:sched-inst
+  [(define (instantiate self proxy-flag start-datetime)
+     ((scheduled-homogeneous-action-action-type self) proxy-flag
+                                                      start-datetime
+                                                      (scheduled-homogeneous-action-rate self)
+                                                      (scheduled-homogeneous-action-duration self)))])
+
+(struct scheduled-culminating-action (action-type schedule goal-state)
+  #:transparent
+  #:methods gen:sched-inst
+  [(define (instantiate self proxy-flag start-datetime)
+     ((scheduled-culminating-action-action-type self) proxy-flag
+                                                      start-datetime
+                                                      (scheduled-culminating-action-goal-state self)))])

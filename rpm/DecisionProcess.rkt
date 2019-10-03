@@ -109,11 +109,12 @@
 
 
 (define-generics inst-template [instantiate inst-template dt])
-(struct control-template (target-process relative-schedule status)
+(struct control-template (control-type target-process relative-schedule status)
   #:transparent
   #:methods gen:inst-template
   [(define (instantiate self dt)
      (scheduled-control
+      (control-template-control-type self)
       (control-template-target-process self)
       (sched-instantiate (control-template-relative-schedule self) dt)
       (control-template-status self)))])
@@ -226,6 +227,7 @@
 ;
 ;(struct ibuprofen culminating-action () #:transparent)
 ;(struct treadmill-exercise homogeneous-action () #:transparent)
+;(struct control-analyze-heart-rate control-instruction () #:transparent)
 ;(struct analyze-heart-rate analysis-process () #:transparent)
 ;(struct fever-treatment action-plan () #:transparent)
 ;
@@ -256,6 +258,7 @@
 ;
 ;(define analyze-heart-rate-template
 ;  (control-template
+;   control-analyze-heart-rate
 ;   analyze-heart-rate
 ;   (relative-schedule (duration 0 0 0 0) (duration 0 0 0 0) null #f)
 ;   #f))
