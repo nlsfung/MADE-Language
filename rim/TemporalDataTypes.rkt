@@ -1,6 +1,6 @@
 #lang rosette/safe
 
-(provide (struct-out datetime) dt=? dt- dt+ dt>? dt<? normalized? dt-between?)
+(provide (struct-out datetime) dt=? dt- dt+ dt>? dt<? normalized? dt-between? datetime->number)
 (provide (struct-out schedule) on-schedule?)
 (provide (struct-out duration) dur- dur+ dur<? dur>? dur=? duration->second)
 
