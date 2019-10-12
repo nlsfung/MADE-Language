@@ -60,7 +60,8 @@
                   (effectuation-triple-plan-type e-triple))
                 body))]
          [plan-buckets
-          (map (lambda (t?) (filter (lambda (d) (t? d)) d-state)) type-list)]
+          (filter (lambda (d-list) (< 0 (length d-list)))
+                  (map (lambda (t?) (filter (lambda (d) (t? d)) d-state)) type-list))]
          [filtered-data
           (map (lambda (d-list)
                  (argmax (lambda (d) (datetime->number (action-plan-valid-datetime d)))
@@ -245,3 +246,18 @@
              (or (not plan-match?)
                  (eq? (length inst-matches)
                            (length (remove* sched-matches inst-matches)))))))))
+
+; Verify the implementation of the proxy flags.
+(define (verify-data-proxy)
+  (verify
+   (assert
+    (implies (= 6 (length (filter (lambda (d) (made-data-proxy-flag d)) d-state)))
+             (void? output)))))
+
+(define (verify-proc-proxy)
+  (verify #:assume
+          (assert (not (void? output)))
+          #:guarantee
+          (assert
+           (implies (made-process-proxy-flag e-proc)
+                    (made-data-proxy-flag output)))))
