@@ -65,17 +65,28 @@
           (map (lambda (d-list)
                  (argmax (lambda (d) (datetime->number (action-plan-valid-datetime d)))
                          d-list))
-               type-list)])
-    (findf (lambda (d)
-             (findf (lambda (e-triple)
-                      (extract-instruction d dt e-triple proxy-flag)) body))
-           filtered-data)))
+               plan-buckets)]
+         [output-inst
+          (foldl (lambda (d result)
+                   (if result
+                       result
+                       (foldl (lambda (e-triple result)
+                                (if result
+                                    result
+                                    (extract-instruction d dt e-triple proxy-flag)))
+                              #f
+                              body)))
+                 #f
+                 filtered-data)])
+    (if output-inst
+        output-inst
+        (void))))
 
 ; Helper function for determining if the input data item corresponds to the
 ; action plan specified in the input effectuation triple, and if yes, whether
 ; the current datetime matches the appropriate scheduled instruction. If also
-; yes, the function returns a pair containing the plan's valid datetime and the
-;instantiated instruction. Otherwise the function returns false.
+; yes, the function returns the instantiated instruction. Otherwise the
+; function returns false.
 (define (extract-instruction d dt e-triple proxy-flag)
   (let* ([relevant-plan? ((effectuation-triple-plan-type e-triple) d)]
          [scheduled-inst
@@ -135,7 +146,7 @@
 (define (gen-proxy) (define-symbolic* proxy boolean?) proxy)
 
 (define (gen-schedule)
-  (let* ([pattern (list (gen-datetime))]
+  (let* ([pattern (list (gen-datetime) (gen-datetime))]
          [status #f])
     (schedule pattern status)))
 
@@ -173,9 +184,9 @@
   (let* ([fever-one (list (gen-fever-treatment-one) (gen-fever-treatment-one))]
          [fever-two (list (gen-fever-treatment-two) (gen-fever-treatment-two))]
          [exercise-one (list (gen-exercise-regimen-one) (gen-exercise-regimen-one))])
-    (assert (eq? (list-ref fever-one 0) (list-ref fever-one 1)))
-    (assert (eq? (list-ref fever-two 0) (list-ref fever-two 1)))
-    (assert (eq? (list-ref exercise-one 0) (list-ref exercise-one 1)))
+    (assert (not (eq? (list-ref fever-one 0) (list-ref fever-one 1))))
+    (assert (not (eq? (list-ref fever-two 0) (list-ref fever-two 1))))
+    (assert (not (eq? (list-ref exercise-one 0) (list-ref exercise-one 1))))
     (append fever-one fever-two exercise-one)))
   
 (define sched-dt (gen-datetime))
@@ -190,6 +201,9 @@
                                                    ibuprofen
                                                    ibuprofen)
                               (effectuation-triple fever-treatment?
+                                                   treadmill-exercise
+                                                   treadmill-exercise)
+                              (effectuation-triple fever-treatment?
                                                    analyze-heart-rate
                                                    control-analyze-heart-rate)
                               (effectuation-triple exercise-regimen?
@@ -202,6 +216,7 @@
 (define-symbolic x y integer?)
 (define d (list-ref d-state x))
 (define e-triple (list-ref (effectuation-process-main-body e-proc) y))
+(define inst (extract-instruction d cur-dt e-triple (made-process-proxy-flag e-proc)))
 (define (verify-extract-instruction)
   (verify
    (assert
@@ -226,8 +241,7 @@
                             [(scheduled-culminating-action? i)
                              (on-schedule? (scheduled-culminating-action-schedule i) cur-dt)]))
                     (action-plan-instruction-set d))])
-      (implies (not (extract-instruction d cur-dt e-triple #f))
+      (implies (not inst)
              (or (not plan-match?)
                  (eq? (length inst-matches)
                            (length (remove* sched-matches inst-matches)))))))))
-                                                
