@@ -137,127 +137,170 @@
               [else #f])
         #f)))
 
-; Symbolic constants for verifying generate data.
-(define (gen-dt-part) (define-symbolic* dt-part integer?) dt-part)
-(define (gen-datetime)
-  (let ([hour (gen-dt-part)])
-    (assert (and (>= hour 0) (< hour 24)))
-    (datetime 7 10 7 hour 0 0)))
-
-(define (gen-proxy) (define-symbolic* proxy boolean?) proxy)
-
-(define (gen-schedule)
-  (let* ([pattern (list (gen-datetime) (gen-datetime))]
-         [status #f])
-    (schedule pattern status)))
-
-(struct fever-treatment action-plan () #:transparent)
-(struct exercise-regimen action-plan () #:transparent)
-(struct ibuprofen culminating-action () #:transparent)
-(struct treadmill-exercise homogeneous-action () #:transparent)
-(struct control-analyze-heart-rate control-instruction () #:transparent)
-(struct analyze-heart-rate analysis-process () #:transparent)
-
-(define (gen-fever-treatment-one)
-  (fever-treatment
-   (gen-proxy)
-   (gen-datetime)
-   (list (scheduled-culminating-action
-          ibuprofen (gen-schedule) #t)
-         (scheduled-homogeneous-action
-          treadmill-exercise (gen-schedule) 'rate 'duration))))
-
-(define (gen-fever-treatment-two)
-  (fever-treatment
-   (gen-proxy)
-   (gen-datetime)
-   (list (scheduled-control
-          analyze-heart-rate (gen-schedule) (void)))))
-
-(define (gen-exercise-regimen-one)
-   (exercise-regimen
-    (gen-proxy)
-    (gen-datetime)
-    (list (scheduled-homogeneous-action
-           treadmill-exercise (gen-schedule) 'rate 'duration))))
-
-(define d-state
-  (let* ([fever-one (list (gen-fever-treatment-one) (gen-fever-treatment-one))]
-         [fever-two (list (gen-fever-treatment-two) (gen-fever-treatment-two))]
-         [exercise-one (list (gen-exercise-regimen-one) (gen-exercise-regimen-one))])
-    (assert (not (eq? (list-ref fever-one 0) (list-ref fever-one 1))))
-    (assert (not (eq? (list-ref fever-two 0) (list-ref fever-two 1))))
-    (assert (not (eq? (list-ref exercise-one 0) (list-ref exercise-one 1))))
-    (append fever-one fever-two exercise-one)))
-  
-(define sched-dt (gen-datetime))
-(define cur-dt (gen-datetime))
-(define-symbolic proc-status boolean?)
-(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
-
-(define (gen-e-triple?) (define-symbolic* e-triple? boolean?) e-triple?)
-(define e-proc
-  (effectuation-process 'id d-state c-state (gen-proxy)
-                        (list (effectuation-triple fever-treatment?
-                                                   ibuprofen
-                                                   ibuprofen)
-                              (effectuation-triple fever-treatment?
-                                                   treadmill-exercise
-                                                   treadmill-exercise)
-                              (effectuation-triple fever-treatment?
-                                                   analyze-heart-rate
-                                                   control-analyze-heart-rate)
-                              (effectuation-triple exercise-regimen?
-                                                   treadmill-exercise
-                                                   treadmill-exercise))))
-
-(define output (generate-data e-proc cur-dt))
-
-; Verify implementation of extract instruction.
-(define-symbolic x y integer?)
-(define d (list-ref d-state x))
-(define e-triple (list-ref (effectuation-process-main-body e-proc) y))
-(define inst (extract-instruction d cur-dt e-triple (made-process-proxy-flag e-proc)))
-(define (verify-extract-instruction)
-  (verify
-   (assert
-    (let* ([plan-match?
-            ((effectuation-triple-plan-type e-triple) d)]
-           [inst-matches
-            (filter (lambda (i)
-                     (eq? (effectuation-triple-target-type e-triple)
-                          (cond [(scheduled-control? i)
-                                 (scheduled-control-target-process i)]
-                                [(scheduled-homogeneous-action? i)
-                                 (scheduled-homogeneous-action-action-type i)]
-                                [(scheduled-culminating-action? i)
-                                 (scheduled-culminating-action-action-type i)])))
-                   (action-plan-instruction-set d))]
-           [sched-matches
-            (filter (lambda (i)
-                      (cond [(scheduled-control? i)
-                             (dt=? (action-plan-valid-datetime d) cur-dt)]
-                            [(scheduled-homogeneous-action? i)
-                             (on-schedule? (scheduled-homogeneous-action-schedule i) cur-dt)]
-                            [(scheduled-culminating-action? i)
-                             (on-schedule? (scheduled-culminating-action-schedule i) cur-dt)]))
-                    (action-plan-instruction-set d))])
-      (implies (not inst)
-             (or (not plan-match?)
-                 (eq? (length inst-matches)
-                           (length (remove* sched-matches inst-matches)))))))))
-
-; Verify the implementation of the proxy flags.
-(define (verify-data-proxy)
-  (verify
-   (assert
-    (implies (= 6 (length (filter (lambda (d) (made-data-proxy-flag d)) d-state)))
-             (void? output)))))
-
-(define (verify-proc-proxy)
-  (verify #:assume
-          (assert (not (void? output)))
-          #:guarantee
-          (assert
-           (implies (made-process-proxy-flag e-proc)
-                    (made-data-proxy-flag output)))))
+;; Symbolic constants for verifying generate data.
+;(define (gen-dt-part) (define-symbolic* dt-part integer?) dt-part)
+;(define (gen-datetime)
+;  (let ([hour (gen-dt-part)])
+;    (assert (and (>= hour 0) (< hour 24)))
+;    (datetime 7 10 7 hour 0 0)))
+;
+;(define (gen-proxy) (define-symbolic* proxy boolean?) proxy)
+;
+;(define (gen-schedule)
+;  (let* ([pattern (list (gen-datetime) (gen-datetime))]
+;         [status #f])
+;    (schedule pattern status)))
+;
+;(struct fever-treatment action-plan () #:transparent)
+;(struct exercise-regimen action-plan () #:transparent)
+;(struct ibuprofen culminating-action () #:transparent)
+;(struct treadmill-exercise homogeneous-action () #:transparent)
+;(struct control-analyze-heart-rate control-instruction () #:transparent)
+;(struct analyze-heart-rate analysis-process () #:transparent)
+;
+;(define (gen-fever-treatment-one)
+;  (fever-treatment
+;   (gen-proxy)
+;   (gen-datetime)
+;   (list (scheduled-culminating-action
+;          ibuprofen (gen-schedule) #t)
+;         (scheduled-homogeneous-action
+;          treadmill-exercise (gen-schedule) 'rate 'duration))))
+;
+;(define (gen-fever-treatment-two)
+;  (fever-treatment
+;   (gen-proxy)
+;   (gen-datetime)
+;   (list (scheduled-control
+;          analyze-heart-rate (gen-schedule) (void)))))
+;
+;(define (gen-exercise-regimen-one)
+;   (exercise-regimen
+;    (gen-proxy)
+;    (gen-datetime)
+;    (list (scheduled-homogeneous-action
+;           treadmill-exercise (gen-schedule) 'rate 'duration))))
+;
+;(define d-state
+;  (let* ([fever-one (list (gen-fever-treatment-one) (gen-fever-treatment-one))]
+;         [fever-two (list (gen-fever-treatment-two) (gen-fever-treatment-two))]
+;         [exercise-one (list (gen-exercise-regimen-one) (gen-exercise-regimen-one))])
+;    (assert (not (eq? (list-ref fever-one 0) (list-ref fever-one 1))))
+;    (assert (not (eq? (list-ref fever-two 0) (list-ref fever-two 1))))
+;    (assert (not (eq? (list-ref exercise-one 0) (list-ref exercise-one 1))))
+;    (append fever-one fever-two exercise-one)))
+;  
+;(define sched-dt (gen-datetime))
+;(define cur-dt (gen-datetime))
+;(define-symbolic proc-status boolean?)
+;(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
+;
+;(define (gen-e-triple?) (define-symbolic* e-triple? boolean?) e-triple?)
+;(define e-proc
+;  (effectuation-process 'id d-state c-state (gen-proxy)
+;                        (list (effectuation-triple fever-treatment?
+;                                                   ibuprofen
+;                                                   ibuprofen)
+;                              (effectuation-triple fever-treatment?
+;                                                   treadmill-exercise
+;                                                   treadmill-exercise)
+;                              (effectuation-triple fever-treatment?
+;                                                   analyze-heart-rate
+;                                                   control-analyze-heart-rate)
+;                              (effectuation-triple exercise-regimen?
+;                                                   treadmill-exercise
+;                                                   treadmill-exercise))))
+;
+;(define output (generate-data e-proc cur-dt))
+;
+;; Verify implementation of extract instruction.
+;(define-symbolic x y integer?)
+;(define d (list-ref d-state x))
+;(define e-triple (list-ref (effectuation-process-main-body e-proc) y))
+;(define inst (extract-instruction d cur-dt e-triple (made-process-proxy-flag e-proc)))
+;(define (verify-extract-instruction)
+;  (verify
+;   (assert
+;    (let* ([plan-match?
+;            ((effectuation-triple-plan-type e-triple) d)]
+;           [inst-matches
+;            (filter (lambda (i)
+;                     (eq? (effectuation-triple-target-type e-triple)
+;                          (cond [(scheduled-control? i)
+;                                 (scheduled-control-target-process i)]
+;                                [(scheduled-homogeneous-action? i)
+;                                 (scheduled-homogeneous-action-action-type i)]
+;                                [(scheduled-culminating-action? i)
+;                                 (scheduled-culminating-action-action-type i)])))
+;                   (action-plan-instruction-set d))]
+;           [sched-matches
+;            (filter (lambda (i)
+;                      (cond [(scheduled-control? i)
+;                             (dt=? (action-plan-valid-datetime d) cur-dt)]
+;                            [(scheduled-homogeneous-action? i)
+;                             (on-schedule? (scheduled-homogeneous-action-schedule i) cur-dt)]
+;                            [(scheduled-culminating-action? i)
+;                             (on-schedule? (scheduled-culminating-action-schedule i) cur-dt)]))
+;                    (action-plan-instruction-set d))])
+;      (implies (not inst)
+;             (or (not plan-match?)
+;                 (eq? (length inst-matches)
+;                           (length (remove* sched-matches inst-matches)))))))))
+;
+;; Verify the implementation of the proxy flags.
+;(define (verify-data-proxy)
+;  (verify
+;   (assert
+;    (implies (= 6 (length (filter (lambda (d) (made-data-proxy-flag d)) d-state)))
+;             (void? output)))))
+;
+;(define (verify-proc-proxy)
+;  (verify #:assume
+;          (assert (not (void? output)))
+;          #:guarantee
+;          (assert
+;           (implies (made-process-proxy-flag e-proc)
+;                    (made-data-proxy-flag output)))))
+;
+;; Verify implementation of execute effectuation body.
+;(define-symbolic u v integer?)
+;(define d-1 (list-ref d-state u))
+;(define d-2 (list-ref d-state v))
+;(define output-1 (execute-effectuation-body
+;                  (list d-1)
+;                  cur-dt
+;                  (effectuation-process-main-body e-proc)
+;                  (made-process-proxy-flag e-proc)))
+;(define output-2 (execute-effectuation-body
+;                  (list d-2)
+;                  cur-dt
+;                  (effectuation-process-main-body e-proc)
+;                  (made-process-proxy-flag e-proc)))
+;(define (verify-effectuation-body)
+;  (verify
+;   #:assume
+;   (assert (and (= 6 (length (filter
+;                              (lambda (d) (not (made-data-proxy-flag d)))
+;                              d-state)))
+;                (= 6 (length (remove-duplicates
+;                              (map (lambda (d) (action-plan-valid-datetime d))
+;                                   d-state))))))
+;
+;   #:guarantee   
+;   (assert (implies (and (not (void? output-1))
+;                         (not (void? output-2))
+;                         (eq? output output-1)
+;                         (not (eq? output output-2)))
+;                    (or (< u v)
+;                        (cond [(fever-treatment? d-2)
+;                               (findf (lambda (d)
+;                                        (and (fever-treatment? d)
+;                                             (dt>? (action-plan-valid-datetime d)
+;                                                   (action-plan-valid-datetime d-2))))
+;                                      d-state)]
+;                              [(exercise-regimen? d-2)
+;                               (findf (lambda (d)
+;                                        (and (exercise-regimen? d)
+;                                             (dt>? (action-plan-valid-datetime d)
+;                                                   (action-plan-valid-datetime d-2))))
+;                                      d-state)]))))))
