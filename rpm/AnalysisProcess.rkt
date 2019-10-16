@@ -9,8 +9,8 @@
 ; This file contains the implementation of Analysis processes.
 
 ; Analysis process inherit from the generic MADE process, extending it with
-; a time window, the output type identifier and a main function body.
-(struct analysis-process made-process (time-window output-type main-body)
+; a time window, the output type identifier and a list of abstraction functions.
+(struct analysis-process made-process (time-window output-type abstraction-functions)
   #:transparent
   #:methods gen:made-proc
   [(define (execute self in-data datetime)
@@ -26,7 +26,7 @@
                                dt
                                (analysis-process-time-window self)
                                (analysis-process-output-type self)
-                               (analysis-process-main-body self)
+                               (analysis-process-abstraction-functions self)
                                (made-process-proxy-flag self)))
       self
       datetime))
@@ -45,29 +45,29 @@
            [p-flag (made-process-proxy-flag self)]
            [t-window (analysis-process-time-window self)]
            [out-type (analysis-process-output-type self)]
-           [body (analysis-process-main-body self)])
+           [ab-funcs (analysis-process-abstraction-functions self)])
        
-       (analysis-process id d-state c-state p-flag t-window out-type body)))])
+       (analysis-process id d-state c-state p-flag t-window out-type ab-funcs)))])
 
 ; Helper function for defining the main behaviour of analysis processes.
-(define (execute-analysis-body d-state dt t-window out-type body proxy-flag)
+(define (execute-analysis-body d-state dt t-window out-type ab-funcs proxy-flag)
   ; To generate output data, an Analysis process follows the following steps:
   ; 1) Filter out any data that falls outside the time window.
-  ; 2) Feed the filtered data into the main body, which comprises a list of
-  ;    functions, one of which may produce a non-void output value.
+  ; 2) Feed the filtered data into the input list of abstraction functions, one
+  ;    of which may produce a non-void output value.
   ; 3) If an output value is produced, determine its valid datetime range.
   ; 4) Generate the output abstraction, if any.
   (let* ([filtered-data (sort (filter-expired-data d-state (dt- dt t-window) dt)
                               observed-after?)]
-         [output-body (findf (lambda (f) (not (void? (f filtered-data)))) body)]
-         [output-value (if output-body (output-body filtered-data) (void))]
+         [output-func (findf (lambda (f) (not (void? (f filtered-data)))) ab-funcs)]
+         [output-value (if output-func (output-func filtered-data) (void))]
 
          [latest-significant-data
           (if (void? output-value)
               (void)
               (foldl (lambda (d result)
                        (if (eq? output-value
-                                (output-body (member d (reverse filtered-data))))
+                                (output-func (member d (reverse filtered-data))))
                            (if result result d)
                            #f))
                      #f
@@ -129,9 +129,9 @@
 ;; Symbolic constants for verifying generate data.
 ;(define (gen-dt-part) (define-symbolic* dt-part integer?) dt-part)
 ;(define (gen-datetime)
-;  (let ([dt (datetime 7 9 12 (gen-dt-part) 0 0)])
-;    (assert (normalized? dt))
-;    dt))
+;  (let ([hour (gen-dt-part)])
+;    (assert (and (>= hour 0) (< hour 24)))
+;    (datetime 7 9 12 hour 0 0)))
 ;
 ;(struct room-temperature observed-property () #:transparent)
 ;(define (gen-temp-proxy) (define-symbolic* proxy boolean?) proxy)
@@ -179,10 +179,10 @@
 ;(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
 ;(define t-window (duration 0 win-length 0 0))
 ;(define out-type room-temperature-grade)
-;(define body (list grade-temp-low grade-temp-high))
+;(define ab-funcs (list grade-temp-low grade-temp-high))
 ;(define room-temp-proc
 ;  (analysis-process 'id d-state c-state (gen-temp-proxy)
-;                    t-window room-temperature-grade body))
+;                    t-window room-temperature-grade ab-funcs))
 ;
 ;(define output (generate-data room-temp-proc cur-dt))
 ;
@@ -196,8 +196,8 @@
 ;(define (verify-time-window)
 ;  (verify (assert (implies (< win-length 2) (void? output)))))
 ;
-;; Verify the implementation of the main process body.
-;(define (verify-proc-body)
+;; Verify the implementation of the abstraction functions.
+;(define (verify-ab-funcs)
 ;  (verify
 ;   (assert
 ;    (implies (eq? (length d-state)
@@ -226,7 +226,7 @@
 ;; Verify the implementation of determining abstraction validity range.
 ;(define new-dt (datetime 7 9 12 (gen-dt-part) 0 0))
 ;(assert (normalized? new-dt))
-;(define new-output (execute-analysis-body d-state new-dt t-window out-type body #f))
+;(define new-output (execute-analysis-body d-state new-dt t-window out-type ab-funcs #f))
 ;(define (verify-valid-range)
 ;  (verify (assert
 ;           (implies (and (room-temperature-grade? output)
