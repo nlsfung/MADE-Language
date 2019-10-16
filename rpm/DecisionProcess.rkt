@@ -8,9 +8,9 @@
 ; This file contains the implementation of Decision processes.
 
 ; Decision process inherit from the generic MADE process, extending it with
-; a main body that comprises a mapping from input abstraction values to
-; plan templates that can be instantiated into action plans.
-(struct decision-process made-process (main-body)
+; a main body that comprises a list of decision criterion and a plan template 
+; that can be instantiated into action plans.
+(struct decision-process made-process (plan-template decision-criteria)
   #:transparent
   #:methods gen:made-proc
   [(define (execute self in-data datetime)
@@ -24,7 +24,8 @@
       (lambda (d-state dt)
         (execute-decision-body d-state
                                dt
-                               (decision-process-main-body self)
+                               (decision-process-plan-template self)
+                               (decision-process-decision-criteria self)
                                (made-process-proxy-flag self)))
       self
       datetime))
@@ -41,30 +42,22 @@
                         elem
                         (made-process-control-state self))]
            [p-flag (made-process-proxy-flag self)]
-           [body (decision-process-main-body self)])
+           [p-temp (decision-process-plan-template self)]
+           [d-crit (decision-process-decision-criteria self)])
        
-       (decision-process id d-state c-state p-flag body)))])
-
-(struct decision-pair (abstraction-predicate plan-template) #:transparent)
+       (decision-process id d-state c-state p-flag p-temp d-crit)))])
 
 ; Helper function for defining the main behaviour of decision processes.
-(define (execute-decision-body d-state dt body proxy-flag)
+(define (execute-decision-body d-state dt p-temp d-crit proxy-flag)
   ; To generate output data, a Decision process follows the following steps:
   ; 1) Filter out all data that are not valid at the input date-time.
-  ; 2) Find the predicate (if any) that returns true given the filtered data.
-  ; 3) Retrieve the corresponding plan template.
-  ; 4) Instantiate from the plan template the corresponding action plan.
+  ; 2) Find a decision criterion (if any) that returns true given the data.
+  ; 3) Instantiate from the plan template the corresponding action plan.
   (let* ([filtered-data (filter-expired-data d-state dt)]
-         [decision-pair (findf (lambda (dp)
-                                 ((decision-pair-abstraction-predicate dp)
-                                  filtered-data))
-                               body)]
-         [plan-template (if decision-pair
-                            (decision-pair-plan-template decision-pair)
-                            (void))])
-    (if (void? plan-template)
-        (void)
-        (plan-instantiate plan-template dt proxy-flag))))
+         [selected-crit (findf (lambda (c) (c filtered-data)) d-crit)])
+    (if selected-crit
+        (plan-instantiate p-temp dt proxy-flag)
+        (void))))
          
 ; Helper function for filtering out abstractions that are:
 ; 1) Not valid at the input datetime.
@@ -260,31 +253,22 @@
 ;   (relative-schedule (duration 0 0 0 0) (duration 0 0 0 0) null #f)
 ;   #f))
 ;
-;(define fever-treatment-template-one
+;(define fever-treatment-template
 ;  (plan-template
 ;   fever-treatment
-;   (list ibuprofen-template treadmill-template)))
+;   (list ibuprofen-template treadmill-template analyze-heart-rate-template)))
 ;
-;(define fever-treatment-template-two
-;  (plan-template
-;   fever-treatment
-;   (list analyze-heart-rate-template)))
-;
-;(define (abstraction-predicate-one d-state)
+;(define (decision-criterion-one d-state)
 ;  (and (memf (lambda (d) (and (avg-body-temp? d)
-;                              (> (abstraction-value d) 40)))
+;                              (> (abstraction-value d) 37)))
 ;             d-state)
 ;       (memf (lambda (d) (and (headache-level? d)
 ;                              (eq? 'high (abstraction-value d))))
 ;             d-state)))
 ;
-;(define (abstraction-predicate-two d-state)
-;  (and (memf (lambda (d) (and (avg-body-temp? d)
-;                              (> (abstraction-value d) 37)
-;                              (< (abstraction-value d) 40)))
-;             d-state)
-;       (memf (lambda (d) (and (headache-level? d)
-;                              (not (eq? 'high (abstraction-value d)))))
+;(define (decision-criterion-two d-state)
+;  (memf (lambda (d) (and (avg-body-temp? d)
+;                              (> (abstraction-value d) 40))
 ;             d-state)))
 ;
 ;(define d-state
@@ -301,10 +285,8 @@
 ;
 ;(define d-proc
 ;  (decision-process 'id d-state c-state (gen-proxy)
-;                    (list (decision-pair abstraction-predicate-one
-;                                         fever-treatment-template-one)
-;                          (decision-pair abstraction-predicate-two
-;                                         fever-treatment-template-two))))
+;                    fever-treatment-template
+;                    (list decision-criterion-one decision-criterion-two)))
 ;
 ;(define output (generate-data d-proc cur-dt))
 ;
@@ -411,13 +393,12 @@
 ;           (implies (made-process-proxy-flag d-proc)
 ;                    (made-data-proxy-flag output)))))
 ;
-;; Verify the implementation of decision pairs.
-;(define (verify-decision-pair)
+;; Verify the implementation of the decision criteria.
+;(define (verify-decision-criteria)
 ;  (verify (assert (implies (eq? output
 ;                                (plan-instantiate
-;                                 fever-treatment-template-two cur-dt proc-status))
+;                                 fever-treatment-template cur-dt proc-status))
 ;                           (<= 1 (count (lambda (d)
 ;                                          (and (avg-body-temp? d)
-;                                               (> (abstraction-value d) 37)
-;                                               (< (abstraction-value d) 40)))
+;                                               (> (abstraction-value d) 37)))
 ;                                        d-state))))))
