@@ -61,7 +61,12 @@
                 body))]
          [plan-buckets
           (filter (lambda (d-list) (< 0 (length d-list)))
-                  (map (lambda (t?) (filter (lambda (d) (t? d)) d-state)) type-list))]
+                  (map (lambda (t?)
+                         (filter (lambda (d)
+                                   (and (t? d)
+                                        (dt<? (action-plan-valid-datetime d) dt)))
+                                 d-state))
+                       type-list))]
          [filtered-data
           (map (lambda (d-list)
                  (argmax (lambda (d) (datetime->number (action-plan-valid-datetime d)))
@@ -243,9 +248,9 @@
 ;                             (on-schedule? (scheduled-culminating-action-schedule i) cur-dt)]))
 ;                    (action-plan-instruction-set d))])
 ;      (implies (not inst)
-;             (or (not plan-match?)
-;                 (eq? (length inst-matches)
-;                           (length (remove* sched-matches inst-matches)))))))))
+;               (or (not plan-match?)
+;                   (eq? (length inst-matches)
+;                        (length (remove* sched-matches inst-matches)))))))))
 ;
 ;; Verify the implementation of the proxy flags.
 ;(define (verify-data-proxy)
