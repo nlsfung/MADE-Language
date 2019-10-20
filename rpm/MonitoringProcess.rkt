@@ -142,3 +142,54 @@
                  (dt-between? (measurement-valid-datetime d)
                               dt-start dt-end)))
           d-state))
+
+; Symbolic constants for verifying generate data.
+(define (gen-dt-part) (define-symbolic* dt-part integer?) dt-part)
+(define (gen-datetime)
+  (let ([hour (gen-dt-part)])
+    (assert (and (>= hour 0) (< hour 24)))
+    (datetime 7 10 20 hour 0 0)))
+(define (gen-window)
+  (let ([hour (gen-dt-part)])
+    (assert (and (>= hour 0) (< hour 24)))
+    (duration 0 hour 0 0)))
+
+(define (gen-proxy) (define-symbolic* proxy boolean?) proxy)
+(define (gen-measure-value) (define-symbolic* m integer?) m)
+
+(struct body-acceleration measurement () #:transparent)
+(define (gen-body-acc)
+  (body-acceleration (gen-proxy) (gen-datetime) (gen-measure-value)))
+
+(struct activity-level observed-property () #:transparent)
+(struct exercise-event observed-event () #:transparent)
+
+(define (sum d-list)
+  (foldl (lambda (d result) (+ (measurement-value d) result))
+            0
+            (filter (lambda (d) (body-acceleration? d)) d-list)))
+
+(define activity-spec (property-specification (gen-window) sum))
+;(define exercise-spec
+;  (event-specification
+;   (event-trigger (gen-window)
+;                  (lambda (d-list) (> (sum d-list) 25)))
+;   (event-trigger (gen-window)
+;                  (lambda (d-list) (< (sum d-list) 5)))))
+
+(define d-state
+  (list (gen-body-acc) (gen-body-acc) (gen-body-acc) (gen-body-acc)
+        (gen-body-acc) (gen-body-acc) (gen-body-acc) (gen-body-acc)))
+  
+(define sched-dt (gen-datetime))
+(define cur-dt (gen-datetime))
+(define-symbolic proc-status boolean?)
+(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
+
+(define m-proc-1
+  (monitoring-process 'id d-state c-state (gen-proxy) activity-spec activity-level))
+;(define m-proc-2
+;  (monitoring-process 'id d-state c-state (gen-proxy) exercise-spec exercise-event)) 
+
+(define output-1 (generate-data m-proc-1 cur-dt))
+;(define output-2 (generate-data m-proc-2 cur-dt))
