@@ -3,6 +3,7 @@
 (provide
  gen:made-d get-type
  (struct-out made-data)
+ (struct-out measurement)
  (struct-out observed-property)
  (struct-out observed-event)
  (struct-out datetime-range)
