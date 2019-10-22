@@ -7,6 +7,7 @@
          update-control-state make-copy)
 (provide gen-proc-execute gen-proc-update-data-state
          gen-proc-generate-data gen-proc-update-control-state)
+(provide is-proc-executed?)
 (provide (struct-out made-process))
 (provide (struct-out control-state))
 

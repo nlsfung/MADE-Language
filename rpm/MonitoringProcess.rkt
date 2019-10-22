@@ -112,21 +112,21 @@
                                     d-state)
                             dt<? #:key measurement-valid-datetime)]
          
-         [start-event? (start-pred (filter-expired-data sorted-data (dt- dt start-win) dt))]
-         [end-event? (end-pred (filter-expired-data sorted-data (dt- dt end-win) dt))]
+         [start-event? (start-pred (filter-expired-data sorted-data (dt- dt start-win) dt) dt)]
+         [end-event? (end-pred (filter-expired-data sorted-data (dt- dt end-win) dt) dt)]
          [opposing-event (cond [start-event?
                                 (findf (lambda (d)
                                          (let* ([ref-dt (measurement-valid-datetime d)])
                                            (end-pred (filter-expired-data sorted-data
                                                                           (dt- ref-dt end-win)
-                                                                          ref-dt))))
+                                                                          ref-dt) dt)))
                                        (reverse sorted-data))]
                                [end-event?
                                 (findf (lambda (d)
                                          (let* ([ref-dt (measurement-valid-datetime d)])
                                            (start-pred (filter-expired-data sorted-data
                                                                             (dt- ref-dt start-win)
-                                                                            ref-dt))))
+                                                                            ref-dt) dt)))
                                        (reverse sorted-data))]
                                [else #f])])
     (if opposing-event
@@ -143,53 +143,112 @@
                               dt-start dt-end)))
           d-state))
 
-; Symbolic constants for verifying generate data.
-(define (gen-dt-part) (define-symbolic* dt-part integer?) dt-part)
-(define (gen-datetime)
-  (let ([hour (gen-dt-part)])
-    (assert (and (>= hour 0) (< hour 24)))
-    (datetime 7 10 20 hour 0 0)))
-(define (gen-window)
-  (let ([hour (gen-dt-part)])
-    (assert (and (>= hour 0) (< hour 24)))
-    (duration 0 hour 0 0)))
-
-(define (gen-proxy) (define-symbolic* proxy boolean?) proxy)
-(define (gen-measure-value) (define-symbolic* m integer?) m)
-
-(struct body-acceleration measurement () #:transparent)
-(define (gen-body-acc)
-  (body-acceleration (gen-proxy) (gen-datetime) (gen-measure-value)))
-
-(struct activity-level observed-property () #:transparent)
-(struct exercise-event observed-event () #:transparent)
-
-(define (sum d-list)
-  (foldl (lambda (d result) (+ (measurement-value d) result))
-            0
-            (filter (lambda (d) (body-acceleration? d)) d-list)))
-
-(define activity-spec (property-specification (gen-window) sum))
+;; Symbolic constants for verifying generate data.
+;; Executed with datetime-unwind and schedule-unwind set to 0.
+;(define (gen-dt-part) (define-symbolic* dt-part integer?) dt-part)
+;(define (gen-datetime)
+;  (let ([hour (gen-dt-part)])
+;    (assert (and (>= hour 0) (< hour 24)))
+;    (datetime 7 10 20 hour 0 0)))
+;(define (gen-window)
+;  (let ([hour (gen-dt-part)])
+;    (assert (and (>= hour 0) (< hour 24)))
+;    (duration 0 hour 0 0)))
+;
+;(define (gen-proxy) (define-symbolic* proxy boolean?) proxy)
+;(define (gen-measure-value)
+;  (define-symbolic* m integer?)
+;  (assert (> m 0))
+;  m)
+;
+;(struct body-acceleration measurement () #:transparent)
+;(define (gen-body-acc)
+;  (body-acceleration (gen-proxy) (gen-datetime) (gen-measure-value)))
+;
+;(struct activity-level observed-property () #:transparent)
+;(struct exercise-event observed-event () #:transparent)
+;
+;(define (sum d-list dt)
+;  (foldl (lambda (d result) (+ (measurement-value d) result))
+;            0
+;            (filter (lambda (d) (body-acceleration? d)) d-list)))
+;
+;(define activity-spec (property-specification (gen-window) sum))
 ;(define exercise-spec
 ;  (event-specification
 ;   (event-trigger (gen-window)
-;                  (lambda (d-list) (> (sum d-list) 25)))
+;                  (lambda (d-list dt) (> (sum d-list dt) 25)))
 ;   (event-trigger (gen-window)
-;                  (lambda (d-list) (< (sum d-list) 5)))))
-
-(define d-state
-  (list (gen-body-acc) (gen-body-acc) (gen-body-acc) (gen-body-acc)
-        (gen-body-acc) (gen-body-acc) (gen-body-acc) (gen-body-acc)))
-  
-(define sched-dt (gen-datetime))
-(define cur-dt (gen-datetime))
-(define-symbolic proc-status boolean?)
-(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
-
-(define m-proc-1
-  (monitoring-process 'id d-state c-state (gen-proxy) activity-spec activity-level))
+;                  (lambda (d-list dt) (< (sum d-list dt) 5)))))
+;
+;(define d-state
+;  (list (gen-body-acc) (gen-body-acc) (gen-body-acc) (gen-body-acc)))
+;  
+;(define sched-dt (gen-datetime))
+;(define cur-dt (gen-datetime))
+;(define-symbolic proc-status boolean?)
+;(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
+;
+;(define m-proc-1
+; (monitoring-process 'id d-state c-state (gen-proxy) activity-spec activity-level))
 ;(define m-proc-2
 ;  (monitoring-process 'id d-state c-state (gen-proxy) exercise-spec exercise-event)) 
-
-(define output-1 (generate-data m-proc-1 cur-dt))
+;
+;(define output-1 (generate-data m-proc-1 cur-dt))
 ;(define output-2 (generate-data m-proc-2 cur-dt))
+;
+;; Verify implementation of execute property body.
+;(define (verify-property-body)
+;  (verify (assert
+;           (implies (is-proc-executed? c-state cur-dt)
+;                    (and (activity-level? output-1)
+;                         (<= (observed-property-value output-1)
+;                             (sum d-state cur-dt)))))))
+;
+;; Verify implementation of execute event body.
+;(define over-acc-meas (filter (lambda (d) (and (> (measurement-value d) 25))) d-state))
+;(define start-win (event-trigger-time-window (event-specification-start-trigger exercise-spec)))
+;(define end-win (event-trigger-time-window (event-specification-end-trigger exercise-spec)))
+;(define (verify-event-body)
+;  (verify (assert
+;           (implies (and (dur=? start-win (duration 0 0 0 0))
+;                         (dur=? end-win (duration 0 0 0 0))
+;                         (= 4 (length (remove-duplicates
+;                                       (map (lambda (d) (measurement-valid-datetime d))
+;                                            d-state)))))
+;                    (and (implies (and (exercise-event? output-2)
+;                                       (not (observed-event-value output-2)))
+;                                  (findf (lambda (d) (dt=? (measurement-valid-datetime d)
+;                                                           cur-dt))
+;                                         over-acc-meas))
+;                         (implies (and (exercise-event? output-2)
+;                                       (observed-event-value output-2))
+;                                  (findf (lambda (d) (dt<? (measurement-valid-datetime d)
+;                                                           cur-dt))
+;                                         over-acc-meas)))))))
+;
+;; Verify the implementation of the proxy flags.
+;(define (verify-data-proxy)
+;  (verify
+;   (assert
+;    (implies (and (is-proc-executed? c-state cur-dt)
+;                  (= 4 (length (filter (lambda (d) (made-data-proxy-flag d)) d-state))))
+;             (and (activity-level? output-1)
+;                  (= 0 (observed-property-value output-1))
+;                  (void? output-2))))))
+;
+;(define (verify-proc-proxy-1)
+;  (verify #:assume
+;          (assert (not (void? output-1)))
+;          #:guarantee
+;          (assert
+;           (implies (made-process-proxy-flag m-proc-1)
+;                    (made-data-proxy-flag output-1)))))
+;
+;(define (verify-proc-proxy-2)
+;  (verify #:assume
+;          (assert (not (void? output-2)))
+;          #:guarantee
+;          (assert
+;           (implies (made-process-proxy-flag m-proc-2)
+;                    (made-data-proxy-flag output-2)))))
