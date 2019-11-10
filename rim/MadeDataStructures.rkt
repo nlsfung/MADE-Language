@@ -1,7 +1,8 @@
 #lang rosette/safe
 
+(require (only-in "./BasicDataTypes.rkt" gen:typed get-type valid?))
+
 (provide
- gen:made-d get-type
  (struct-out made-data)
  (struct-out measurement)
  (struct-out observed-property)
@@ -24,13 +25,12 @@
 ; it follows the MADE RIM with the following exceptions:
 ; 1) Id is not a field as it is inherently provided by Racket.
 ; 2) Proxy flag is added to indicate whether the data can be used automatically
-;    as an input to by the MADE processes. 
+;    as an input to the MADE processes. 
 ; 3) Transaction date-time is not a field as this implementation focuses
 ;    on the clinical requirements only.
 ; 4) An function (required for abstractions) is added to retrieve the specific
 ;    structure of MADE data (e.g. blood glucose).
-(define-generics made-d [get-type made-d])
-(struct made-data (proxy-flag) #:transparent #:methods gen:made-d [])
+(struct made-data (proxy-flag) #:transparent #:methods gen:typed [])
 (struct measurement made-data (valid-datetime value) #:transparent)
 
 ; Observation is implemented as an empty structure that is inherited by

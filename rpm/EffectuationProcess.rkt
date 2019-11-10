@@ -1,6 +1,8 @@
 #lang rosette/safe
 
+(require (only-in "../rim/BasicDataTypes.rkt" gen:typed get-type))
 (require "./MadeProcess.rkt")
+(require "./AnalysisProcess.rkt")
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
 
@@ -154,11 +156,11 @@
 ;
 ;(struct fever-treatment action-plan ()
 ;  #:transparent
-;  #:methods gen:made-d
+;  #:methods gen:typed
 ;  [(define (get-type self) fever-treatment)])
 ;(struct exercise-regimen action-plan ()
 ;  #:transparent
-;  #:methods gen:made-d
+;  #:methods gen:typed
 ;  [(define (get-type self) exercise-regimen)])
 ;(struct ibuprofen culminating-action () #:transparent)
 ;(struct treadmill-exercise homogeneous-action () #:transparent)

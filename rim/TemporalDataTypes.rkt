@@ -1,5 +1,7 @@
 #lang rosette/safe
 
+(require (only-in "./BasicDataTypes.rkt" gen:typed get-type valid?))
+
 (provide (struct-out datetime) dt=? dt- dt+ dt>? dt<? normalized? dt-between? datetime->number)
 (provide (struct-out schedule) on-schedule?)
 (provide (struct-out duration) dur- dur+ dur<? dur>? dur=? duration->second)
@@ -32,6 +34,10 @@
 
 (struct duration (day hour minute second)
   #:transparent
+  #:methods gen:typed
+  [(define (get-type self) duration)
+   (define (valid? self) #t)]
+  
   #:methods gen:dur
   [(define-syntax-rule (compare-with-duration op self dur)
      (op (duration->second self) (duration->second dur)))
@@ -74,6 +80,10 @@
 
 (struct datetime (year month day hour minute second)
   #:transparent
+  #:methods gen:typed
+  [(define (get-type self) datetime)
+   (define (valid? self) (normalized? self))]
+  
   #:methods gen:dt
   [(define-syntax-rule (compare-with-datetime op self dt)
      (op (datetime->number self) (datetime->number dt)))
@@ -213,6 +223,17 @@
 
 (struct schedule (pattern interval)
   #:transparent
+  #:methods gen:typed
+  [(define (get-type self) schedule)
+   (define (valid? self)
+     (and (list? (schedule-pattern self))
+          (andmap (lambda (p) (and (datetime? p)
+                                   (valid? p)))
+                  (schedule-pattern self))
+          (or (and (duration? (schedule-interval self))
+                   (valid? (schedule-interval self)))
+              #f)))]
+  
   #:methods gen:sched
   [(define (update-interval self)
      (map (lambda (sched-dt) (dt+ sched-dt (schedule-interval self)))

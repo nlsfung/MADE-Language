@@ -1,5 +1,6 @@
 #lang rosette/safe
 
+(require (only-in "../rim/BasicDataTypes.rkt" gen:typed get-type))
 (require "./MadeProcess.rkt")
 (require "./AnalysisProcess.rkt")
 (require "../rim/TemporalDataTypes.rkt")
@@ -203,13 +204,13 @@
 ;  (list-ref headache-grades h-grade))
 ;(struct headache-level abstraction ()
 ;  #:transparent
-;  #:methods gen:made-d
+;  #:methods gen:typed
 ;  [(define (get-type self) headache-level)])
 ;
 ;(define (gen-temp) (define-symbolic* temp integer?) temp)
 ;(struct avg-body-temp abstraction ()
 ;  #:transparent
-;  #:methods gen:made-d
+;  #:methods gen:typed
 ;  [(define (get-type self) avg-body-temp)])
 ;
 ;(define (gen-headache-level)
