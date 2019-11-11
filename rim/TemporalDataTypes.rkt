@@ -36,7 +36,11 @@
   #:transparent
   #:methods gen:typed
   [(define (get-type self) duration)
-   (define (valid? self) #t)]
+   (define (valid? self)
+     (and (integer? (duration-day self))
+          (integer? (duration-hour self))
+          (integer? (duration-minute self))
+          (integer? (duration-second self))))]
   
   #:methods gen:dur
   [(define-syntax-rule (compare-with-duration op self dur)
@@ -82,7 +86,14 @@
   #:transparent
   #:methods gen:typed
   [(define (get-type self) datetime)
-   (define (valid? self) (normalized? self))]
+   (define (valid? self)
+     (and (integer? (datetime-year self))
+          (integer? (datetime-month self))
+          (integer? (datetime-day self))
+          (integer? (datetime-hour self))
+          (integer? (datetime-minute self))
+          (integer? (datetime-second self))
+          (normalized? self)))]
   
   #:methods gen:dt
   [(define-syntax-rule (compare-with-datetime op self dt)
@@ -224,15 +235,16 @@
 (struct schedule (pattern interval)
   #:transparent
   #:methods gen:typed
-  [(define (get-type self) schedule)
+  [(define/generic super-valid? valid?)
+   (define (get-type self) schedule)
    (define (valid? self)
      (and (list? (schedule-pattern self))
           (andmap (lambda (p) (and (datetime? p)
-                                   (valid? p)))
+                                   (super-valid? p)))
                   (schedule-pattern self))
           (or (and (duration? (schedule-interval self))
-                   (valid? (schedule-interval self)))
-              #f)))]
+                   (super-valid? (schedule-interval self)))
+              (eq? (schedule-interval self) #f))))]
   
   #:methods gen:sched
   [(define (update-interval self)

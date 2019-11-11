@@ -1,6 +1,9 @@
 #lang rosette
 
 (provide gen:typed get-type valid?)
+(provide gen:basic basic?)
+(provide (struct-out dimensioned))
+(provide (struct-out bool))
 
 ; The complete MADE reference information model (RIM) is constructed from 10
 ; primitive data types: Id, Boolean, Nominal, Enumerated, Count, Proportion,
@@ -92,6 +95,12 @@
   [dim/ dim elem units])
 
 (struct dimensioned (value units)
+  #:methods gen:basic
+  [(define (get-value self) (dimensioned-value self))]
+  #:methods gen:typed
+  [(define (get-type self) dimensioned)
+   (define (valid? self) (and (real? (dimensioned-value self))
+                              (symbol? (dimensioned-units self))))]
   #:methods gen:dim
   [(define-syntax-rule (compare-with-units op dim elem)
      (if (eq? (dimensioned-units dim) (dimensioned-units elem))
