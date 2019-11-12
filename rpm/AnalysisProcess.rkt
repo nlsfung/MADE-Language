@@ -1,6 +1,7 @@
 #lang rosette/safe
 
 (require "./MadeProcess.rkt")
+(require "../rim/BasicDataTypes.rkt")
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
 
@@ -12,8 +13,20 @@
 ; a time window, the output type identifier and a list of abstraction functions.
 (struct analysis-process made-process (time-window output-type abstraction-functions)
   #:transparent
+  #:methods gen:typed
+  [(define/generic super-valid? valid?)
+   (define (get-type self) analysis-process)
+   (define (valid? self)
+     (and (valid-spec? self)
+          (list? (made-process-data-state self))
+          (andmap (lambda (d)
+                    (and (made-data? d)
+                         (super-valid? d)))
+                  (made-process-data-state self))))]
+  
   #:methods gen:made-proc
-  [(define (execute self in-data datetime)
+  [(define/generic super-valid-spec? valid-spec?)
+   (define (execute self in-data datetime)
      (gen-proc-execute self in-data datetime))
 
    (define (update-data-state self in-data)
@@ -47,7 +60,18 @@
            [out-type (analysis-process-output-type self)]
            [ab-funcs (analysis-process-abstraction-functions self)])
        
-       (analysis-process id d-state c-state p-flag t-window out-type ab-funcs)))])
+       (analysis-process id d-state c-state p-flag t-window out-type ab-funcs)))
+
+   (define (valid-spec? self)
+     (and (super-valid-spec? (made-process (made-process-id self)
+                                           null
+                                           (made-process-control-state self)
+                                           (made-process-proxy-flag self)))
+          (duration? (analysis-process-time-window self))
+          (valid? (analysis-process-time-window self))
+          (procedure? (analysis-process-output-type self))
+          (list? (analysis-process-abstraction-functions self))
+          (andmap (lambda (f) (procedure? f)) (analysis-process-abstraction-functions self))))])
 
 ; Helper function for defining the main behaviour of analysis processes.
 (define (execute-analysis-body d-state dt t-window out-type ab-funcs proxy-flag)

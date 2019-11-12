@@ -1,6 +1,7 @@
 #lang rosette/safe
 
 (require "./MadeProcess.rkt")
+(require "../rim/BasicDataTypes.rkt")
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
 
@@ -11,6 +12,17 @@
 ; on whether the output is for a property or an event.
 (struct monitoring-process made-process (output-specification output-type)
   #:transparent
+  #:methods gen:typed
+  [(define/generic super-valid? valid?)
+   (define (get-type self) monitoring-process)
+   (define (valid? self)
+     (and (valid-spec? self)
+          (list? (made-process-data-state self))
+          (andmap (lambda (d)
+                    (and (made-data? d)
+                         (super-valid? d)))
+                  (made-process-data-state self))))]
+  
   #:methods gen:made-proc
   [(define (execute self in-data datetime)
      (gen-proc-execute self in-data datetime))
@@ -45,20 +57,57 @@
            [o-spec (monitoring-process-output-specification self)]
            [o-type (monitoring-process-output-type self)])
        
-       (monitoring-process id d-state c-state p-flag o-spec o-type)))])
+       (monitoring-process id d-state c-state p-flag o-spec o-type)))
+
+   (define/generic super-valid-spec? valid-spec?)
+   (define (valid-spec? self)
+     (and (super-valid-spec? (made-process (made-process-id self)
+                                           null
+                                           (made-process-control-state self)
+                                           (made-process-proxy-flag self)))
+          (or (property-specification? (monitoring-process-output-specification self))
+              (event-specification? (monitoring-process-output-specification self)))
+          (valid? (monitoring-process-output-specification self))
+          (procedure? (monitoring-process-output-type self))))])
 
 ; For observed properties, the output specification comprises a time window and
 ; a function that computes the appropriate property value given the input data
 ; set (sorted from least to most recent) and datetime.
-(struct property-specification (time-window value-function) #:transparent)
+(struct property-specification (time-window value-function)
+  #:transparent
+  #:methods gen:typed
+  [(define/generic super-valid? valid?)
+   (define (get-type self) property-specification)
+   (define (valid? self)
+     (and (duration? (property-specification-time-window self))
+          (super-valid? (property-specification-time-window self))
+          (procedure? (property-specification-value-function self))))])
 
 ; For observed events, the output specification comprise a pair of event
 ; triggers, each of which in turn comprises a window length for filtering
 ; out irrelevant data as well as a predicate on the filtered (and sorted) data
 ; and given datetime. Together, these triggers specify the conditions under
 ; which an event is onsidered to have started or ended respectively.
-(struct event-specification (start-trigger end-trigger) #:transparent)
-(struct event-trigger (time-window trigger-predicate) #:transparent)
+(struct event-specification (start-trigger end-trigger)
+  #:transparent
+  #:methods gen:typed
+  [(define/generic super-valid? valid?)
+   (define (get-type self) event-specification)
+   (define (valid? self)
+     (and (event-trigger? (event-specification-start-trigger self))
+          (super-valid? (event-specification-start-trigger self))
+          (event-trigger? (event-specification-end-trigger self))
+          (super-valid? (event-specification-end-trigger self))))])
+
+(struct event-trigger (time-window trigger-predicate)
+  #:transparent
+  #:methods gen:typed
+  [(define/generic super-valid? valid?)
+   (define (get-type self) event-trigger)
+   (define (valid? self)
+     (and (duration? (event-trigger-time-window self))
+          (super-valid? (event-trigger-time-window self))
+          (procedure? (event-trigger-trigger-predicate self))))])
 
 ; Helper function for defining the main behaviour of monitoring processes.
 (define (execute-monitoring-body d-state dt o-spec o-type proxy-flag)

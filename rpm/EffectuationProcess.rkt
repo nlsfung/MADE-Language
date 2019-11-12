@@ -1,8 +1,7 @@
 #lang rosette/safe
 
-(require (only-in "../rim/BasicDataTypes.rkt" gen:typed get-type))
 (require "./MadeProcess.rkt")
-(require "./AnalysisProcess.rkt")
+(require "../rim/BasicDataTypes.rkt")
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
 
@@ -13,6 +12,17 @@
 ; instructions to instantiate as well as the output type of the process. 
 (struct effectuation-process made-process (target-schedules output-type)
   #:transparent
+  #:methods gen:typed
+  [(define/generic super-valid? valid?)
+   (define (get-type self) effectuation-process)
+   (define (valid? self)
+     (and (valid-spec? self)
+          (list? (made-process-data-state self))
+          (andmap (lambda (d)
+                    (and (made-data? d)
+                         (super-valid? d)))
+                  (made-process-data-state self))))]
+  
   #:methods gen:made-proc
   [(define (execute self in-data datetime)
      (gen-proc-execute self in-data datetime))
@@ -47,12 +57,31 @@
            [t-scheds (effectuation-process-target-schedules self)]
            [o-type (effectuation-process-output-type self)])
        
-       (effectuation-process id d-state c-state p-flag t-scheds o-type)))])
+       (effectuation-process id d-state c-state p-flag t-scheds o-type)))
+
+   (define/generic super-valid-spec? valid-spec?)
+   (define (valid-spec? self)
+     (and (super-valid-spec? (made-process (made-process-id self)
+                                           null
+                                           (made-process-control-state self)
+                                           (made-process-proxy-flag self)))
+          (list? (effectuation-process-target-schedules self))
+          (andmap (lambda (t) (and (target-schedule? t)
+                                   (valid? t)))
+                  (effectuation-process-target-schedules self))
+          (procedure? (effectuation-process-output-type self))))])
 
 ; Target schedules are identified by a plan type, an instruction type (i.e. an
 ; action or target process type) as well as a predicate on the properties of
 ; the target scheduled instruction.
-(struct target-schedule (plan-type instruction-type instruction-predicate) #:transparent)
+(struct target-schedule (plan-type instruction-type instruction-predicate)
+  #:transparent
+  #:methods gen:typed
+  [(define (get-type self) target-schedule)
+   (define (valid? self)
+     (and (procedure? (target-schedule-plan-type self))
+          (procedure? (target-schedule-instruction-type self))
+          (procedure? (target-schedule-instruction-predicate self))))])
 
 ; Helper function for defining the main behaviour of effectuation processes.
 (define (execute-effectuation-body d-state dt t-scheds o-type proxy-flag)
@@ -141,6 +170,7 @@
     scheduled-inst))
 
 ;; Symbolic constants for verifying generate data.
+;(require "./AnalysisProcess.rkt")
 ;(define (gen-dt-part) (define-symbolic* dt-part integer?) dt-part)
 ;(define (gen-datetime)
 ;  (let ([hour (gen-dt-part)])
@@ -157,11 +187,22 @@
 ;(struct fever-treatment action-plan ()
 ;  #:transparent
 ;  #:methods gen:typed
-;  [(define (get-type self) fever-treatment)])
+;  [(define/generic super-valid? valid?)
+;   (define (get-type self) fever-treatment)
+;   (define (valid? self)
+;     (super-valid? (action-plan (made-data-proxy-flag self)
+;                                (action-plan-valid-datetime self)
+;                                (action-plan-instruction-set self))))])
+;
 ;(struct exercise-regimen action-plan ()
 ;  #:transparent
 ;  #:methods gen:typed
-;  [(define (get-type self) exercise-regimen)])
+;  [(define/generic super-valid? valid?)
+;   (define (get-type self) exercise-regimen)
+;   (define (valid? self)
+;     (super-valid? (action-plan (made-data-proxy-flag self)
+;                                (action-plan-valid-datetime self)
+;                                (action-plan-instruction-set self))))])
 ;(struct ibuprofen culminating-action () #:transparent)
 ;(struct treadmill-exercise homogeneous-action () #:transparent)
 ;(struct control-analyze-heart-rate control-instruction () #:transparent)
@@ -172,9 +213,12 @@
 ;   (gen-proxy)
 ;   (gen-datetime)
 ;   (list (scheduled-culminating-action
-;          ibuprofen (gen-schedule) #t)
+;          ibuprofen (gen-schedule) (bool #t))
 ;         (scheduled-homogeneous-action
-;          treadmill-exercise (gen-schedule) 'rate 'duration))))
+;          treadmill-exercise
+;          (gen-schedule)
+;          (dimensioned 10 'units)
+;          (duration 0 1 0 0)))))
 ;
 ;(define (gen-fever-treatment-two)
 ;  (fever-treatment
@@ -188,7 +232,10 @@
 ;    (gen-proxy)
 ;    (gen-datetime)
 ;    (list (scheduled-homogeneous-action
-;           treadmill-exercise (gen-schedule) 'rate 'duration))))
+;           treadmill-exercise
+;           (gen-schedule)
+;           (dimensioned 15 'units)
+;           (duration 0 2 0 0)))))
 ;
 ;(define d-state
 ;  (let* ([fever-one (list (gen-fever-treatment-one) (gen-fever-treatment-one))]

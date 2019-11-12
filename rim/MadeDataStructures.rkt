@@ -195,7 +195,7 @@
           (implies (void? (scheduled-control-schedule self))
                    (not (void? (scheduled-control-status self))))
           (implies (void? (scheduled-control-status self))
-                   (void? (scheduled-control-schedule self)))))])          
+                   (not (void? (scheduled-control-schedule self))))))])          
 
 ; As with action instructions, there are two types of scheduled actions,
 ; scheduled homogeneous and scheduled culminating actions. The former comprises

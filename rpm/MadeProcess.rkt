@@ -1,10 +1,12 @@
 #lang rosette/safe
 
+(require (only-in rosette symbol?))
+(require "../rim/BasicDataTypes.rkt")
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
 
 (provide gen:made-proc execute update-data-state generate-data
-         update-control-state make-copy)
+         update-control-state make-copy valid-spec?)
 (provide gen-proc-execute gen-proc-update-data-state
          gen-proc-generate-data gen-proc-update-control-state)
 (provide is-proc-executed?)
@@ -16,22 +18,46 @@
   
 ; All MADE processes contain an Id, data state, control state, proxy flag and
 ; main body. They support four main operations: execute, update data state,
-; generate data and update control state. One helper functions, make-copy,
-; is also supported.
+; generate data and update control state. Three helper functions, make-copy and
+; make-super-copy and valid-spec?, are also supported.
 (define-generics made-proc
   [execute made-proc in-data datetime]
   [update-data-state made-proc in-data]
   [generate-data made-proc datetime]
   [update-control-state made-proc in-data datetime]
-  [make-copy made-proc elem])
+  [make-copy made-proc elem]
+  [valid-spec? made-proc])
 
 (struct made-process (id data-state control-state proxy-flag)
   #:transparent
-  #:methods gen:made-proc [])
+  #:methods gen:made-proc
+  [(define (valid-spec? self)
+     (and (symbol? (made-process-id self))
+          (control-state? (made-process-control-state self))
+          (valid? (made-process-control-state self))
+          (boolean? (made-process-proxy-flag self))))]
+  #:methods gen:typed
+  [(define/generic super-valid? valid?)
+   (define (get-type self) made-process)
+   (define (valid? self)
+     (and (valid-spec? self)
+          (list? (made-process-data-state self))
+          (andmap (lambda (d)
+                    (and (made-data? d)
+                         (super-valid? d)))
+                  (made-process-data-state self))))])
 
 ; Control state contains a schedule as well as a status flag which indicates
 ; if the process is running or paused.
-(struct control-state (schedule status) #:transparent)
+(struct control-state (schedule status)
+  #:transparent
+  #:methods gen:typed
+  [(define/generic super-valid? valid?)
+   (define (get-type self) control-state)
+   (define (valid? self)
+     (and (schedule? (control-state-schedule self))
+          (super-valid? (control-state-schedule self))
+          (boolean? (control-state-status self))))])
 
 ; The following are generic implementations of execute, update data state,
 ; generate data and update control, the latter three of which must be
@@ -73,10 +99,8 @@
   (let ([sched (control-state-schedule c-state)]
         [stat (control-state-status c-state)])
     (and stat (on-schedule? sched datetime))))
-        
 
-(define
-  (gen-proc-update-control-state made-proc in-data datetime)
+(define (gen-proc-update-control-state made-proc in-data datetime)
   ; Updating the control state involves:
   ; 1) Finding a control instruction with the appropriate id and valid datetime
   ;    and is not a proxy.

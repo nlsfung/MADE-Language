@@ -1,8 +1,8 @@
 #lang rosette/safe
 
-(require (only-in "../rim/BasicDataTypes.rkt" gen:typed get-type))
 (require "./MadeProcess.rkt")
 (require "./AnalysisProcess.rkt")
+(require "../rim/BasicDataTypes.rkt")
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
 
@@ -13,6 +13,17 @@
 ; that can be instantiated into action plans.
 (struct decision-process made-process (plan-template decision-criteria)
   #:transparent
+  #:methods gen:typed
+  [(define/generic super-valid? valid?)
+   (define (get-type self) decision-process)
+   (define (valid? self)
+     (and (valid-spec? self)
+          (list? (made-process-data-state self))
+          (andmap (lambda (d)
+                    (and (made-data? d)
+                         (super-valid? d)))
+                  (made-process-data-state self))))]
+  
   #:methods gen:made-proc
   [(define (execute self in-data datetime)
      (gen-proc-execute self in-data datetime))
@@ -46,13 +57,24 @@
            [p-temp (decision-process-plan-template self)]
            [d-crit (decision-process-decision-criteria self)])
        
-       (decision-process id d-state c-state p-flag p-temp d-crit)))])
+       (decision-process id d-state c-state p-flag p-temp d-crit)))
+
+   (define/generic super-valid-spec? valid-spec?)
+   (define (valid-spec? self)
+     (and (super-valid-spec? (made-process (made-process-id self)
+                                           null
+                                           (made-process-control-state self)
+                                           (made-process-proxy-flag self)))
+          (plan-template? (decision-process-plan-template self))
+          (valid? (decision-process-plan-template self))
+          (list? (decision-process-decision-criteria self))
+          (andmap (lambda (c) (procedure? c)) (decision-process-decision-criteria self))))])
 
 ; Helper function for defining the main behaviour of decision processes.
 (define (execute-decision-body d-state dt p-temp d-crit proxy-flag)
   ; To generate output data, a Decision process follows the following steps:
   ; 1) Filter out all data that are not valid at the input date-time.
-  ; 2) Find a decision criterion (if any) that returns true given the data.
+  ; 2) Check if any decision criterion (if any) returns true given the data.
   ; 3) Instantiate from the plan template the corresponding action plan.
   (let* ([filtered-data (filter-expired-data d-state dt)]
          [selected-crit (findf (lambda (c) (c filtered-data)) d-crit)])
@@ -93,6 +115,16 @@
 (define-generics plan-temp [plan-instantiate plan-temp dt proxy-flag])
 (struct plan-template (plan-type instruction-set)
   #:transparent
+  #:methods gen:typed
+  [(define/generic super-valid? valid?)
+   (define (get-type self) plan-template)
+   (define (valid? self)
+     (and (procedure? (plan-template-plan-type self))
+          (list? (plan-template-instruction-set self))
+          (andmap (lambda (i) (and (inst-template? i)
+                                   (super-valid? i)))
+                  (plan-template-instruction-set self))))]
+  
   #:methods gen:plan-temp
   [(define (plan-instantiate self dt proxy-flag)
      ((plan-template-plan-type self)
@@ -105,15 +137,44 @@
 (define-generics inst-template [instantiate inst-template dt])
 (struct control-template (target-process relative-schedule status)
   #:transparent
+  #:methods gen:typed
+  [(define/generic super-valid? valid?)
+   (define (get-type self) control-template)
+   (define (valid? self)
+     (and (procedure? (control-template-target-process self))
+          (or (and (relative-schedule? (control-template-relative-schedule self))
+                   (super-valid? (control-template-relative-schedule self)))
+              (void? (control-template-relative-schedule self)))
+          (or (boolean? (control-template-status self))
+              (void? (control-template-status self)))
+          (implies (void? (control-template-relative-schedule self))
+                   (not (void? (control-template-status self))))
+          (implies (void? (control-template-status self))
+                   (not (void? (control-template-relative-schedule self))))))]
+  
   #:methods gen:inst-template
   [(define (instantiate self dt)
      (scheduled-control
       (control-template-target-process self)
-      (sched-instantiate (control-template-relative-schedule self) dt)
+      (if (relative-schedule? (control-template-relative-schedule self))
+          (sched-instantiate (control-template-relative-schedule self) dt)
+          (control-template-relative-schedule self))
       (control-template-status self)))])
 
 (struct homogeneous-action-template (action-type relative-schedule rate duration)
   #:transparent
+  #:methods gen:typed
+  [(define/generic super-valid? valid?)
+   (define (get-type self) homogeneous-action-template)
+   (define (valid? self)
+     (and (procedure? (homogeneous-action-template-action-type self))
+          (relative-schedule? (homogeneous-action-template-relative-schedule self))
+          (super-valid? (homogeneous-action-template-relative-schedule self))
+          (dimensioned? (homogeneous-action-template-rate self))
+          (super-valid? (homogeneous-action-template-rate self))
+          (duration? (homogeneous-action-template-duration self))
+          (super-valid? (homogeneous-action-template-duration self))))]
+  
   #:methods gen:inst-template
   [(define (instantiate self dt)
      (scheduled-homogeneous-action
@@ -124,6 +185,16 @@
 
 (struct culminating-action-template (action-type relative-schedule goal-state)
   #:transparent
+  #:methods gen:typed
+  [(define/generic super-valid? valid?)
+   (define (get-type self) culminating-action-template)
+   (define (valid? self)
+     (and (procedure? (culminating-action-template-action-type self))
+          (relative-schedule? (culminating-action-template-relative-schedule self))
+          (super-valid? (culminating-action-template-relative-schedule self))
+          (basic? (culminating-action-template-goal-state self))
+          (super-valid? (culminating-action-template-goal-state self))))]
+  
   #:methods gen:inst-template
   [(define (instantiate self dt)
      (scheduled-culminating-action
@@ -136,6 +207,22 @@
 (define-generics rel-sched [sched-instantiate rel-sched dt])
 (struct relative-schedule (rounding-factor offset relative-pattern interval)
   #:transparent
+  #:methods gen:typed
+  [(define/generic super-valid? valid?)
+   (define (get-type self) relative-schedule)
+   (define (valid? self)
+     (and (duration? (relative-schedule-rounding-factor self))
+          (super-valid? (relative-schedule-rounding-factor self))
+          (duration? (relative-schedule-offset self))
+          (super-valid? (relative-schedule-offset self))
+          (list? (relative-schedule-relative-pattern self))
+          (andmap (lambda (p) (and (duration? p)
+                                   (super-valid? p)))
+                  (relative-schedule-relative-pattern self))
+          (or (and (duration? (relative-schedule-interval self))
+                   (super-valid? (relative-schedule-interval self)))
+              (eq? (relative-schedule-interval self) #f))))]
+  
   #:methods gen:rel-sched
   [(define (sched-instantiate self dt)
      ; To following steps are required to instantiate a schedule:
@@ -234,7 +321,7 @@
 ;  (culminating-action-template
 ;   ibuprofen
 ;   ibuprofen-rel-sched
-;   #t))
+;   (bool #t)))
 ;
 ;(define treadmill-template
 ;  (homogeneous-action-template
@@ -245,8 +332,8 @@
 ;    (list (duration 0 13 0 0)
 ;          (duration 0 21 0 0))
 ;    (duration 2 0 0 0))
-;   10
-;   20))
+;   (dimensioned 10 'units)
+;   (duration 0 1 0 0)))
 ;
 ;(define analyze-heart-rate-template
 ;  (control-template
