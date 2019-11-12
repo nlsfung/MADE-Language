@@ -95,6 +95,7 @@
   [dim/ dim elem units])
 
 (struct dimensioned (value units)
+  #:transparent
   #:methods gen:basic
   [(define (get-value self) (dimensioned-value self))]
   #:methods gen:typed

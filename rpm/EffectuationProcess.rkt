@@ -346,21 +346,19 @@
 ;   (assert (implies (and (not (void? output))
 ;                         (not (void? output-2))
 ;                         (not (eq? output output-2)))
-;
 ;                    (or (not (dt=? cur-dt cur-dt-2))
 ;                        (dt>? (action-plan-valid-datetime d-2) cur-dt)
 ;                        (findf (lambda (d)
-;                                 (and (eq? output
+;                                 (or (and (eq? (get-type d) (get-type d-2))
+;                                          (dt>? (action-plan-valid-datetime d)
+;                                                (action-plan-valid-datetime d-2)))
+;                                     (and (eq? output
 ;                                           (execute-effectuation-body
 ;                                            (list d)
 ;                                            cur-dt
 ;                                            (effectuation-process-target-schedules e-proc)
 ;                                            (effectuation-process-output-type e-proc)
 ;                                            (made-process-proxy-flag e-proc)))
-;
-;                                      (or (> (length (member d d-state))
-;                                             (length (member d-2 d-state)))
-;                                          (dt>? (action-plan-valid-datetime d)
-;                                                (action-plan-valid-datetime d-2))
-;                                          )))
+;                                          (> (length (member d d-state))
+;                                             (length (member d-2 d-state))))))
 ;                               d-state))))))
