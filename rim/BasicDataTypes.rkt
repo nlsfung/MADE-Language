@@ -1,7 +1,10 @@
-#lang rosette
+#lang rosette/safe
+
+(require (only-in rosette symbol? rational?))
 
 (provide gen:typed get-type valid?)
-(provide gen:basic basic?)
+(provide gen:basic basic? get-value)
+(provide (struct-out nominal))
 (provide (struct-out dimensioned))
 (provide (struct-out bool))
 
@@ -86,7 +89,6 @@
 ; with the output units (as a symbol). Furthermore, all comparators require
 ; the units to be equal.
 (define-generics dim
-  [dim=? dim elem]
   [dim>? dim elem]
   [dim<? dim elem]
   [dim+ dim elem units]
@@ -106,8 +108,7 @@
   [(define-syntax-rule (compare-with-units op dim elem)
      (if (eq? (dimensioned-units dim) (dimensioned-units elem))
          (op (dimensioned-value dim) (dimensioned-value elem))
-         #f))   
-   (define (dim=? dim elem) (compare-with-units = dim elem))
+         #f))
    (define (dim>? dim elem) (compare-with-units > dim elem))
    (define (dim<? dim elem) (compare-with-units < dim elem))
 
