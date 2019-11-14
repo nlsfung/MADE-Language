@@ -1,6 +1,6 @@
 #lang rosette/safe
 
-(require (only-in rosette symbol? rational?))
+(require (only-in rosette symbol? rational? raise-argument-error))
 
 (provide gen:typed get-type valid?)
 (provide gen:basic basic? get-value)
@@ -108,12 +108,20 @@
    (define (valid? self) (and (real? (dimensioned-value self))
                               (symbol? (dimensioned-units self))))]
   #:methods gen:dim
-  [(define-syntax-rule (compare-with-units op dim elem)
-     (if (eq? (dimensioned-units dim) (dimensioned-units elem))
-         (op (dimensioned-value dim) (dimensioned-value elem))
-         #f))
-   (define (dim>? dim elem) (compare-with-units > dim elem))
-   (define (dim<? dim elem) (compare-with-units < dim elem))
+  [(define-syntax-rule (compare-with-units op dim elem op-sym)
+     (cond [(not (dimensioned? elem))
+            (raise-argument-error op-sym "dimensioned?" elem)]
+           [(not (valid? elem))
+            (raise-argument-error op-sym "(dimensioned real? symbol?)" elem)]
+           [(not (valid? dim))
+            (raise-argument-error op-sym "(dimensioned real? symbol?)" dim)]
+           [(not (eq? (dimensioned-units dim) (dimensioned-units elem)))
+            (raise-argument-error op-sym
+                                  (format "~a" (dimensioned-units dim))
+                                  (dimensioned-units elem))]
+           [else (op (dimensioned-value dim) (dimensioned-value elem))]))
+   (define (dim>? dim elem) (compare-with-units > dim elem 'dim>?))
+   (define (dim<? dim elem) (compare-with-units < dim elem 'dim<?))
 
    (define-syntax-rule (arithmetic-with-units op dim elem units)
      (if (dimensioned? elem)
