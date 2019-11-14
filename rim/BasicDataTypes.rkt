@@ -5,6 +5,7 @@
 (provide gen:typed get-type valid?)
 (provide gen:basic basic? get-value)
 (provide (struct-out nominal))
+(provide (struct-out enumerated) gen:enum enum>? enum<?)
 (provide (struct-out dimensioned))
 (provide (struct-out bool))
 
@@ -75,13 +76,15 @@
 ; Enumerated is equivalent to nominal except that its values are ordered (see
 ; ISO/IEC 11404). As a result, it requires an interface for greater-than and
 ; less-than comparisons.
-(struct enumerated (value)
-  #:transparent
-  #:methods gen:basic
-  [(define (get-value self) (enumerated-value self))])
 (define-generics enum
   [enum>? enum elem]
   [enum<? enum elem])
+
+(struct enumerated (value)
+  #:transparent
+  #:methods gen:enum []
+  #:methods gen:basic
+  [(define (get-value self) (enumerated-value self))])
 
 ; Dimensioned is equivalent to DV_Quantity class in OpenEHR for representing
 ; quantities expressed as a magnitude and units. Automatic conversion of
