@@ -40,11 +40,7 @@
                        #:methods gen:typed
                        [(define (get-type self) id)
                         (define (valid? self)
-                          (list? (member (get-value self) value-list)))])]))]
-    
-    [(define-nominal val-1 ...)
-     (raise-syntax-error 'define-nominal
-                         "bad syntax. expected: (define-nominal id value-list).")]))
+                          (list? (member (get-value self) value-list)))])]))]))
 
 ; define-enumerated creates a new enumerated datatype.
 ; It requires two inputs:
@@ -101,11 +97,7 @@
                         (define (enum<? self elem)
                           (check-comparability self elem 'enum<?)
                           (> (length (member (get-value self) value-list))
-                             (length (member (get-value elem) value-list))))])]))]
-    
-    [(define-enumerated val-1 ...)
-     (raise-syntax-error 'define-enumerated
-                         "bad syntax. expected: (define-enumerated id value-list).")]))
+                             (length (member (get-value elem) value-list))))])]))]))
 
 ; Helper function for raising an error when creating a nominal or enumerated 
 ; datatype with a non-symbol value.
