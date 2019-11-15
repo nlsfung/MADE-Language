@@ -249,6 +249,67 @@
                              (eq? units (dimensioned-units (abstraction-value self)))
                              (invariant (observed-property-value self))))])])]))
 
+; define-action-plan creates a new type of action plan. 
+; It requires the following inputs:
+; 1) An identifier for the new action plan datatype.
+; 2) An optional list of struct constructors specifying the accepted targets.
+(define-syntax (define-action-plan stx)
+  (syntax-case stx ()
+    [(define-action-plan id)
+     (cond [(not (identifier? #'id))
+            (raise-syntax-error #f "identifier expected." stx #'id)]
+           [else #'(struct id action-plan ()
+                     #:transparent
+                     #:methods gen:typed
+                     [(define/generic super-valid? valid?)
+                      (define (get-type self) id)
+                      (define (valid? self)
+                        (super-valid? (action-plan
+                                       (made-data-proxy-flag self)
+                                       (action-plan-valid-datetime self)
+                                       (action-plan-instruction-set self))))])])]
+
+    [(define-action-plan id target-list)
+     (cond [(not (identifier? #'id))
+            (raise-syntax-error #f "identifier expected." stx #'id)]
+           [(not (list? (syntax->datum #'target-list)))
+            (raise-syntax-error #f "list of identifiers expected." stx #'target-list)]
+           [else (let* ([bad-target (find-invalid-target #'target-list)])
+                   (if bad-target
+                       (raise-syntax-error #f "identifier expected." stx bad-target)
+                       #'(struct id action-plan ()
+                           #:transparent
+                           #:methods gen:typed
+                           [(define/generic super-valid? valid?)
+                            (define (get-type self) id)
+                            (define (valid? self)
+                              (and (super-valid? (action-plan
+                                                  (made-data-proxy-flag self)
+                                                  (action-plan-valid-datetime self)
+                                                  (action-plan-instruction-set self)))
+                                   (not (eq? (andmap
+                                              (lambda (i)
+                                                (member (cond [(scheduled-control? i)
+                                                               (scheduled-control-target-process i)]
+                                                              [(scheduled-homogeneous-action? i)
+                                                               (scheduled-homogeneous-action-action-type i)]
+                                                              [(scheduled-culminating-action? i)
+                                                               (scheduled-culminating-action-action-type i)])
+                                                        target-list))
+                                              (action-plan-instruction-set self))
+                                             #f))))])))])]))
+
+; Helper function to check that the target list contains identifiers only.
+; Returns the first invalid input found or #f if all inputs are identifiers.
+(define-for-syntax (find-invalid-target stx)
+  (syntax-case stx ()
+    [(id)
+     (if (not (identifier? #'id)) #'id #f)]
+    [(id-1 id-2 ...)
+     (if (not (identifier? #'id-1))
+         #'id-1
+         (find-invalid-target #'(id-2 ...)))]))
+
 ; define-action-instruction creates a new type of action instruction. 
 ; It requires the following inputs:
 ; 1) An identifier for the new action instruction datatype.
@@ -358,7 +419,7 @@
            [(and (not (identifier? #'invariant))
                  (not (and (procedure? (eval-syntax #'invariant))
                            (eq? (procedure-arity (eval-syntax #'invariant)) 1))))
-            (raise-syntax-error #f "invariant on property value expected." src-stx #'invariant)]
+            (raise-syntax-error #f "invariant on goal state expected." src-stx #'invariant)]
            [else  #'(struct id culminating-action ()
                      #:methods gen:typed
                      [(define/generic super-valid? valid?)
@@ -379,7 +440,7 @@
            [(and (not (identifier? #'invariant))
                  (not (and (procedure? (eval-syntax #'invariant))
                            (eq? (procedure-arity (eval-syntax #'invariant)) 1))))
-            (raise-syntax-error #f "invariant on property value expected." src-stx #'invariant)]
+            (raise-syntax-error #f "invariant on goal state expected." src-stx #'invariant)]
            [else #'(struct id culminating-action ()
                      #:methods gen:typed
                      [(define/generic super-valid? valid?)
@@ -392,3 +453,49 @@
                              (dimensioned? (culminating-action-goal-state self))
                              (eq? units (dimensioned-units (culminating-action-goal-state self)))
                              (invariant (culminating-action-goal-state self))))])])]))
+
+; define-control-instruction creates a new type of control instruction. 
+; It requires the following inputs:
+; 1) An identifier for the new control instruction datatype.
+; 2) An optional list of struct constructors specifying the accepted target processes.
+(define-syntax (define-control-instruction stx)
+  (syntax-case stx ()
+    [(define-control-instruction id)
+     (cond [(not (identifier? #'id))
+            (raise-syntax-error #f "identifier expected." stx #'id)]
+           [else #'(struct id control-instruction ()
+                     #:transparent
+                     #:methods gen:typed
+                     [(define/generic super-valid? valid?)
+                      (define (get-type self) id)
+                      (define (valid? self)
+                        (super-valid? (control-instruction
+                                       (made-data-proxy-flag self)
+                                       (control-instruction-target-process self)
+                                       (control-instruction-valid-datetime self)
+                                       (control-instruction-schedule self)
+                                       (control-instruction-status self))))])])]
+
+    [(define-control-instruction id target-list)
+     (cond [(not (identifier? #'id))
+            (raise-syntax-error #f "identifier expected." stx #'id)]
+           [(not (list? (syntax->datum #'target-list)))
+            (raise-syntax-error #f "list of identifiers expected." stx #'target-list)]
+           [else (let* ([bad-target (find-invalid-target #'target-list)])
+                   (if bad-target
+                       (raise-syntax-error #f "identifier expected." stx bad-target)
+                       #'(struct id control-instruction ()
+                           #:transparent
+                           #:methods gen:typed
+                           [(define/generic super-valid? valid?)
+                            (define (get-type self) id)
+                            (define (valid? self)
+                              (and (super-valid? (control-instruction
+                                                  (made-data-proxy-flag self)
+                                                  (control-instruction-target-process self)
+                                                  (control-instruction-valid-datetime self)
+                                                  (control-instruction-schedule self)
+                                                  (control-instruction-status self)))
+                                   (not (eq? (member (control-instruction-target-process self)
+                                                     target-list)
+                                             #f))))])))])]))
