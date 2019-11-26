@@ -28,12 +28,11 @@
   [make-copy made-proc elem]
   [valid-spec? made-proc])
 
-(struct made-process (id data-state control-state proxy-flag)
+(struct made-process (data-state control-state proxy-flag)
   #:transparent
   #:methods gen:made-proc
   [(define (valid-spec? self)
-     (and (symbol? (made-process-id self))
-          (control-state? (made-process-control-state self))
+     (and (control-state? (made-process-control-state self))
           (valid? (made-process-control-state self))
           (boolean? (made-process-proxy-flag self))))]
   #:methods gen:typed
@@ -110,7 +109,7 @@
          
          [new-control (findf (lambda (d) (and (control-instruction? d)
                                               (not (made-data-proxy-flag d))
-                                              (eq? (made-process-id made-proc)
+                                              (eq? (get-type made-proc)
                                                    (control-instruction-target-process d))
                                               (dt=? datetime
                                                     (control-instruction-valid-datetime d))))
@@ -134,6 +133,9 @@
 ;; on a sample MADE process.
 ;(struct sample-process made-process ()
 ;  #:transparent
+;  #:methods gen:typed
+;  [(define (get-type self) sample-process)]
+;  
 ;  #:methods gen:made-proc
 ;  [(define (execute self in-data datetime)
 ;     (gen-proc-execute self in-data datetime))
@@ -148,8 +150,7 @@
 ;     (gen-proc-update-control-state self in-data datetime))
 ;
 ;   (define (make-copy self elem)
-;     (let ([id (made-process-id self)]
-;           [d-state (if (list? elem)
+;     (let ([d-state (if (list? elem)
 ;                        elem
 ;                        (made-process-data-state self))]
 ;           [c-state (if (control-state? elem)
@@ -157,20 +158,20 @@
 ;                        (made-process-control-state self))]
 ;           [p-flag (made-process-proxy-flag self)])
 ;       
-;       (sample-process id d-state c-state p-flag)))])   
+;       (sample-process d-state c-state p-flag)))])   
 ;
-;(define-symbolic p-id integer?)
 ;(define-symbolic p-data integer?)
 ;(define-symbolic p-sched p-stat integer?)
 ;
-;(define a-proc (sample-process p-id (list p-data) (control-state p-sched p-stat) #t))
+;(define a-proc (sample-process (list p-data) (control-state p-sched p-stat) #t))
 ;
 ;(define-symbolic in1 in2 integer?)
 ;(define in-data (list in1 in2))
 ;
 ;(define new-data-proc (update-data-state a-proc in-data))
 ;
-;(define-symbolic t-id integer?)
+;(define-symbolic t-id-num integer?)
+;(define t-id (if (eq? t-id-num 0) sample-process t-id-num))
 ;(define-symbolic v-dt-h v-dt-min v-dt-s integer?)
 ;(define-symbolic c-inst-sched c-inst-stat integer?)
 ;(define-symbolic c-inst-sched-void c-inst-stat-void boolean?)
@@ -201,7 +202,7 @@
 ;          #:guarantee (assert (implies (eq? a-proc new-ctrl-proc)
 ;                                       (or c-proxy
 ;                                           (not (dt=? v-dt cur-dt))
-;                                           (not (= p-id t-id))
+;                                           (not (eq? sample-process t-id))
 ;                                           (and (or (= p-sched c-inst-sched)
 ;                                                    c-inst-sched-void)
 ;                                                (or (= p-stat c-inst-stat)

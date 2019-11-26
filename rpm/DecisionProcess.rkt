@@ -46,8 +46,7 @@
      (gen-proc-update-control-state self in-data datetime))
 
    (define (make-copy self elem)
-     (let ([id (made-process-id self)]
-           [d-state (if (list? elem)
+     (let ([d-state (if (list? elem)
                         elem
                         (made-process-data-state self))]
            [c-state (if (control-state? elem)
@@ -57,12 +56,11 @@
            [p-temp (decision-process-plan-template self)]
            [d-crit (decision-process-decision-criteria self)])
        
-       (decision-process id d-state c-state p-flag p-temp d-crit)))
+       (decision-process d-state c-state p-flag p-temp d-crit)))
 
    (define/generic super-valid-spec? valid-spec?)
    (define (valid-spec? self)
-     (and (super-valid-spec? (made-process (made-process-id self)
-                                           null
+     (and (super-valid-spec? (made-process null
                                            (made-process-control-state self)
                                            (made-process-proxy-flag self)))
           (plan-template? (decision-process-plan-template self))
@@ -372,7 +370,7 @@
 ;(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
 ;
 ;(define d-proc
-;  (decision-process 'id d-state c-state (gen-proxy)
+;  (decision-process d-state c-state (gen-proxy)
 ;                    fever-treatment-template
 ;                    (list decision-criterion-one decision-criterion-two)))
 ;

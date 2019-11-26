@@ -46,8 +46,7 @@
      (gen-proc-update-control-state self in-data datetime))
 
    (define (make-copy self elem)
-     (let ([id (made-process-id self)]
-           [d-state (if (list? elem)
+     (let ([d-state (if (list? elem)
                         elem
                         (made-process-data-state self))]
            [c-state (if (control-state? elem)
@@ -57,12 +56,11 @@
            [o-spec (monitoring-process-output-specification self)]
            [o-type (monitoring-process-output-type self)])
        
-       (monitoring-process id d-state c-state p-flag o-spec o-type)))
+       (monitoring-process d-state c-state p-flag o-spec o-type)))
 
    (define/generic super-valid-spec? valid-spec?)
    (define (valid-spec? self)
-     (and (super-valid-spec? (made-process (made-process-id self)
-                                           null
+     (and (super-valid-spec? (made-process null
                                            (made-process-control-state self)
                                            (made-process-proxy-flag self)))
           (or (property-specification? (monitoring-process-output-specification self))
@@ -239,9 +237,9 @@
 ;(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
 ;
 ;(define m-proc-1
-; (monitoring-process 'id d-state c-state (gen-proxy) activity-spec activity-level))
+; (monitoring-process d-state c-state (gen-proxy) activity-spec activity-level))
 ;(define m-proc-2
-;  (monitoring-process 'id d-state c-state (gen-proxy) exercise-spec exercise-event)) 
+;  (monitoring-process d-state c-state (gen-proxy) exercise-spec exercise-event)) 
 ;
 ;(define output-1 (generate-data m-proc-1 cur-dt))
 ;(define output-2 (generate-data m-proc-2 cur-dt))

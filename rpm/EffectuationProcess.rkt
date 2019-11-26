@@ -46,8 +46,7 @@
      (gen-proc-update-control-state self in-data datetime))
 
    (define (make-copy self elem)
-     (let ([id (made-process-id self)]
-           [d-state (if (list? elem)
+     (let ([d-state (if (list? elem)
                         elem
                         (made-process-data-state self))]
            [c-state (if (control-state? elem)
@@ -57,12 +56,11 @@
            [t-scheds (effectuation-process-target-schedules self)]
            [o-type (effectuation-process-output-type self)])
        
-       (effectuation-process id d-state c-state p-flag t-scheds o-type)))
+       (effectuation-process d-state c-state p-flag t-scheds o-type)))
 
    (define/generic super-valid-spec? valid-spec?)
    (define (valid-spec? self)
-     (and (super-valid-spec? (made-process (made-process-id self)
-                                           null
+     (and (super-valid-spec? (made-process null
                                            (made-process-control-state self)
                                            (made-process-proxy-flag self)))
           (list? (effectuation-process-target-schedules self))
@@ -256,7 +254,7 @@
 ;  (lambda (i) inst-pred))
 ;
 ;(define e-proc
-;  (effectuation-process 'id d-state c-state (gen-proxy)
+;  (effectuation-process d-state c-state (gen-proxy)
 ;                        (list (target-schedule fever-treatment
 ;                                               treadmill-exercise
 ;                                               (gen-inst-pred))

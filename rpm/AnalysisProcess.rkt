@@ -48,8 +48,7 @@
      (gen-proc-update-control-state self in-data datetime))
 
    (define (make-copy self elem)
-     (let ([id (made-process-id self)]
-           [d-state (if (list? elem)
+     (let ([d-state (if (list? elem)
                         elem
                         (made-process-data-state self))]
            [c-state (if (control-state? elem)
@@ -60,11 +59,10 @@
            [out-type (analysis-process-output-type self)]
            [ab-funcs (analysis-process-abstraction-functions self)])
        
-       (analysis-process id d-state c-state p-flag t-window out-type ab-funcs)))
+       (analysis-process d-state c-state p-flag t-window out-type ab-funcs)))
 
    (define (valid-spec? self)
-     (and (super-valid-spec? (made-process (made-process-id self)
-                                           null
+     (and (super-valid-spec? (made-process null
                                            (made-process-control-state self)
                                            (made-process-proxy-flag self)))
           (duration? (analysis-process-time-window self))
@@ -205,7 +203,7 @@
 ;(define out-type room-temperature-grade)
 ;(define ab-funcs (list grade-temp-low grade-temp-high))
 ;(define room-temp-proc
-;  (analysis-process 'id d-state c-state (gen-temp-proxy)
+;  (analysis-process d-state c-state (gen-temp-proxy)
 ;                    t-window room-temperature-grade ab-funcs))
 ;
 ;(define output (generate-data room-temp-proc cur-dt))
