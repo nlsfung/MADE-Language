@@ -11,8 +11,15 @@
 
 ; Analysis process inherit from the generic MADE process, extending it with
 ; a time window, the output type identifier and a list of abstraction functions.
-(struct analysis-process made-process (time-window output-type abstraction-functions)
+(define-generics analysis
+  [analysis-process-time-window analysis]
+  [analysis-process-output-type analysis]
+  [analysis-process-abstraction-functions analysis]
+  [analysis-process-proxy-flag analysis])
+
+(struct analysis-process made-process ()
   #:transparent
+  #:methods gen:analysis []
   #:methods gen:typed
   [(define/generic super-valid? valid?)
    (define (get-type self) analysis-process)
@@ -25,12 +32,7 @@
                   (made-process-data-state self))))]
   
   #:methods gen:made-proc
-  [(define/generic super-valid-spec? valid-spec?)
-   (define (execute self in-data datetime)
-     (gen-proc-execute self in-data datetime))
-
-   (define (update-data-state self in-data)
-     (gen-proc-update-data-state self in-data))
+  [(define (proxy? self) (analysis-process-proxy-flag self))
 
    (define (generate-data self datetime)
      (gen-proc-generate-data
@@ -40,31 +42,13 @@
                                (analysis-process-time-window self)
                                (analysis-process-output-type self)
                                (analysis-process-abstraction-functions self)
-                               (made-process-proxy-flag self)))
+                               (analysis-process-proxy-flag self)))
       self
       datetime))
    
-   (define (update-control-state self in-data datetime)
-     (gen-proc-update-control-state self in-data datetime))
-
-   (define (make-copy self elem)
-     (let ([d-state (if (list? elem)
-                        elem
-                        (made-process-data-state self))]
-           [c-state (if (control-state? elem)
-                        elem
-                        (made-process-control-state self))]
-           [p-flag (made-process-proxy-flag self)]
-           [t-window (analysis-process-time-window self)]
-           [out-type (analysis-process-output-type self)]
-           [ab-funcs (analysis-process-abstraction-functions self)])
-       
-       (analysis-process d-state c-state p-flag t-window out-type ab-funcs)))
-
+   (define/generic super-valid-spec? valid-spec?)
    (define (valid-spec? self)
-     (and (super-valid-spec? (made-process null
-                                           (made-process-control-state self)
-                                           (made-process-proxy-flag self)))
+     (and (super-valid-spec? (made-process null (made-process-control-state self)))
           (duration? (analysis-process-time-window self))
           (valid? (analysis-process-time-window self))
           (procedure? (analysis-process-output-type self))
@@ -107,7 +91,7 @@
                        latest-significant-data))]))])
 
     (if (void? output-value)
-        (void)
+        null
         (out-type proxy-flag
                   (datetime-range dt (dt+ latest-start-time t-window))
                   output-value))))
@@ -202,9 +186,24 @@
 ;(define t-window (duration 0 win-length 0 0))
 ;(define out-type room-temperature-grade)
 ;(define ab-funcs (list grade-temp-low grade-temp-high))
-;(define room-temp-proc
-;  (analysis-process d-state c-state (gen-temp-proxy)
-;                    t-window room-temperature-grade ab-funcs))
+;(define proc-proxy (gen-temp-proxy))
+;  
+;(struct sample-process analysis-process ()
+;  #:methods gen:analysis
+;  [(define (analysis-process-time-window self) t-window)
+;   (define (analysis-process-output-type self) room-temperature-grade)
+;   (define (analysis-process-abstraction-functions self) ab-funcs)
+;   (define (analysis-process-proxy-flag self) proc-proxy)]
+;
+;  #:methods gen:typed
+;  [(define/generic super-valid? valid?)
+;   (define (get-type self) sample-process)
+;   (define (valid? self)
+;     (and (valid-spec? self)
+;          (super-valid? (made-process (made-process-data-state self)
+;                                      (made-process-control-state self)))))])
+;
+;(define room-temp-proc (sample-process d-state c-state))
 ;
 ;(define output (generate-data room-temp-proc cur-dt))
 ;
@@ -212,11 +211,11 @@
 ;(define (verify-is-executed)
 ;  (verify (assert (implies (or (not (eq? sched-dt cur-dt))
 ;                               (not proc-status))
-;                           (void? output)))))
+;                           (null? output)))))
 ;
 ;; Verify the implementation of the time window.
 ;(define (verify-time-window)
-;  (verify (assert (implies (< win-length 2) (void? output)))))
+;  (verify (assert (implies (< win-length 2) (null? output)))))
 ;
 ;; Verify the implementation of the abstraction functions.
 ;(define (verify-ab-funcs)
@@ -228,21 +227,21 @@
 ;                             (and (< (observed-property-value d) 14)
 ;                                  (> (observed-property-value d) 2)))
 ;                           d-state)))
-;             (void? output)))))
+;             (null? output)))))
 ;
 ;; Verify the implementation of the proxy flags.
 ;(define (verify-data-proxy)
 ;  (verify
 ;   (assert
 ;    (implies (<= 3 (length (filter (lambda (d) (made-data-proxy-flag d)) d-state)))
-;             (void? output)))))
+;             (null? output)))))
 ;
 ;(define (verify-proc-proxy)
 ;  (verify #:assume
 ;          (assert (room-temperature-grade? output))
 ;          #:guarantee
 ;          (assert
-;           (implies (made-process-proxy-flag room-temp-proc)
+;           (implies (proxy? room-temp-proc)
 ;                    (made-data-proxy-flag output)))))
 ;
 ;; Verify the implementation of determining abstraction validity range.
