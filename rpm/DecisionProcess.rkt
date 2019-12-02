@@ -11,8 +11,14 @@
 ; Decision process inherit from the generic MADE process, extending it with
 ; a main body that comprises a list of decision criterion and a plan template 
 ; that can be instantiated into action plans.
-(struct decision-process made-process (plan-template decision-criteria)
+(define-generics decision
+  [decision-process-plan-template decision]
+  [decision-process-decision-criteria decision]
+  [decision-process-proxy-flag decision])
+
+(struct decision-process made-process ()
   #:transparent
+  #:methods gen:decision []
   #:methods gen:typed
   [(define/generic super-valid? valid?)
    (define (get-type self) decision-process)
@@ -25,12 +31,8 @@
                   (made-process-data-state self))))]
   
   #:methods gen:made-proc
-  [(define (execute self in-data datetime)
-     (gen-proc-execute self in-data datetime))
-
-   (define (update-data-state self in-data)
-     (gen-proc-update-data-state self in-data))
-
+  [(define (proxy? self) (decision-process-proxy-flag self))
+   
    (define (generate-data self datetime)
      (gen-proc-generate-data
       (lambda (d-state dt)
@@ -38,35 +40,18 @@
                                dt
                                (decision-process-plan-template self)
                                (decision-process-decision-criteria self)
-                               (made-process-proxy-flag self)))
+                               (decision-process-proxy-flag self)))
       self
       datetime))
-   
-   (define (update-control-state self in-data datetime)
-     (gen-proc-update-control-state self in-data datetime))
-
-   (define (make-copy self elem)
-     (let ([d-state (if (list? elem)
-                        elem
-                        (made-process-data-state self))]
-           [c-state (if (control-state? elem)
-                        elem
-                        (made-process-control-state self))]
-           [p-flag (made-process-proxy-flag self)]
-           [p-temp (decision-process-plan-template self)]
-           [d-crit (decision-process-decision-criteria self)])
-       
-       (decision-process d-state c-state p-flag p-temp d-crit)))
 
    (define/generic super-valid-spec? valid-spec?)
    (define (valid-spec? self)
-     (and (super-valid-spec? (made-process null
-                                           (made-process-control-state self)
-                                           (made-process-proxy-flag self)))
+     (and (super-valid-spec? (made-process null (made-process-control-state self)))
           (plan-template? (decision-process-plan-template self))
           (valid? (decision-process-plan-template self))
           (list? (decision-process-decision-criteria self))
-          (andmap (lambda (c) (procedure? c)) (decision-process-decision-criteria self))))])
+          (andmap (lambda (c) (procedure? c)) (decision-process-decision-criteria self))
+          (boolean? (proxy? self))))])
 
 ; Helper function for defining the main behaviour of decision processes.
 (define (execute-decision-body d-state dt p-temp d-crit proxy-flag)
@@ -78,7 +63,7 @@
          [selected-crit (findf (lambda (c) (c filtered-data)) d-crit)])
     (if selected-crit
         (plan-instantiate p-temp dt proxy-flag)
-        (void))))
+        null)))
          
 ; Helper function for filtering out abstractions that are:
 ; 1) Not valid at the input datetime.
@@ -368,11 +353,25 @@
 ;(define cur-dt (gen-datetime))
 ;(define-symbolic proc-status boolean?)
 ;(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
+;(define proc-proxy (gen-proxy))
 ;
-;(define d-proc
-;  (decision-process d-state c-state (gen-proxy)
-;                    fever-treatment-template
-;                    (list decision-criterion-one decision-criterion-two)))
+;(struct sample-process decision-process ()
+;  #:transparent
+;  #:methods gen:decision
+;  [(define (decision-process-plan-template self) fever-treatment-template)
+;   (define (decision-process-decision-criteria self)
+;     (list decision-criterion-one decision-criterion-two))
+;   (define (decision-process-proxy-flag self) proc-proxy)]
+;
+;  #:methods gen:typed
+;  [(define/generic super-valid? valid?)
+;   (define (get-type self) sample-process)
+;   (define (valid? self)
+;     (and (valid-spec? self)
+;          (super-valid? (made-process (made-process-data-state self)
+;                                      (made-process-control-state self)))))])
+;
+;(define d-proc (sample-process d-state c-state))
 ;
 ;(define output (generate-data d-proc cur-dt))
 ;
@@ -462,21 +461,21 @@
 ;(define (verify-is-executed)
 ;  (verify (assert (implies (or (not (eq? sched-dt cur-dt))
 ;                               (not proc-status))
-;                           (void? output)))))
+;                           (null? output)))))
 ;
 ;; Verify the implementation of the proxy flags.
 ;(define (verify-data-proxy)
 ;  (verify
 ;   (assert
 ;    (implies (<= 3 (length (filter (lambda (d) (made-data-proxy-flag d)) d-state)))
-;             (void? output)))))
+;             (null? output)))))
 ;
 ;(define (verify-proc-proxy)
 ;  (verify #:assume
 ;          (assert (action-plan? output))
 ;          #:guarantee
 ;          (assert
-;           (implies (made-process-proxy-flag d-proc)
+;           (implies (proxy? d-proc)
 ;                    (made-data-proxy-flag output)))))
 ;
 ;; Verify the implementation of the decision criteria.
