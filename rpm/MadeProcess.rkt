@@ -6,7 +6,7 @@
 (require "../rim/MadeDataStructures.rkt")
 
 (provide gen:made-proc execute update-data-state generate-data
-         update-control-state make-copy valid-spec?)
+         update-control-state valid-spec?)
 (provide gen-proc-execute gen-proc-update-data-state
          gen-proc-generate-data gen-proc-update-control-state)
 (provide is-proc-executed?)
@@ -18,23 +18,32 @@
   
 ; All MADE processes contain an Id, data state, control state, proxy flag and
 ; main body. They support four main operations: execute, update data state,
-; generate data and update control state. Three helper functions, make-copy and
-; make-super-copy and valid-spec?, are also supported.
+; generate data and update control state. Two helper functions, make-super-copy
+; and valid-spec?, are also supported.
 (define-generics made-proc
+  [proxy? made-proc]
   [execute made-proc in-data datetime]
   [update-data-state made-proc in-data]
   [generate-data made-proc datetime]
   [update-control-state made-proc in-data datetime]
-  [make-copy made-proc elem]
-  [valid-spec? made-proc])
+  [valid-spec? made-proc]
 
-(struct made-process (data-state control-state proxy-flag)
+  #:fallbacks
+  [(define (proxy? made-proc) #t)
+   (define (execute made-proc in-data datetime)
+     (gen-proc-execute made-proc in-data datetime))
+   (define (update-data-state made-proc in-data)
+     (gen-proc-update-data-state made-proc in-data))
+   (define (update-control-state made-proc in-data datetime)
+     (gen-proc-update-control-state made-proc in-data datetime))
+   (define (valid-spec? made-proc)
+     (and (control-state? (made-process-control-state made-proc))
+          (valid? (made-process-control-state made-proc))
+          (boolean? (proxy? made-proc))))])
+
+(struct made-process (data-state control-state)
   #:transparent
-  #:methods gen:made-proc
-  [(define (valid-spec? self)
-     (and (control-state? (made-process-control-state self))
-          (valid? (made-process-control-state self))
-          (boolean? (made-process-proxy-flag self))))]
+  #:methods gen:made-proc []
   #:methods gen:typed
   [(define/generic super-valid? valid?)
    (define (get-type self) made-process)
@@ -61,13 +70,13 @@
 ; The following are generic implementations of execute, update data state,
 ; generate data and update control, the latter three of which must be
 ; specialised for each type of process.
-(define (gen-proc-execute self in-data datetime)
+(define (gen-proc-execute made-proc in-data datetime)
   ; Executing a process comprise three steps:
-  ; 1) Updating its data state given the input data.
-  ; 2) Generate data given its new data state and current date-time.
-  ; 3) Update its control state given the input data and current date-time.
-  (let* ([updated-proc (update-data-state self in-data)]
-         [proc-output (generate-data updated-proc datetime)]
+  ; 1) Generate data given the input data and current date-time.
+  ; 2) Update its data state given the input and output data.
+  ; 3) Update its control state given the input and output data and current date-time.
+  (let* ([proc-output (generate-data made-proc datetime)]
+         [updated-proc (update-data-state made-proc (append in-data proc-output))]
          [new-proc (update-control-state updated-proc
                                          (append in-data proc-output)
                                          datetime)])
@@ -78,8 +87,8 @@
 (define (gen-proc-update-data-state made-proc in-data)
   ; Updating the data state involves adding the input data into the data state,
   ; ignoring any duplicates.
-  (make-copy made-proc (remove-duplicates
-                        (append (made-process-data-state made-proc) in-data))))
+  ((get-type made-proc) (remove-duplicates (append (made-process-data-state made-proc) in-data))
+                        (made-process-control-state made-proc)))
 
 (define (gen-proc-generate-data proc-func made-proc datetime)
   ; Generating new data involves:
@@ -90,7 +99,7 @@
       (let ([input (filter (lambda (d) (not (made-data-proxy-flag d)))
                            (made-process-data-state made-proc))])
         (proc-func input datetime))
-      (void)))
+      null))
 
 ; Helper function for determining if the process is executed or not given its
 ; control state as well as the current datetime.
@@ -126,8 +135,9 @@
                          old-status)]        
          
          [new-state (control-state new-schedule new-status)])
-    
-    (make-copy made-proc new-state)))
+
+    ((get-type made-proc) (made-process-data-state made-proc)
+                          new-state)))
 
 ;; Symbolic constants for verifying update data state and update control state
 ;; on a sample MADE process.
@@ -137,33 +147,14 @@
 ;  [(define (get-type self) sample-process)]
 ;  
 ;  #:methods gen:made-proc
-;  [(define (execute self in-data datetime)
-;     (gen-proc-execute self in-data datetime))
-;
-;   (define (update-data-state self in-data)
-;     (gen-proc-update-data-state self in-data))
-;
+;  [(define (proxy? self) #f)
 ;   (define (generate-data self datetime)
-;     (gen-proc-generate-data (lambda (d-state dt) #f) self datetime))
-;   
-;   (define (update-control-state self in-data datetime)
-;     (gen-proc-update-control-state self in-data datetime))
-;
-;   (define (make-copy self elem)
-;     (let ([d-state (if (list? elem)
-;                        elem
-;                        (made-process-data-state self))]
-;           [c-state (if (control-state? elem)
-;                        elem
-;                        (made-process-control-state self))]
-;           [p-flag (made-process-proxy-flag self)])
-;       
-;       (sample-process d-state c-state p-flag)))])   
+;     (gen-proc-generate-data (lambda (d-state dt) #f) self datetime))])   
 ;
 ;(define-symbolic p-data integer?)
 ;(define-symbolic p-sched p-stat integer?)
 ;
-;(define a-proc (sample-process (list p-data) (control-state p-sched p-stat) #t))
+;(define a-proc (sample-process (list p-data) (control-state p-sched p-stat)))
 ;
 ;(define-symbolic in1 in2 integer?)
 ;(define in-data (list in1 in2))
