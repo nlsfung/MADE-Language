@@ -10,8 +10,14 @@
 ; Monitoring process inherit from the generic MADE process, extending it with
 ; the output type of the process as well as a main body that varies depending
 ; on whether the output is for a property or an event.
-(struct monitoring-process made-process (output-specification output-type)
+(define-generics monitoring
+  [monitoring-process-output-specification monitoring]
+  [monitoring-process-output-type monitoring]
+  [monitoring-process-proxy-flag monitoring])
+
+(struct monitoring-process made-process ()
   #:transparent
+  #:methods gen:monitoring []
   #:methods gen:typed
   [(define/generic super-valid? valid?)
    (define (get-type self) monitoring-process)
@@ -24,11 +30,7 @@
                   (made-process-data-state self))))]
   
   #:methods gen:made-proc
-  [(define (execute self in-data datetime)
-     (gen-proc-execute self in-data datetime))
-
-   (define (update-data-state self in-data)
-     (gen-proc-update-data-state self in-data))
+  [(define (proxy? self) (monitoring-process-proxy-flag self))
 
    (define (generate-data self datetime)
      (gen-proc-generate-data
@@ -38,35 +40,18 @@
          dt
          (monitoring-process-output-specification self)
          (monitoring-process-output-type self)
-         (made-process-proxy-flag self)))
+         (monitoring-process-proxy-flag self)))
       self
       datetime))
-   
-   (define (update-control-state self in-data datetime)
-     (gen-proc-update-control-state self in-data datetime))
-
-   (define (make-copy self elem)
-     (let ([d-state (if (list? elem)
-                        elem
-                        (made-process-data-state self))]
-           [c-state (if (control-state? elem)
-                        elem
-                        (made-process-control-state self))]
-           [p-flag (made-process-proxy-flag self)]
-           [o-spec (monitoring-process-output-specification self)]
-           [o-type (monitoring-process-output-type self)])
-       
-       (monitoring-process d-state c-state p-flag o-spec o-type)))
 
    (define/generic super-valid-spec? valid-spec?)
    (define (valid-spec? self)
-     (and (super-valid-spec? (made-process null
-                                           (made-process-control-state self)
-                                           (made-process-proxy-flag self)))
+     (and (super-valid-spec? (made-process null (made-process-control-state self)))
           (or (property-specification? (monitoring-process-output-specification self))
               (event-specification? (monitoring-process-output-specification self)))
           (valid? (monitoring-process-output-specification self))
-          (procedure? (monitoring-process-output-type self))))])
+          (procedure? (monitoring-process-output-type self))
+          (boolean? (proxy? self))))])
 
 ; For observed properties, the output specification comprises a time window and
 ; a function that computes the appropriate property value given the input data
@@ -135,7 +120,7 @@
                               dt<? #:key measurement-valid-datetime)]
          [property-value (p-func filtered-data dt)])
     (if (void? property-value)
-        (void)
+        null
         (o-type proxy-flag
                 dt
                 property-value))))
@@ -180,7 +165,7 @@
         (o-type proxy-flag
                 (datetime-range (measurement-valid-datetime opposing-event) dt)
                 end-event?)
-        (void))))
+        null)))
     
 ; Helper function for filtering out data that lies outside a given range.
 (define (filter-expired-data d-state dt-start dt-end)
@@ -236,10 +221,41 @@
 ;(define-symbolic proc-status boolean?)
 ;(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
 ;
-;(define m-proc-1
-; (monitoring-process d-state c-state (gen-proxy) activity-spec activity-level))
-;(define m-proc-2
-;  (monitoring-process d-state c-state (gen-proxy) exercise-spec exercise-event)) 
+;(define sample-process-1-proxy (gen-proxy))
+;(struct sample-process-1 monitoring-process ()
+;  #:transparent
+;  #:methods gen:monitoring
+;  [(define (monitoring-process-output-specification self) activity-spec)
+;   (define (monitoring-process-output-type self) activity-level)
+;   (define (monitoring-process-proxy-flag self) sample-process-1-proxy)]
+;
+;  #:methods gen:typed
+;  [(define/generic super-valid? valid?)
+;   (define (get-type self) sample-process-1)
+;   (define (valid? self)
+;     (and (valid-spec? self)
+;          (super-valid? (made-process (made-process-data-state self)
+;                                      (made-process-control-state self)))))])
+;
+;(define sample-process-2-proxy (gen-proxy))
+;(struct sample-process-2 monitoring-process ()
+;  #:transparent
+;  #:methods gen:monitoring
+;  [(define (monitoring-process-output-specification self) exercise-spec)
+;   (define (monitoring-process-output-type self) exercise-event)
+;   (define (monitoring-process-proxy-flag self) sample-process-2-proxy)]
+;
+;  #:methods gen:typed
+;  [(define/generic super-valid? valid?)
+;   (define (get-type self) sample-process-2)
+;   (define (valid? self)
+;     (and (valid-spec? self)
+;          (super-valid? (made-process (made-process-data-state self)
+;                                      (made-process-control-state self)))))])
+;  
+;
+;(define m-proc-1 (sample-process-1 d-state c-state))
+;(define m-proc-2 (sample-process-2 d-state c-state))
 ;
 ;(define output-1 (generate-data m-proc-1 cur-dt))
 ;(define output-2 (generate-data m-proc-2 cur-dt))
@@ -282,20 +298,20 @@
 ;                  (= 4 (length (filter (lambda (d) (made-data-proxy-flag d)) d-state))))
 ;             (and (activity-level? output-1)
 ;                  (= 0 (observed-property-value output-1))
-;                  (void? output-2))))))
+;                  (null? output-2))))))
 ;
 ;(define (verify-proc-proxy-1)
 ;  (verify #:assume
-;          (assert (not (void? output-1)))
+;          (assert (not (null? output-1)))
 ;          #:guarantee
 ;          (assert
-;           (implies (made-process-proxy-flag m-proc-1)
+;           (implies (proxy? m-proc-1)
 ;                    (made-data-proxy-flag output-1)))))
 ;
 ;(define (verify-proc-proxy-2)
 ;  (verify #:assume
-;          (assert (not (void? output-2)))
+;          (assert (not (null? output-2)))
 ;          #:guarantee
 ;          (assert
-;           (implies (made-process-proxy-flag m-proc-2)
+;           (implies (proxy? m-proc-2)
 ;                    (made-data-proxy-flag output-2)))))

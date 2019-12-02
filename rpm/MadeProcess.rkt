@@ -6,7 +6,7 @@
 (require "../rim/MadeDataStructures.rkt")
 
 (provide gen:made-proc execute update-data-state generate-data
-         update-control-state valid-spec?)
+         update-control-state valid-spec? proxy?)
 (provide gen-proc-execute gen-proc-update-data-state
          gen-proc-generate-data gen-proc-update-control-state)
 (provide is-proc-executed?)
@@ -29,21 +29,20 @@
   [valid-spec? made-proc]
 
   #:fallbacks
-  [(define (proxy? made-proc) #t)
-   (define (execute made-proc in-data datetime)
+  [(define (execute made-proc in-data datetime)
      (gen-proc-execute made-proc in-data datetime))
    (define (update-data-state made-proc in-data)
      (gen-proc-update-data-state made-proc in-data))
    (define (update-control-state made-proc in-data datetime)
-     (gen-proc-update-control-state made-proc in-data datetime))
-   (define (valid-spec? made-proc)
-     (and (control-state? (made-process-control-state made-proc))
-          (valid? (made-process-control-state made-proc))
-          (boolean? (proxy? made-proc))))])
+     (gen-proc-update-control-state made-proc in-data datetime))])
 
 (struct made-process (data-state control-state)
   #:transparent
-  #:methods gen:made-proc []
+  #:methods gen:made-proc
+  [(define (valid-spec? made-proc)
+     (and (control-state? (made-process-control-state made-proc))
+          (valid? (made-process-control-state made-proc))))]
+  
   #:methods gen:typed
   [(define/generic super-valid? valid?)
    (define (get-type self) made-process)
