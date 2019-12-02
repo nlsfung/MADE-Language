@@ -9,8 +9,13 @@
 
 ; Effectuation process inherit from the generic MADE process, extending it with
 ; a main body that comprises a list of targets identifying which scheduled
-; instructions to instantiate as well as the output type of the process. 
-(struct effectuation-process made-process (target-schedules output-type)
+; instructions to instantiate as well as the output type of the process.
+(define-generics effectuation
+  [effectuation-process-target-schedules effectuation]
+  [effectuation-process-output-type effectuation]
+  [effectuation-process-proxy-flag effectuation])
+
+(struct effectuation-process made-process ()
   #:transparent
   #:methods gen:typed
   [(define/generic super-valid? valid?)
@@ -24,12 +29,8 @@
                   (made-process-data-state self))))]
   
   #:methods gen:made-proc
-  [(define (execute self in-data datetime)
-     (gen-proc-execute self in-data datetime))
-
-   (define (update-data-state self in-data)
-     (gen-proc-update-data-state self in-data))
-
+  [(define (proxy? self) (effectuation-process-proxy-flag self))
+   
    (define (generate-data self datetime)
      (gen-proc-generate-data
       (lambda (d-state dt)
@@ -38,36 +39,19 @@
          dt
          (effectuation-process-target-schedules self)
          (effectuation-process-output-type self)
-         (made-process-proxy-flag self)))
+         (effectuation-process-proxy-flag self)))
       self
       datetime))
    
-   (define (update-control-state self in-data datetime)
-     (gen-proc-update-control-state self in-data datetime))
-
-   (define (make-copy self elem)
-     (let ([d-state (if (list? elem)
-                        elem
-                        (made-process-data-state self))]
-           [c-state (if (control-state? elem)
-                        elem
-                        (made-process-control-state self))]
-           [p-flag (made-process-proxy-flag self)]
-           [t-scheds (effectuation-process-target-schedules self)]
-           [o-type (effectuation-process-output-type self)])
-       
-       (effectuation-process d-state c-state p-flag t-scheds o-type)))
-
    (define/generic super-valid-spec? valid-spec?)
    (define (valid-spec? self)
-     (and (super-valid-spec? (made-process null
-                                           (made-process-control-state self)
-                                           (made-process-proxy-flag self)))
+     (and (super-valid-spec? (made-process null (made-process-control-state self)))
           (list? (effectuation-process-target-schedules self))
           (andmap (lambda (t) (and (target-schedule? t)
                                    (valid? t)))
                   (effectuation-process-target-schedules self))
-          (procedure? (effectuation-process-output-type self))))])
+          (procedure? (effectuation-process-output-type self))
+          (boolean? (proxy? self))))])
 
 ; Target schedules are identified by a plan type, an instruction type (i.e. an
 ; action or target process type) as well as a predicate on the properties of
@@ -113,8 +97,8 @@
                 proxy-flag
                 dt
                 (scheduled-culminating-action-goal-state scheduled-inst))]
-              [else (void)])
-        (void))))
+              [else null])
+        null)))
 
 ; Helper function for filtering out irrelevant action plans. It involves:
 ; 1) Removing all data that are not action plans.
@@ -253,15 +237,27 @@
 ;  (define-symbolic* inst-pred boolean?)
 ;  (lambda (i) inst-pred))
 ;
-;(define e-proc
-;  (effectuation-process d-state c-state (gen-proxy)
-;                        (list (target-schedule fever-treatment
-;                                               treadmill-exercise
-;                                               (gen-inst-pred))
-;                              (target-schedule exercise-regimen
-;                                               treadmill-exercise
-;                                               (gen-inst-pred)))
-;                        treadmill-exercise))
+;(define proc-proxy (gen-proxy))
+;(define proc-target-schedules
+;  (list (target-schedule fever-treatment treadmill-exercise (gen-inst-pred))
+;        (target-schedule exercise-regimen treadmill-exercise (gen-inst-pred))))
+;
+;(struct sample-process effectuation-process ()
+;  #:transparent
+;  #:methods gen:effectuation
+;  [(define (effectuation-process-target-schedules self) proc-target-schedules)
+;   (define (effectuation-process-output-type self) treadmill-exercise)
+;   (define (effectuation-process-proxy-flag self) proc-proxy)]
+;
+;  #:methods gen:typed
+;  [(define/generic super-valid? valid?)
+;   (define (get-type self) sample-process)
+;   (define (valid? self)
+;     (and (valid-spec? self)
+;          (super-valid? (made-process (made-process-data-state self)
+;                                      (made-process-control-state self)))))])
+;
+;(define e-proc (sample-process d-state c-state)) 
 ;
 ;(define output (generate-data e-proc cur-dt))
 ;
@@ -309,14 +305,14 @@
 ;  (verify
 ;   (assert
 ;    (implies (= 6 (length (filter (lambda (d) (made-data-proxy-flag d)) d-state)))
-;             (void? output)))))
+;             (null? output)))))
 ;
 ;(define (verify-proc-proxy)
 ;  (verify #:assume
-;          (assert (not (void? output)))
+;          (assert (not (null? output)))
 ;          #:guarantee
 ;          (assert
-;           (implies (made-process-proxy-flag e-proc)
+;           (implies (proxy? e-proc)
 ;                    (made-data-proxy-flag output)))))
 ;
 ;; Verify implementation of execute effectuation body.
@@ -328,7 +324,7 @@
 ;                  cur-dt-2
 ;                  (effectuation-process-target-schedules e-proc)
 ;                  (effectuation-process-output-type e-proc)
-;                  (made-process-proxy-flag e-proc)))
+;                  (effectuation-process-proxy-flag e-proc)))
 ;
 ;(define (verify-effectuation-body)
 ;  (verify
@@ -341,8 +337,8 @@
 ;                                   d-state))))))
 ;
 ;   #:guarantee   
-;   (assert (implies (and (not (void? output))
-;                         (not (void? output-2))
+;   (assert (implies (and (not (null? output))
+;                         (not (null? output-2))
 ;                         (not (eq? output output-2)))
 ;                    (or (not (dt=? cur-dt cur-dt-2))
 ;                        (dt>? (action-plan-valid-datetime d-2) cur-dt)
@@ -356,7 +352,7 @@
 ;                                            cur-dt
 ;                                            (effectuation-process-target-schedules e-proc)
 ;                                            (effectuation-process-output-type e-proc)
-;                                            (made-process-proxy-flag e-proc)))
+;                                            (effectuation-process-proxy-flag e-proc)))
 ;                                          (> (length (member d d-state))
 ;                                             (length (member d-2 d-state))))))
 ;                               d-state))))))
