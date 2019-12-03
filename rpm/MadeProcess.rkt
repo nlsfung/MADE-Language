@@ -95,8 +95,11 @@
   ; 2) Filtering out all data for which the proxy flag is set (to #t).
   ; 3) Executing the input process function (or return void if not executed). 
   (if (is-proc-executed? (made-process-control-state made-proc) datetime)
-      (let ([input (filter (lambda (d) (not (made-data-proxy-flag d)))
-                           (append (made-process-data-state made-proc) in-data))])
+      (let ([input
+             (filter (lambda (d) (not (made-data-proxy-flag d)))
+                     (remove-duplicates
+                      (append (made-process-data-state made-proc)
+                              in-data)))])
         (proc-func input datetime))
       null))
 
