@@ -41,16 +41,17 @@
   #:methods gen:made-proc
   [(define (proxy? self) (monitoring-process-proxy-flag self))
 
-   (define (generate-data self datetime)
+   (define (generate-data self in-data datetime)
      (gen-proc-generate-data
-      (lambda (d-state dt)
+      (lambda (d-list dt)
         (execute-monitoring-body
-         d-state
+         d-list
          dt
          (monitoring-process-output-specification self)
          (monitoring-process-output-type self)
          (monitoring-process-proxy-flag self)))
       self
+      in-data
       datetime))
 
    (define/generic super-valid-spec? valid-spec?)
@@ -102,16 +103,16 @@
           (procedure? (event-trigger-trigger-predicate self))))])
 
 ; Helper function for defining the main behaviour of monitoring processes.
-(define (execute-monitoring-body d-state dt o-spec o-type proxy-flag)
+(define (execute-monitoring-body d-list dt o-spec o-type proxy-flag)
   (cond [(property-specification? o-spec)
-         (execute-property-body d-state
+         (execute-property-body d-list
                                 dt
                                 (property-specification-time-window o-spec)
                                 (property-specification-value-function o-spec)
                                 o-type
                                 proxy-flag)]
         [(event-specification? o-spec)
-         (execute-event-body d-state
+         (execute-event-body d-list
                              dt
                              (event-specification-start-trigger o-spec)
                              (event-specification-end-trigger o-spec)
@@ -120,23 +121,21 @@
  
 ; Helper function for specifying the behaviour of monitoring processes that
 ; output observed properties.
-(define (execute-property-body d-state dt t-window p-func o-type proxy-flag)
+(define (execute-property-body d-list dt t-window p-func o-type proxy-flag)
   ; To generate an observed property, the following steps are followed:
   ; 1) Filter out irrelevant data, and sort the remaining data.
   ; 2) Execute the property function.
   ; 3) Instantiate the property.
-  (let* ([filtered-data (sort (filter-expired-data d-state (dt- dt t-window) dt)
+  (let* ([filtered-data (sort (filter-expired-data d-list (dt- dt t-window) dt)
                               dt<? #:key measurement-valid-datetime)]
          [property-value (p-func filtered-data)])
     (if (void? property-value)
         null
-        (o-type proxy-flag
-                dt
-                property-value))))
+        (list (o-type proxy-flag dt property-value)))))
 
 ; Helper function for specifying the behaviour of monitoring processes that
 ; output observed events.
-(define (execute-event-body d-state dt start-trigger end-trigger o-type proxy-flag)
+(define (execute-event-body d-list dt start-trigger end-trigger o-type proxy-flag)
   ; To generate an observed event, the following steps are followed:
   ; 1) Sort the input data from the least to most recent.
   ; 2) Check if the start (or end) trigger is activated.
@@ -150,7 +149,7 @@
          [sorted-data (sort (filter (lambda (d)
                                       (and (measurement? d)
                                            (not (dt>? (measurement-valid-datetime d) dt))))
-                                    d-state)
+                                    d-list)
                             dt<? #:key measurement-valid-datetime)]
          
          [start-event? (start-pred (filter-expired-data sorted-data (dt- dt start-win) dt))]
@@ -171,9 +170,9 @@
                                        (reverse sorted-data))]
                                [else #f])])
     (if opposing-event
-        (o-type proxy-flag
-                (datetime-range (measurement-valid-datetime opposing-event) dt)
-                end-event?)
+        (list (o-type proxy-flag
+                      (datetime-range (measurement-valid-datetime opposing-event) dt)
+                      end-event?))
         null)))
     
 ; Helper function for filtering out data that lies outside a given range.
@@ -264,15 +263,16 @@
 ;(define m-proc-1 (sample-process-1 d-state c-state))
 ;(define m-proc-2 (sample-process-2 d-state c-state))
 ;
-;(define output-1 (generate-data m-proc-1 cur-dt))
-;(define output-2 (generate-data m-proc-2 cur-dt))
+;(define output-1 (generate-data m-proc-1 null cur-dt))
+;(define output-2 (generate-data m-proc-2 null cur-dt))
 ;
 ;; Verify implementation of execute property body.
 ;(define (verify-property-body)
 ;  (verify (assert
 ;           (implies (is-proc-executed? c-state cur-dt)
-;                    (and (activity-level? output-1)
-;                         (<= (observed-property-value output-1)
+;                    (and (list? output-1)
+;                         (activity-level? (list-ref output-1 0))
+;                         (<= (observed-property-value (list-ref output-1 0))
 ;                             (sum d-state)))))))
 ;
 ;; Verify implementation of execute event body.
@@ -286,13 +286,15 @@
 ;                         (= 4 (length (remove-duplicates
 ;                                       (map (lambda (d) (measurement-valid-datetime d))
 ;                                            d-state)))))
-;                    (and (implies (and (exercise-event? output-2)
-;                                       (not (observed-event-value output-2)))
+;                    (and (implies (and (list? output-2)
+;                                       (exercise-event? (list-ref output-2 0))
+;                                       (not (observed-event-value (list-ref output-2 0))))
 ;                                  (findf (lambda (d) (dt=? (measurement-valid-datetime d)
 ;                                                           cur-dt))
 ;                                         over-acc-meas))
-;                         (implies (and (exercise-event? output-2)
-;                                       (observed-event-value output-2))
+;                         (implies (and (list? output-2)
+;                                       (exercise-event? (list-ref output-2 0))
+;                                       (observed-event-value (list-ref output-2 0)))
 ;                                  (findf (lambda (d) (dt<? (measurement-valid-datetime d)
 ;                                                           cur-dt))
 ;                                         over-acc-meas)))))))
@@ -303,8 +305,9 @@
 ;   (assert
 ;    (implies (and (is-proc-executed? c-state cur-dt)
 ;                  (= 4 (length (filter (lambda (d) (made-data-proxy-flag d)) d-state))))
-;             (and (activity-level? output-1)
-;                  (= 0 (observed-property-value output-1))
+;             (and (list? output-1)
+;                  (activity-level? (list-ref output-1 0))
+;                  (= 0 (observed-property-value (list-ref output-1 0)))
 ;                  (null? output-2))))))
 ;
 ;(define (verify-proc-proxy-1)
@@ -313,7 +316,8 @@
 ;          #:guarantee
 ;          (assert
 ;           (implies (proxy? m-proc-1)
-;                    (made-data-proxy-flag output-1)))))
+;                    (and (list? output-1)
+;                         (made-data-proxy-flag (list-ref output-1 0)))))))
 ;
 ;(define (verify-proc-proxy-2)
 ;  (verify #:assume
@@ -321,4 +325,5 @@
 ;          #:guarantee
 ;          (assert
 ;           (implies (proxy? m-proc-2)
-;                    (made-data-proxy-flag output-2)))))
+;                    (and (list? output-2)
+;                         (made-data-proxy-flag (list-ref output-2 0)))))))
