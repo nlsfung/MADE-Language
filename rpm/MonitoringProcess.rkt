@@ -5,6 +5,15 @@
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
 
+(provide gen:monitoring
+         monitoring-process-output-specification
+         monitoring-process-output-type
+         monitoring-process-proxy-flag)
+(provide (struct-out monitoring-process)
+         property-specification
+         event-specification
+         event-trigger)
+
 ; This file contains the implementation of Monitoring processes.
 
 ; Monitoring process inherit from the generic MADE process, extending it with
@@ -118,7 +127,7 @@
   ; 3) Instantiate the property.
   (let* ([filtered-data (sort (filter-expired-data d-state (dt- dt t-window) dt)
                               dt<? #:key measurement-valid-datetime)]
-         [property-value (p-func filtered-data dt)])
+         [property-value (p-func filtered-data)])
     (if (void? property-value)
         null
         (o-type proxy-flag
@@ -144,21 +153,21 @@
                                     d-state)
                             dt<? #:key measurement-valid-datetime)]
          
-         [start-event? (start-pred (filter-expired-data sorted-data (dt- dt start-win) dt) dt)]
-         [end-event? (end-pred (filter-expired-data sorted-data (dt- dt end-win) dt) dt)]
+         [start-event? (start-pred (filter-expired-data sorted-data (dt- dt start-win) dt))]
+         [end-event? (end-pred (filter-expired-data sorted-data (dt- dt end-win) dt))]
          [opposing-event (cond [start-event?
                                 (findf (lambda (d)
                                          (let* ([ref-dt (measurement-valid-datetime d)])
                                            (end-pred (filter-expired-data sorted-data
                                                                           (dt- ref-dt end-win)
-                                                                          ref-dt) dt)))
+                                                                          ref-dt))))
                                        (reverse sorted-data))]
                                [end-event?
                                 (findf (lambda (d)
                                          (let* ([ref-dt (measurement-valid-datetime d)])
                                            (start-pred (filter-expired-data sorted-data
                                                                             (dt- ref-dt start-win)
-                                                                            ref-dt) dt)))
+                                                                            ref-dt))))
                                        (reverse sorted-data))]
                                [else #f])])
     (if opposing-event
@@ -200,7 +209,7 @@
 ;(struct activity-level observed-property () #:transparent)
 ;(struct exercise-event observed-event () #:transparent)
 ;
-;(define (sum d-list dt)
+;(define (sum d-list)
 ;  (foldl (lambda (d result) (+ (measurement-value d) result))
 ;            0
 ;            (filter (lambda (d) (body-acceleration? d)) d-list)))
@@ -208,10 +217,8 @@
 ;(define activity-spec (property-specification (gen-window) sum))
 ;(define exercise-spec
 ;  (event-specification
-;   (event-trigger (gen-window)
-;                  (lambda (d-list dt) (> (sum d-list dt) 25)))
-;   (event-trigger (gen-window)
-;                  (lambda (d-list dt) (< (sum d-list dt) 5)))))
+;   (event-trigger (gen-window) (lambda (d-list) (> (sum d-list) 25)))
+;   (event-trigger (gen-window) (lambda (d-list) (< (sum d-list) 5)))))
 ;
 ;(define d-state
 ;  (list (gen-body-acc) (gen-body-acc) (gen-body-acc) (gen-body-acc)))
@@ -219,7 +226,7 @@
 ;(define sched-dt (gen-datetime))
 ;(define cur-dt (gen-datetime))
 ;(define-symbolic proc-status boolean?)
-;(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
+;(define c-state (control-state (schedule (list sched-dt) #f) #t))
 ;
 ;(define sample-process-1-proxy (gen-proxy))
 ;(struct sample-process-1 monitoring-process ()
@@ -266,7 +273,7 @@
 ;           (implies (is-proc-executed? c-state cur-dt)
 ;                    (and (activity-level? output-1)
 ;                         (<= (observed-property-value output-1)
-;                             (sum d-state cur-dt)))))))
+;                             (sum d-state)))))))
 ;
 ;; Verify implementation of execute event body.
 ;(define over-acc-meas (filter (lambda (d) (and (> (measurement-value d) 25))) d-state))
