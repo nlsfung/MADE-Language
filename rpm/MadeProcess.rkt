@@ -24,7 +24,7 @@
   [proxy? made-proc]
   [execute made-proc in-data datetime]
   [update-data-state made-proc in-data]
-  [generate-data made-proc datetime]
+  [generate-data made-proc in-data datetime]
   [update-control-state made-proc in-data datetime]
   [valid-spec? made-proc]
 
@@ -74,7 +74,7 @@
   ; 1) Generate data given the input data and current date-time.
   ; 2) Update its data state given the input and output data.
   ; 3) Update its control state given the input and output data and current date-time.
-  (let* ([proc-output (generate-data made-proc datetime)]
+  (let* ([proc-output (generate-data made-proc in-data datetime)]
          [updated-proc (update-data-state made-proc (append in-data proc-output))]
          [new-proc (update-control-state updated-proc
                                          (append in-data proc-output)
@@ -89,14 +89,14 @@
   ((get-type made-proc) (remove-duplicates (append (made-process-data-state made-proc) in-data))
                         (made-process-control-state made-proc)))
 
-(define (gen-proc-generate-data proc-func made-proc datetime)
+(define (gen-proc-generate-data proc-func made-proc in-data datetime)
   ; Generating new data involves:
   ; 1) Checking that the input datetime lies on the process schedule.
   ; 2) Filtering out all data for which the proxy flag is set (to #t).
   ; 3) Executing the input process function (or return void if not executed). 
   (if (is-proc-executed? (made-process-control-state made-proc) datetime)
       (let ([input (filter (lambda (d) (not (made-data-proxy-flag d)))
-                           (made-process-data-state made-proc))])
+                           (append (made-process-data-state made-proc) in-data))])
         (proc-func input datetime))
       null))
 
