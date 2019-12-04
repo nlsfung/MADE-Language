@@ -31,16 +31,17 @@
   #:methods gen:made-proc
   [(define (proxy? self) (effectuation-process-proxy-flag self))
    
-   (define (generate-data self datetime)
+   (define (generate-data self in-data datetime)
      (gen-proc-generate-data
-      (lambda (d-state dt)
+      (lambda (d-list dt)
         (execute-effectuation-body
-         d-state
+         d-list
          dt
          (effectuation-process-target-schedules self)
          (effectuation-process-output-type self)
          (effectuation-process-proxy-flag self)))
       self
+      in-data
       datetime))
    
    (define/generic super-valid-spec? valid-spec?)
@@ -66,12 +67,12 @@
           (procedure? (target-schedule-instruction-predicate self))))])
 
 ; Helper function for defining the main behaviour of effectuation processes.
-(define (execute-effectuation-body d-state dt t-scheds o-type proxy-flag)
+(define (execute-effectuation-body d-list dt t-scheds o-type proxy-flag)
   ; To generate output data, an Effectuation process follows the following steps:
   ; 1) Filter out expired action plans
   ; 2) Identify a scheduled instruction (if any) to instantiate.
   ; 3) Instantiate it as an instruction of the output type. 
-  (let* ([filtered-data (filter-expired-data d-state dt)]
+  (let* ([filtered-data (filter-expired-data d-list dt)]
          [scheduled-inst
           (ormap (lambda (d)
                    (ormap (lambda (t-sched)
@@ -80,23 +81,23 @@
                  filtered-data)])
     (if scheduled-inst
         (cond [(scheduled-control? scheduled-inst)
-               (o-type
-                proxy-flag
-                (scheduled-control-target-process scheduled-inst)
-                dt
-                (scheduled-control-schedule scheduled-inst)
-                (scheduled-control-status scheduled-inst))]
+               (list (o-type
+                      proxy-flag
+                      (scheduled-control-target-process scheduled-inst)
+                      dt
+                      (scheduled-control-schedule scheduled-inst)
+                      (scheduled-control-status scheduled-inst)))]
               [(scheduled-homogeneous-action? scheduled-inst)
-               (o-type
-                proxy-flag
-                dt
-                (scheduled-homogeneous-action-rate scheduled-inst)
-                (scheduled-homogeneous-action-duration scheduled-inst))]
+               (list (o-type
+                      proxy-flag
+                      dt
+                      (scheduled-homogeneous-action-rate scheduled-inst)
+                      (scheduled-homogeneous-action-duration scheduled-inst)))]
               [(scheduled-culminating-action? scheduled-inst)
-               (o-type
-                proxy-flag
-                dt
-                (scheduled-culminating-action-goal-state scheduled-inst))]
+               (list (o-type
+                      proxy-flag
+                      dt
+                      (scheduled-culminating-action-goal-state scheduled-inst)))]
               [else null])
         null)))
 
@@ -104,8 +105,8 @@
 ; 1) Removing all data that are not action plans.
 ; 2) Identifying all types of action plans.
 ; 3) Finding for each plan type the most up-to-date plan (if any).
-(define (filter-expired-data d-state dt)
-  (let* ([plan-list (filter (lambda (d) (action-plan? d)) d-state)]
+(define (filter-expired-data d-list dt)
+  (let* ([plan-list (filter (lambda (d) (action-plan? d)) d-list)]
          [type-list (remove-duplicates
                      (map (lambda (d) (get-type d)) plan-list))]
          [plan-buckets
@@ -259,7 +260,7 @@
 ;
 ;(define e-proc (sample-process d-state c-state)) 
 ;
-;(define output (generate-data e-proc cur-dt))
+;(define output (generate-data e-proc null cur-dt))
 ;
 ;; Verify implementation of extract instruction.
 ;(define-symbolic x y integer?)
@@ -313,7 +314,7 @@
 ;          #:guarantee
 ;          (assert
 ;           (implies (proxy? e-proc)
-;                    (made-data-proxy-flag output)))))
+;                    (made-data-proxy-flag (list-ref output 0))))))
 ;
 ;; Verify implementation of execute effectuation body.
 ;(define-symbolic v integer?)

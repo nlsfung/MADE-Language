@@ -270,7 +270,7 @@
 ;(define (verify-property-body)
 ;  (verify (assert
 ;           (implies (is-proc-executed? c-state cur-dt)
-;                    (and (list? output-1)
+;                    (and (not (null? output-1))
 ;                         (activity-level? (list-ref output-1 0))
 ;                         (<= (observed-property-value (list-ref output-1 0))
 ;                             (sum d-state)))))))
@@ -286,13 +286,13 @@
 ;                         (= 4 (length (remove-duplicates
 ;                                       (map (lambda (d) (measurement-valid-datetime d))
 ;                                            d-state)))))
-;                    (and (implies (and (list? output-2)
+;                    (and (implies (and (not (null? output-2))
 ;                                       (exercise-event? (list-ref output-2 0))
 ;                                       (not (observed-event-value (list-ref output-2 0))))
 ;                                  (findf (lambda (d) (dt=? (measurement-valid-datetime d)
 ;                                                           cur-dt))
 ;                                         over-acc-meas))
-;                         (implies (and (list? output-2)
+;                         (implies (and (not (null? output-2))
 ;                                       (exercise-event? (list-ref output-2 0))
 ;                                       (observed-event-value (list-ref output-2 0)))
 ;                                  (findf (lambda (d) (dt<? (measurement-valid-datetime d)
@@ -305,7 +305,7 @@
 ;   (assert
 ;    (implies (and (is-proc-executed? c-state cur-dt)
 ;                  (= 4 (length (filter (lambda (d) (made-data-proxy-flag d)) d-state))))
-;             (and (list? output-1)
+;             (and (not (null? output-1))
 ;                  (activity-level? (list-ref output-1 0))
 ;                  (= 0 (observed-property-value (list-ref output-1 0)))
 ;                  (null? output-2))))))
@@ -316,8 +316,7 @@
 ;          #:guarantee
 ;          (assert
 ;           (implies (proxy? m-proc-1)
-;                    (and (list? output-1)
-;                         (made-data-proxy-flag (list-ref output-1 0)))))))
+;                    (made-data-proxy-flag (list-ref output-1 0))))))
 ;
 ;(define (verify-proc-proxy-2)
 ;  (verify #:assume
@@ -325,5 +324,4 @@
 ;          #:guarantee
 ;          (assert
 ;           (implies (proxy? m-proc-2)
-;                    (and (list? output-2)
-;                         (made-data-proxy-flag (list-ref output-2 0)))))))
+;                    (made-data-proxy-flag (list-ref output-2 0))))))

@@ -33,15 +33,16 @@
   #:methods gen:made-proc
   [(define (proxy? self) (decision-process-proxy-flag self))
    
-   (define (generate-data self datetime)
+   (define (generate-data self in-data datetime)
      (gen-proc-generate-data
-      (lambda (d-state dt)
-        (execute-decision-body d-state
+      (lambda (d-list dt)
+        (execute-decision-body d-list
                                dt
                                (decision-process-plan-template self)
                                (decision-process-decision-criteria self)
                                (decision-process-proxy-flag self)))
       self
+      in-data
       datetime))
 
    (define/generic super-valid-spec? valid-spec?)
@@ -54,21 +55,21 @@
           (boolean? (proxy? self))))])
 
 ; Helper function for defining the main behaviour of decision processes.
-(define (execute-decision-body d-state dt p-temp d-crit proxy-flag)
+(define (execute-decision-body d-list dt p-temp d-crit proxy-flag)
   ; To generate output data, a Decision process follows the following steps:
   ; 1) Filter out all data that are not valid at the input date-time.
   ; 2) Check if any decision criterion (if any) returns true given the data.
   ; 3) Instantiate from the plan template the corresponding action plan.
-  (let* ([filtered-data (filter-expired-data d-state dt)]
+  (let* ([filtered-data (filter-expired-data d-list dt)]
          [selected-crit (findf (lambda (c) (c filtered-data)) d-crit)])
     (if selected-crit
-        (plan-instantiate p-temp dt proxy-flag)
+        (list (plan-instantiate p-temp dt proxy-flag))
         null)))
          
 ; Helper function for filtering out abstractions that are:
 ; 1) Not valid at the input datetime.
 ; 2) Overriden by another abstraction.
-(define (filter-expired-data d-state dt)
+(define (filter-expired-data d-list dt)
   (let* ([filtered-data
           (filter
            (lambda (d)
@@ -77,7 +78,7 @@
                    dt
                    (datetime-range-start (abstraction-valid-datetime-range d))
                    (datetime-range-end (abstraction-valid-datetime-range d)))))
-           d-state)]
+           d-list)]
 
          [sorted-data
           (sort filtered-data dt>?
@@ -373,7 +374,7 @@
 ;
 ;(define d-proc (sample-process d-state c-state))
 ;
-;(define output (generate-data d-proc cur-dt))
+;(define output (generate-data d-proc null cur-dt))
 ;
 ;; Verify the implementation of the data filter.
 ;(define (verify-filtered-data-length)
@@ -472,17 +473,17 @@
 ;
 ;(define (verify-proc-proxy)
 ;  (verify #:assume
-;          (assert (action-plan? output))
+;          (assert (not (null? output)))
 ;          #:guarantee
 ;          (assert
 ;           (implies (proxy? d-proc)
-;                    (made-data-proxy-flag output)))))
+;                    (made-data-proxy-flag (list-ref output 0))))))
 ;
 ;; Verify the implementation of the decision criteria.
 ;(define (verify-decision-criteria)
 ;  (verify (assert (implies (eq? output
-;                                (plan-instantiate
-;                                 fever-treatment-template cur-dt proc-status))
+;                                (list (plan-instantiate
+;                                       fever-treatment-template cur-dt proc-status)))
 ;                           (<= 1 (count (lambda (d)
 ;                                          (and (avg-body-temp? d)
 ;                                               (> (abstraction-value d) 37)))

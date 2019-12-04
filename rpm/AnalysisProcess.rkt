@@ -34,16 +34,17 @@
   #:methods gen:made-proc
   [(define (proxy? self) (analysis-process-proxy-flag self))
 
-   (define (generate-data self datetime)
+   (define (generate-data self in-data datetime)
      (gen-proc-generate-data
-      (lambda (d-state dt)
-        (execute-analysis-body d-state
+      (lambda (d-list dt)
+        (execute-analysis-body d-list
                                dt
                                (analysis-process-time-window self)
                                (analysis-process-output-type self)
                                (analysis-process-abstraction-functions self)
                                (analysis-process-proxy-flag self)))
       self
+      in-data
       datetime))
    
    (define/generic super-valid-spec? valid-spec?)
@@ -56,14 +57,14 @@
           (andmap (lambda (f) (procedure? f)) (analysis-process-abstraction-functions self))))])
 
 ; Helper function for defining the main behaviour of analysis processes.
-(define (execute-analysis-body d-state dt t-window out-type ab-funcs proxy-flag)
+(define (execute-analysis-body d-list dt t-window out-type ab-funcs proxy-flag)
   ; To generate output data, an Analysis process follows the following steps:
   ; 1) Filter out any data that falls outside the time window.
   ; 2) Feed the filtered data into the input list of abstraction functions, one
   ;    of which may produce a non-void output value.
   ; 3) If an output value is produced, determine its valid datetime range.
   ; 4) Generate the output abstraction, if any.
-  (let* ([filtered-data (sort (filter-expired-data d-state (dt- dt t-window) dt)
+  (let* ([filtered-data (sort (filter-expired-data d-list (dt- dt t-window) dt)
                               observed-after?)]
          [output-func (findf (lambda (f) (not (void? (f filtered-data)))) ab-funcs)]
          [output-value (if output-func (output-func filtered-data) (void))]
@@ -92,9 +93,9 @@
 
     (if (void? output-value)
         null
-        (out-type proxy-flag
-                  (datetime-range dt (dt+ latest-start-time t-window))
-                  output-value))))
+        (list (out-type proxy-flag
+                        (datetime-range dt (dt+ latest-start-time t-window))
+                        output-value)))))
 
 ; Helper function to determine the temporal order of two observations.
 (define (observed-after? ob1 ob2)
@@ -110,7 +111,7 @@
                 (observed-event-valid-datetime-range ob2))])))
 
 ; Helper function for filtering out data that lies outside a given range.
-(define (filter-expired-data d-state dt-start dt-end)
+(define (filter-expired-data d-list dt-start dt-end)
   (filter (lambda (d)
             (or (and (observed-property? d)
                      (dt-between? (observed-property-valid-datetime d)
@@ -119,7 +120,7 @@
                      (dt-range-overlap?
                       (observed-event-valid-datetime-range d)
                       (datetime-range dt-start dt-end)))))
-          d-state))
+          d-list))
 
 ; Helper function to determine if a datetime range intersects with another.
 (define (dt-range-overlap? range-1 range-2)
@@ -205,7 +206,7 @@
 ;
 ;(define room-temp-proc (sample-process d-state c-state))
 ;
-;(define output (generate-data room-temp-proc cur-dt))
+;(define output (generate-data room-temp-proc null cur-dt))
 ;
 ;; Verify the implementation of the control state.
 ;(define (verify-is-executed)
@@ -238,11 +239,12 @@
 ;
 ;(define (verify-proc-proxy)
 ;  (verify #:assume
-;          (assert (room-temperature-grade? output))
+;          (assert (and (not (null? output))
+;                       (room-temperature-grade? (list-ref output 0))))
 ;          #:guarantee
 ;          (assert
 ;           (implies (proxy? room-temp-proc)
-;                    (made-data-proxy-flag output)))))
+;                    (made-data-proxy-flag (list-ref output 0))))))
 ;
 ;; Verify the implementation of determining abstraction validity range.
 ;(define new-dt (datetime 7 9 12 (gen-dt-part) 0 0))
@@ -250,11 +252,13 @@
 ;(define new-output (execute-analysis-body d-state new-dt t-window out-type ab-funcs #f))
 ;(define (verify-valid-range)
 ;  (verify (assert
-;           (implies (and (room-temperature-grade? output)
+;           (implies (and (not (null? output))
+;                         (room-temperature-grade? (list-ref output 0))
 ;                         (dt>? new-dt (datetime-range-start
-;                                       (abstraction-valid-datetime-range output)))
+;                                       (abstraction-valid-datetime-range (list-ref output 0))))
 ;                         (dt<? new-dt (datetime-range-end
-;                                       (abstraction-valid-datetime-range output))))
-;                    (and (room-temperature-grade? new-output)
-;                         (eq? (abstraction-value new-output)
-;                              (abstraction-value output)))))))
+;                                       (abstraction-valid-datetime-range (list-ref output 0)))))
+;                    (and (not (null? new-output))
+;                         (room-temperature-grade? (list-ref new-output 0))
+;                         (eq? (abstraction-value (list-ref new-output 0))
+;                              (abstraction-value (list-ref output 0))))))))
