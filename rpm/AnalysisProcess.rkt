@@ -5,6 +5,11 @@
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
 
+(provide gen:analysis
+         analysis-process-time-window
+         analysis-process-output-type
+         analysis-process-abstraction-functions
+         analysis-process-proxy-flag)
 (provide (struct-out analysis-process))
 
 ; This file contains the implementation of Analysis processes.
@@ -147,18 +152,18 @@
 ;  (room-temperature (gen-temp-proxy) (gen-datetime) (gen-temp-value)))
 ;
 ;(struct room-temperature-grade abstraction () #:transparent)
-;(define (grade-temp-low d-state)
+;(define (grade-temp-low d-list)
 ;  (if (>= (length (filter (lambda (d)
 ;                            (and (room-temperature? d)
 ;                                 (< (observed-property-value d) 5)))
-;                         d-state)) 3)
+;                         d-list)) 3)
 ;      'low
 ;      (void)))
-;(define (grade-temp-high d-state)
+;(define (grade-temp-high d-list)
 ;  (if (>= (length (filter (lambda (d)
 ;                            (and (room-temperature? d)
 ;                                 (> (observed-property-value d) 10)))
-;                         d-state)) 4)
+;                         d-list)) 4)
 ;      'high
 ;      (void)))
 ;
