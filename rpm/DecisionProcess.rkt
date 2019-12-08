@@ -6,6 +6,19 @@
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
 
+(provide gen:decision
+         decision-process-plan-template
+         decision-process-decision-criteria
+         decision-process-proxy-flag)
+(provide (struct-out decision-process)
+         gen:plan-temp plan-instantiate
+         gen:inst-template instantiate
+         relative-schedule
+         plan-template
+         control-template
+         homogeneous-action-template
+         culminating-action-template)
+
 ; This file contains the implementation of Decision processes.
 
 ; Decision process inherit from the generic MADE process, extending it with
@@ -330,18 +343,18 @@
 ;   fever-treatment
 ;   (list ibuprofen-template treadmill-template analyze-heart-rate-template)))
 ;
-;(define (decision-criterion-one d-state)
+;(define (decision-criterion-one d-list)
 ;  (and (memf (lambda (d) (and (avg-body-temp? d)
 ;                              (> (abstraction-value d) 37)))
-;             d-state)
+;             d-list)
 ;       (memf (lambda (d) (and (headache-level? d)
 ;                              (eq? 'high (abstraction-value d))))
-;             d-state)))
+;             d-list)))
 ;
-;(define (decision-criterion-two d-state)
+;(define (decision-criterion-two d-list)
 ;  (memf (lambda (d) (and (avg-body-temp? d)
 ;                              (> (abstraction-value d) 40))
-;             d-state)))
+;             d-list)))
 ;
 ;(define d-state
 ;  (let* ([headaches (list (gen-headache-level) (gen-headache-level))]
