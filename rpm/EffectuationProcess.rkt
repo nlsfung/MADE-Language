@@ -5,6 +5,13 @@
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
 
+(provide gen:effectuation
+         effectuation-process-target-schedules
+         effectuation-process-output-type
+         effectuation-process-proxy-flag)
+(provide (struct-out effectuation-process)
+         target-schedule)
+
 ; This file contains the implementation of Effectuation processes.
 
 ; Effectuation process inherit from the generic MADE process, extending it with

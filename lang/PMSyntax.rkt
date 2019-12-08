@@ -4,6 +4,7 @@
 (require "../rpm/MonitoringProcess.rkt")
 (require "../rpm/AnalysisProcess.rkt")
 (require "../rpm/DecisionProcess.rkt")
+(require "../rpm/EffectuationProcess.rkt")
 (require "../rim/BasicDataTypes.rkt")
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
@@ -86,6 +87,7 @@
        (raise-if-not-duration #'duration stx)
        (raise-if-not-lambda #'(lambda ...) 1 stx)
        #'(struct id analysis-process ()
+           #:transparent
            #:methods gen:analysis
            [(define (analysis-process-time-window self) duration)
             (define (analysis-process-output-type self) output-type)
@@ -107,6 +109,8 @@
 ; 3) The output type of the process.
 ; 4) A list of instruction templates that constitute the plan.
 ; 5) A list of predicates which constitute the decision criteria of the process.
+; Note: The relative schedules in the instruction templates must contain a
+; non-empty list of datetime patterns.
 (define-syntax (define-decision stx)
   (syntax-case stx ()
     [(define-decision id proxy output-type (#:instructions (... inst) ...) (#:criteria (... lambda) ...))
@@ -123,6 +127,39 @@
             (define (decision-process-decision-criteria self) (list lambda ...))
             (define (decision-process-proxy-flag self) proxy)]
            
+           #:methods gen:typed
+           [(define/generic super-valid? valid?)
+            (define (get-type self) sample-process)
+            (define (valid? self)
+              (and (valid-spec? self)
+                   (super-valid? (made-process (made-process-data-state self)
+                                               (made-process-control-state self)))))]))]))
+
+; define-effectuation creates a new Effectuation process.
+; It requires the following inputs:
+; It requires the following inputs:
+; 1) An identifier for the new process.
+; 2) A boolean indicating whether the process is a proxy or not.
+; 3) The output type of the process.
+; 4) A list of target schedules, each containing:
+;    a) The target plan type.
+;    b) The target instruction type.
+;    c) A predicte on the target scheduled instruction.
+(define-syntax (define-effectuation stx)
+  (syntax-case stx ()
+    [(define-effectuation id proxy output-type (... target) ...)
+     (begin
+       (raise-if-not-identifier #'id stx)
+       (raise-if-not-boolean #'proxy stx)
+       (raise-if-not-identifier #'output-type stx)
+       #'(struct id effectuation-process ()
+           #:transparent
+           #:methods gen:effectuation
+           [(define (effectuation-process-target-schedules self)
+              (define-target-schedule-list target ...))
+            (define (effectuation-process-output-type self) output-type)
+            (define (effectuation-process-proxy-flag self) proxy)]
+
            #:methods gen:typed
            [(define/generic super-valid? valid?)
             (define (get-type self) sample-process)
@@ -382,3 +419,25 @@
        (if (not (eq? (syntax->datum #'rel-sched) 'relative-schedule))
            (raise-syntax-error #f "relative scheduled expected." stx #'rel-sched)
            #'(relative-schedule rounding offset (list pattern ...) interval)))]))
+
+; Helper function for parsing the syntax for lists of target schedules.
+(define-syntax (define-target-schedule-list stx)
+  (syntax-case stx ()
+    [(_ (target-schedule #:plan plan-type #:instruction inst-type #:predicate pred))
+     #'(list (define-target-schedule target-schedule plan-type inst-type pred))]
+
+    [(_ (target-schedule #:plan plan-type #:instruction inst-type #:predicate pred) (... target) ...)
+     #'(append (list (define-target-schedule target-schedule plan-type inst-type pred))
+               (define-target-schedule-list target ...))]))
+
+; Helper function for parsing the syntax for target schedules.
+(define-syntax (define-target-schedule stx)
+  (syntax-case stx ()
+    [(_ target-schedule plan-type inst-type pred)
+     (if (not (eq? (syntax->datum #'target-schedule) 'target-schedule))
+         (raise-syntax-error #f "target schedule expected." stx #'target-schedule)
+         (begin
+           (raise-if-not-identifier #'plan-type stx)
+           (raise-if-not-identifier #'inst-type stx)
+           (raise-if-not-lambda #'pred 1 stx)
+           #'(target-schedule plan-type inst-type pred)))]))
