@@ -273,43 +273,27 @@
 (define-syntax (define-action-instruction stx)
   (syntax-case stx ()
     [(define-action-instruction id action-type rest ...)
-     (cond [(not (identifier? #'id))
-            (raise-syntax-error #f "identifier expected." stx #'id)]
-           [(eq? 'homogeneous (eval-syntax #'action-type))
-            (define-homogeneous-action #'(id rest ...) stx)]
-           [(eq? 'culminating (eval-syntax #'action-type))
-            (define-culminating-action #'(id rest ...) stx)]
+     (cond [(eq? (syntax->datum #'action-type) 'homogeneous)
+            #'(define-homogeneous-action id rest ...)]
+           [(eq? (syntax->datum #'action-type) 'culminating)
+            #'(define-culminating-action id rest ...)]
            [else (raise-syntax-error #f "'homogeneous or 'culminating expected."
-                                     stx #'action-type)])]))    
+                                     stx #'action-type)])]))
 
 ; Helper function for creating new homogeneous action instruction types.
-(define-for-syntax (define-homogeneous-action stx src-stx)
+(define-syntax (define-homogeneous-action stx)
   (syntax-case stx ()
-    [(id units)
-     (cond [(not (symbol? (eval-syntax #'units)))
-            (raise-syntax-error #f "symbol expected." src-stx #'units)]
-           [else #'(struct id homogeneous-action ()
-                     #:transparent
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (and (super-valid? (homogeneous-action
-                                            (made-data-proxy-flag self)
-                                            (homogeneous-action-start-datetime self)
-                                            (homogeneous-action-rate self)
-                                            (homogeneous-action-duration self)))
-                             (eq? (dimensioned-units (homogeneous-action-rate self)) units)))])])]
+    [(_ id units)
+     #'(define-homogeneous-action id units (lambda (d1 d2) #t))]
 
-    [(id units invariant)
-     (cond [(not (symbol? (eval-syntax #'units)))
-            (raise-syntax-error #f "symbol expected." src-stx #'units)]
-           [(and (not (identifier? #'invariant))
-                 (not (and (procedure? (eval-syntax #'invariant))
-                           (eq? (procedure-arity (eval-syntax #'invariant)) 2))))
-            (raise-syntax-error #f "invariant on action rate and duration expected."
-                                src-stx #'invariant)]
-           [else #'(struct id homogeneous-action ()
+    [(_ id units (... invariant))
+     (begin
+       (raise-if-not-identifier #'id stx)
+       (raise-if-not-symbol #'units stx)
+       (raise-if-not-lambda #'invariant 2 stx)
+       (with-syntax ([get-id (build-getter-name #'id)])
+         #'(begin
+             (struct id homogeneous-action ()
                      #:transparent
                      #:methods gen:typed
                      [(define/generic super-valid? valid?)
@@ -322,90 +306,72 @@
                                             (homogeneous-action-duration self)))
                              (eq? (dimensioned-units (homogeneous-action-rate self)) units)
                              (invariant (homogeneous-action-rate self)
-                                        (homogeneous-action-duration self))))])])]))
+                                        (homogeneous-action-duration self))))])
+             (define get-id
+               (lambda () (id (get-proxy)
+                              (get-datetime)
+                              (get-dimensioned units)
+                              (get-duration)))))))]))
 
 ; Helper function for creating new culminating action instruction types.
-(define-for-syntax (define-culminating-action stx src-stx)
+(define-syntax (define-culminating-action stx)
   (syntax-case stx ()
-    [(id type)
-     (cond [(and (not (identifier? #'type))
-                 (not (procedure? (eval-syntax #'type))))
-            (raise-syntax-error #f "datatype constructor expected." src-stx #'type)]
-           [(eq? 'dimensioned (syntax->datum #'type))
-            (raise-syntax-error #f "units missing." src-stx #'type)]
-           [else #'(struct id culminating-action ()
-                     #:transparent
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define/generic super-get-type get-type)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (and (super-valid? (culminating-action
-                                            (made-data-proxy-flag self)
-                                            (culminating-action-start-datetime self)
-                                            (culminating-action-goal-state self)))
-                             (eq? (super-get-type (culminating-action-goal-state self)) type)))])])]
+    [(_ id type)
+     (cond [(eq? (syntax->datum #'type) 'dimensioned)
+            (raise-syntax-error #f "units missing." stx #'type)]
+           [else #'(define-culminating-action id type (lambda (d) #t))])]
 
-    [(id dimensioned units)
+    [(_ id dimensioned units)
+     (eq? (syntax->datum #'dimensioned) 'dimensioned)
+     #'(define-culminating-action id dimensioned units (lambda (d) #t))]
+
+    [(_ id type (... invariant))
+     (begin
+       (raise-if-not-identifier #'id stx)
+       (raise-if-not-identifier #'type stx)
+       (raise-if-not-lambda #'invariant 1 stx)
+       (with-syntax ([get-id (build-getter-name #'id)]
+                     [get-val (build-getter-name #'type)])
+         #'(begin
+             (struct id culminating-action ()
+               #:transparent
+               #:methods gen:typed
+               [(define/generic super-valid? valid?)
+                (define/generic super-get-type get-type)
+                (define (get-type self) id)
+                (define (valid? self)
+                  (and (super-valid? (culminating-action
+                                      (made-data-proxy-flag self)
+                                      (culminating-action-start-datetime self)
+                                      (culminating-action-goal-state self)))
+                       (eq? (super-get-type (culminating-action-goal-state self)) type)
+                       (invariant (culminating-action-goal-state self))))])
+             (define get-id
+               (lambda () (id (get-proxy) (get-datetime) (get-val)))))))]
+
+    [(_ id dimensioned units (... invariant))
      (eq? 'dimensioned (syntax->datum #'dimensioned))
-     (cond [(not (symbol? (eval-syntax #'units)))
-            (raise-syntax-error #f "symbol expected." src-stx #'units)]           
-           [else #'(struct id culminating-action ()
-                     #:transparent
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (and (super-valid? (culminating-action
-                                            (made-data-proxy-flag self)
-                                            (culminating-action-start-datetime self)
-                                            (culminating-action-goal-state self)))
-                             (dimensioned? (culminating-action-goal-state self))
-                             (eq? units (dimensioned-units (culminating-action-goal-state self)))))])])]
-
-    [(id type invariant)
-     (cond [(and (not (identifier? #'type))
-                 (not (procedure? (eval-syntax #'type))))
-            (raise-syntax-error #f "datatype constructor expected." src-stx #'type)]
-           [(and (not (identifier? #'invariant))
-                 (not (and (procedure? (eval-syntax #'invariant))
-                           (eq? (procedure-arity (eval-syntax #'invariant)) 1))))
-            (raise-syntax-error #f "invariant on goal state expected." src-stx #'invariant)]
-           [else  #'(struct id culminating-action ()
-                     #:transparent
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define/generic super-get-type get-type)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (and (super-valid? (culminating-action
-                                            (made-data-proxy-flag self)
-                                            (culminating-action-start-datetime self)
-                                            (culminating-action-goal-state self)))
-                             (eq? (super-get-type (culminating-action-goal-state self)) type)
-                             (invariant (culminating-action-goal-state self))))])])]
-
-    [(id dimensioned units invariant)
-     (eq? 'dimensioned (syntax->datum #'dimensioned))
-     (cond [(not (symbol? (eval-syntax #'units)))
-            (raise-syntax-error #f "symbol expected." src-stx #'units)]
-           [(and (not (identifier? #'invariant))
-                 (not (and (procedure? (eval-syntax #'invariant))
-                           (eq? (procedure-arity (eval-syntax #'invariant)) 1))))
-            (raise-syntax-error #f "invariant on goal state expected." src-stx #'invariant)]
-           [else #'(struct id culminating-action ()
-                     #:transparent
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (and (super-valid? (culminating-action
-                                            (made-data-proxy-flag self)
-                                            (culminating-action-start-datetime self)
-                                            (culminating-action-goal-state self)))
-                             (dimensioned? (culminating-action-goal-state self))
-                             (eq? units (dimensioned-units (culminating-action-goal-state self)))
-                             (invariant (culminating-action-goal-state self))))])])]))
+     (begin
+       (raise-if-not-identifier #'id stx)
+       (raise-if-not-symbol #'units stx)
+       (raise-if-not-lambda #'invariant 1 stx)
+       (with-syntax ([get-id (build-getter-name #'id)])
+         #'(begin
+             (struct id culminating-action ()
+               #:transparent
+               #:methods gen:typed
+               [(define/generic super-valid? valid?)
+                (define (get-type self) id)
+                (define (valid? self)
+                  (and (super-valid? (culminating-action
+                                      (made-data-proxy-flag self)
+                                      (culminating-action-start-datetime self)
+                                      (culminating-action-goal-state self)))
+                       (dimensioned? (culminating-action-goal-state self))
+                       (eq? units (dimensioned-units (culminating-action-goal-state self)))
+                       (invariant (culminating-action-goal-state self))))])
+             (define get-id
+               (lambda () (id (get-proxy) (get-datetime) (get-dimensioned units)))))))]))
 
 ; define-control-instruction creates a new type of control instruction. 
 ; It requires the following inputs:

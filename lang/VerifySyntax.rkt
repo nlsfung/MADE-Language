@@ -5,9 +5,12 @@
 (require "../rim/TemporalDataTypes.rkt")
 
 (provide define-datetime-generator
+         get-duration
          get-proxy
          get-dimensioned
-         get-bool)
+         get-bool
+         get-count
+         get-proportion)
 
 ; This file contains the syntax of functions for verifying concrete MADE models.
 
@@ -42,6 +45,13 @@
                  (assert (and (>= dt-part lo) (<= dt-part hi)))
                  dt-part)
                (datetime year month day hour minute second)))))]))
+
+; get-duration creates a symbolic duration value.
+(define (get-duration)
+  (define (get-dur-part)
+    (define-symbolic* dur-part integer?)
+    dur-part)
+  (duration (get-dur-part) (get-dur-part) (get-dur-part) (get-dur-part)))
 
 ; get-proxy creates a symbolic boolean value for the proxy.
 (define (get-proxy)
