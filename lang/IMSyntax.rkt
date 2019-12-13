@@ -58,6 +58,7 @@
        (with-syntax ([get-id (build-getter-name #'id)])
          #'(begin
              (struct id observed-event ()
+               #:transparent
                #:methods gen:typed
                [(define/generic super-valid? valid?)
                 (define (get-type self) id)
@@ -89,6 +90,7 @@
                      [get-val (build-getter-name #'type)])
          #'(begin
              (struct id observed-property ()
+               #:transparent
                #:methods gen:typed
                [(define/generic super-valid? valid?)
                 (define/generic super-get-type get-type)
@@ -112,6 +114,7 @@
        (with-syntax ([get-id (build-getter-name #'id)])
          #'(begin
              (struct id observed-property ()
+               #:transparent
                #:methods gen:typed
                [(define/generic super-valid? valid?)
                 (define (get-type self) id)
@@ -135,88 +138,65 @@
 (define-syntax (define-abstraction stx)
   (syntax-case stx ()
     [(define-abstraction id type)
-     (cond [(not (identifier? #'id))
-            (raise-syntax-error #f "identifier expected." stx #'id)]
-           [(and (not (identifier? #'type))
-                 (not (procedure? (eval-syntax #'type))))
-            (raise-syntax-error #f "datatype constructor expected." stx #'type)]
-           [(eq? 'dimensioned (syntax->datum #'type))
+     (cond [(eq? (syntax->datum #'type) 'dimensioned)
             (raise-syntax-error #f "units missing." stx #'type)]
-           [else #'(struct id abstraction ()
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define/generic super-get-type get-type)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (and (super-valid? (abstraction
-                                            (made-data-proxy-flag self)
-                                            (abstraction-valid-datetime-range self)
-                                            (abstraction-value self)))
-                             (eq? (super-get-type (abstraction-value self)) type)))])])]
+           [else #'(define-abstraction id type (lambda (d) #t))])]
 
     [(define-abstraction id dimensioned units)
      (eq? 'dimensioned (syntax->datum #'dimensioned))
-     (cond [(not (identifier? #'id))
-            (raise-syntax-error #f "identifier expected." stx #'id)]
-           [(not (symbol? (eval-syntax #'units)))
-            (raise-syntax-error #f "symbol expected." stx #'units)]           
-           [else #'(struct id abstraction ()
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (and (super-valid? (abstraction
-                                            (made-data-proxy-flag self)
-                                            (abstraction-valid-datetime-range self)
-                                            (abstraction-value self)))
-                             (dimensioned? (abstraction-value self))
-                             (eq? units (dimensioned-units (abstraction-value self)))))])])]
+     #'(define-abstraction id dimensioned units (lambda (d) #t))]     
 
-    [(define-abstraction id type invariant)
-     (cond [(not (identifier? #'id))
-            (raise-syntax-error #f "identifier expected." stx #'id)]
-           [(and (not (identifier? #'type))
-                 (not (procedure? (eval-syntax #'type))))
-            (raise-syntax-error #f "datatype constructor expected." stx #'type)]
-           [(and (not (identifier? #'invariant))
-                 (not (and (procedure? (eval-syntax #'invariant))
-                           (eq? (procedure-arity (eval-syntax #'invariant)) 1))))
-            (raise-syntax-error #f "invariant on property value expected." stx #'invariant)]
-           [else #'(struct id abstraction ()
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define/generic super-get-type get-type)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (and (super-valid? (abstraction
-                                            (made-data-proxy-flag self)
-                                            (abstraction-valid-datetime-range self)
-                                            (abstraction-value self)))
-                             (eq? (super-get-type (abstraction-value self)) type)
-                             (invariant (abstraction-value self))))])])]
+    [(define-abstraction id type (... invariant))
+     (begin
+       (raise-if-not-identifier #'id stx)
+       (raise-if-not-identifier #'type stx)
+       (raise-if-not-lambda #'invariant 1 stx)
+       (with-syntax ([get-id (build-getter-name #'id)]
+                     [get-val (build-getter-name #'type)])
+       #'(begin
+           (struct id abstraction ()
+             #:transparent
+             #:methods gen:typed
+             [(define/generic super-valid? valid?)
+              (define/generic super-get-type get-type)
+              (define (get-type self) id)
+              (define (valid? self)
+                (and (super-valid? (abstraction
+                                    (made-data-proxy-flag self)
+                                    (abstraction-valid-datetime-range self)
+                                    (abstraction-value self)))
+                     (eq? (super-get-type (abstraction-value self)) type)
+                     (invariant (abstraction-value self))))])
+           (define get-id
+             (lambda () (id (get-proxy)
+                            (datetime-range (get-datetime) (get-datetime))
+                            (get-val)))))))]
 
-    [(define-abstraction id dimensioned units invariant)
+    [(define-abstraction id dimensioned units (... invariant))
      (eq? 'dimensioned (syntax->datum #'dimensioned))
-     (cond [(not (identifier? #'id))
-            (raise-syntax-error #f "identifier expected." stx #'id)]
-           [(not (symbol? (eval-syntax #'units)))
-            (raise-syntax-error #f "symbol expected." stx #'units)]
-           [(and (not (identifier? #'invariant))
-                 (not (and (procedure? (eval-syntax #'invariant))
-                           (eq? (procedure-arity (eval-syntax #'invariant)) 1))))
-            (raise-syntax-error #f "invariant on property value expected." stx #'invariant)]
-           [else #'(struct id observed-property ()
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (and (super-valid? (abstraction
-                                            (made-data-proxy-flag self)
-                                            (abstraction-valid-datetime-range self)
-                                            (abstraction-value self)))
-                             (dimensioned? (abstraction-value self))
-                             (eq? units (dimensioned-units (abstraction-value self)))
-                             (invariant (observed-property-value self))))])])]))
+     (begin
+       (raise-if-not-identifier #'id stx)
+       (raise-if-not-symbol #'units stx)
+       (raise-if-not-lambda #'invariant 1 stx)
+       (with-syntax ([get-id (build-getter-name #'id)])
+         #'(begin
+             (struct id abstraction ()
+               #:transparent
+               #:methods gen:typed
+               [(define/generic super-valid? valid?)
+                (define (get-type self) id)
+                (define (valid? self)
+                  (and (super-valid? (abstraction
+                                      (made-data-proxy-flag self)
+                                      (abstraction-valid-datetime-range self)
+                                      (abstraction-value self)))
+                       (dimensioned? (abstraction-value self))
+                       (eq? units (dimensioned-units (abstraction-value self)))
+                       (invariant (abstraction-value self))))])
+             (define get-id
+               (lambda () (id (get-proxy)
+                              (datetime-range (get-datetime) (get-datetime))
+                              (get-dimensioned units)))))))]))
 
 ; define-action-plan creates a new type of action plan. 
 ; It requires the following inputs:
@@ -354,6 +334,7 @@
            [(eq? 'dimensioned (syntax->datum #'type))
             (raise-syntax-error #f "units missing." src-stx #'type)]
            [else #'(struct id culminating-action ()
+                     #:transparent
                      #:methods gen:typed
                      [(define/generic super-valid? valid?)
                       (define/generic super-get-type get-type)
@@ -370,6 +351,7 @@
      (cond [(not (symbol? (eval-syntax #'units)))
             (raise-syntax-error #f "symbol expected." src-stx #'units)]           
            [else #'(struct id culminating-action ()
+                     #:transparent
                      #:methods gen:typed
                      [(define/generic super-valid? valid?)
                       (define (get-type self) id)
@@ -390,6 +372,7 @@
                            (eq? (procedure-arity (eval-syntax #'invariant)) 1))))
             (raise-syntax-error #f "invariant on goal state expected." src-stx #'invariant)]
            [else  #'(struct id culminating-action ()
+                     #:transparent
                      #:methods gen:typed
                      [(define/generic super-valid? valid?)
                       (define/generic super-get-type get-type)
@@ -411,6 +394,7 @@
                            (eq? (procedure-arity (eval-syntax #'invariant)) 1))))
             (raise-syntax-error #f "invariant on goal state expected." src-stx #'invariant)]
            [else #'(struct id culminating-action ()
+                     #:transparent
                      #:methods gen:typed
                      [(define/generic super-valid? valid?)
                       (define (get-type self) id)
