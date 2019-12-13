@@ -15,6 +15,7 @@
 ; 2) A list of its possible values.
 ;    a) Entries must be symbols.
 ;    b) Entries must be unique.
+(define (get-nom-val) (define-symbolic* nom-val integer?) nom-val)
 (define-syntax (define-nominal stx)       
   (syntax-case stx ()
     [(define-nominal id val ...)
@@ -32,8 +33,7 @@
                   (list? (member (get-value self) (list val ...))))])
              (define get-id
                (lambda ()
-                 (define-symbolic* nom-val integer?)
-                 (id (list-ref (list val ...) nom-val)))))))]))
+                 (id (list-ref (list val ...) (get-nom-val))))))))]))
 
 ; define-enumerated creates a new enumerated datatype.
 ; It requires two inputs:
@@ -41,6 +41,7 @@
 ; 2) A list of its possible values, ordered from minimum to maximum.
 ;    a) Entries must be symbols.
 ;    b) Entries must be unique.
+(define (get-enum-val) (define-symbolic* enum-val integer?) enum-val)
 (define-syntax (define-enumerated stx)       
   (syntax-case stx ()
     [(define-enumerated id val ...)
@@ -86,4 +87,4 @@
              (define get-id
                (lambda ()
                  (define-symbolic* enum-val integer?)
-                 (id (list-ref (list val ...) enum-val)))))))]))
+                 (id (list-ref (list val ...) (get-enum-val))))))))]))

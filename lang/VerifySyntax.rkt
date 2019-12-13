@@ -1,11 +1,14 @@
 #lang rosette/safe
 
+(require (only-in rosette for/list))
 (require (for-syntax "./SyntaxUtil.rkt"))
 (require "../rim/BasicDataTypes.rkt")
 (require "../rim/TemporalDataTypes.rkt")
 
 (provide define-datetime-generator
          get-duration
+         get-schedule
+         get-status
          get-proxy
          get-dimensioned
          get-bool
@@ -53,10 +56,29 @@
     dur-part)
   (duration (get-dur-part) (get-dur-part) (get-dur-part) (get-dur-part)))
 
+; get-schedule creates a symbolic schedule value.
+; Accepts as argument the number of datetime values in the starting pattern.
+(define-syntax (get-schedule stx)
+  (syntax-case stx ()
+    [(get-schedule max)
+     #'(schedule
+        (for/list ([n (- max 1)]) (get-datetime))
+        (get-interval))]))
+
+; get-interval creates a symbolic value for the repeat interval of a schedule.
+(define (get-interval)
+  (define-symbolic* int boolean?)
+  (if int (get-duration) #f))
+
 ; get-proxy creates a symbolic boolean value for the proxy.
 (define (get-proxy)
   (define-symbolic* proxy boolean?)
   proxy)
+
+; get-status creates a symbolic boolean value for the process status.
+(define (get-status)
+  (define-symbolic* status boolean?)
+  status)
 
 ; get-dimensioned creates a symbolic dimensioned value.
 ; It requires the appropriate units to be provided.

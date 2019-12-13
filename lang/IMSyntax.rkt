@@ -376,34 +376,19 @@
 ; define-control-instruction creates a new type of control instruction. 
 ; It requires the following inputs:
 ; 1) An identifier for the new control instruction datatype.
-; 2) An optional list of struct constructors specifying the accepted target processes.
+; 2) An list of struct constructors specifying the accepted target processes.
+(define (get-target-val) (define-symbolic* target-val integer?) target-val)
+(define (get-void-sched) (define-symbolic* void-sched boolean?) void-sched)
+(define (get-void-stat) (define-symbolic* void-stat boolean?) void-stat)
 (define-syntax (define-control-instruction stx)
   (syntax-case stx ()
-    [(define-control-instruction id)
-     (cond [(not (identifier? #'id))
-            (raise-syntax-error #f "identifier expected." stx #'id)]
-           [else #'(struct id control-instruction ()
-                     #:transparent
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (super-valid? (control-instruction
-                                       (made-data-proxy-flag self)
-                                       (control-instruction-target-process self)
-                                       (control-instruction-valid-datetime self)
-                                       (control-instruction-schedule self)
-                                       (control-instruction-status self))))])])]
-
-    [(define-control-instruction id target-list)
-     (cond [(not (identifier? #'id))
-            (raise-syntax-error #f "identifier expected." stx #'id)]
-           [(not (list? (syntax->datum #'target-list)))
-            (raise-syntax-error #f "list of identifiers expected." stx #'target-list)]
-           [else (let* ([bad-target (find-invalid-target #'target-list)])
-                   (if bad-target
-                       (raise-syntax-error #f "identifier expected." stx bad-target)
-                       #'(struct id control-instruction ()
+    [(define-control-instruction id target ...)
+     (begin
+       (raise-if-not-identifier #'id stx)
+       (raise-if-not-identifier #'(target ...) stx)
+       (with-syntax ([get-id (build-getter-name #'id)])
+         #'(begin
+             (struct id control-instruction ()
                            #:transparent
                            #:methods gen:typed
                            [(define/generic super-valid? valid?)
@@ -416,5 +401,12 @@
                                                   (control-instruction-schedule self)
                                                   (control-instruction-status self)))
                                    (not (eq? (member (control-instruction-target-process self)
-                                                     target-list)
-                                             #f))))])))])]))
+                                                     (list target ...))
+                                             #f))))])
+             (define get-id
+               (lambda (pat-length)
+                 (id (get-proxy)
+                     (list-ref (list target ...) (get-target-val))
+                     (get-datetime)
+                     (if (get-void-sched) (void) (get-schedule pat-length))
+                     (if (get-void-stat) (void) (get-status))))))))]))
