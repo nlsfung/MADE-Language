@@ -4,6 +4,7 @@
 
 (require (for-syntax "./SyntaxUtil.rkt"))
 (require "./VerifySyntax.rkt")
+(require "./NomEnumSyntax.rkt")
 
 (require "../rim/BasicDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
@@ -52,101 +53,78 @@
 (define-syntax (define-observation stx)
   (syntax-case stx ()
     [(define-observation id 'event)
-     (cond [(not (identifier? #'id))
-            (raise-syntax-error #f "identifier expected." stx #'id)]
-           [else #'(struct id observed-event ()
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (super-valid? (observed-event
-                                       (made-data-proxy-flag self)
-                                       (observed-event-valid-datetime-range self)
-                                       (observed-event-value self))))])])]
+     (begin
+       (raise-if-not-identifier #'id stx)
+       (with-syntax ([get-id (build-getter-name #'id)])
+         #'(begin
+             (struct id observed-event ()
+               #:methods gen:typed
+               [(define/generic super-valid? valid?)
+                (define (get-type self) id)
+                (define (valid? self)
+                  (super-valid? (observed-event
+                                 (made-data-proxy-flag self)
+                                 (observed-event-valid-datetime-range self)
+                                 (observed-event-value self))))])
+             (define get-id               
+               (lambda () (id (get-proxy)
+                              (datetime-range (get-datetime) (get-datetime))
+                              (get-bool)))))))]
 
     [(define-observation id type)
-     (cond [(not (identifier? #'id))
-            (raise-syntax-error #f "identifier expected." stx #'id)]
-           [(and (not (identifier? #'type))
-                 (not (procedure? (eval-syntax #'type))))
-            (raise-syntax-error #f "datatype constructor expected." stx #'type)]
-           [(eq? 'dimensioned (syntax->datum #'type))
+     (cond [(eq? (syntax->datum #'type) 'dimensioned)
             (raise-syntax-error #f "units missing." stx #'type)]
-           [else #'(struct id observed-property ()
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define/generic super-get-type get-type)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (and (super-valid? (observed-property
-                                            (made-data-proxy-flag self)
-                                            (observed-property-valid-datetime self)
-                                            (observed-property-value self)))
-                             (eq? (super-get-type (observed-property-value self)) type)))])])]
+           [else #'(define-observation id type (lambda (d) #t))])]
 
     [(define-observation id dimensioned units)
      (eq? 'dimensioned (syntax->datum #'dimensioned))
-     (cond [(not (identifier? #'id))
-            (raise-syntax-error #f "identifier expected." stx #'id)]
-           [(not (symbol? (eval-syntax #'units)))
-            (raise-syntax-error #f "symbol expected." stx #'units)]           
-           [else #'(struct id observed-property ()
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (and (super-valid? (observed-property
-                                            (made-data-proxy-flag self)
-                                            (observed-property-valid-datetime self)
-                                            (observed-property-value self)))
-                             (dimensioned? (observed-property-value self))
-                             (eq? units (dimensioned-units (observed-property-value self)))))])])]
+     #'(define-observation id dimensioned units (lambda (d) #t))]
+     
+    [(define-observation id type (... invariant))
+     (begin
+       (raise-if-not-identifier #'id stx)
+       (raise-if-not-identifier #'type stx)
+       (raise-if-not-lambda #'invariant 1 stx)
+       (with-syntax ([get-id (build-getter-name #'id)]
+                     [get-val (build-getter-name #'type)])
+         #'(begin
+             (struct id observed-property ()
+               #:methods gen:typed
+               [(define/generic super-valid? valid?)
+                (define/generic super-get-type get-type)
+                (define (get-type self) id)
+                (define (valid? self)
+                  (and (super-valid? (observed-property
+                                      (made-data-proxy-flag self)
+                                      (observed-property-valid-datetime self)
+                                      (observed-property-value self)))
+                       (eq? (super-get-type (observed-property-value self)) type)
+                       (invariant (observed-property-value self))))])
+             (define get-id
+               (lambda () (id (get-proxy) (get-datetime) (get-val)))))))]
 
-    [(define-observation id type invariant)
-     (cond [(not (identifier? #'id))
-            (raise-syntax-error #f "identifier expected." stx #'id)]
-           [(and (not (identifier? #'type))
-                 (not (procedure? (eval-syntax #'type))))
-            (raise-syntax-error #f "datatype constructor expected." stx #'type)]
-           [(and (not (identifier? #'invariant))
-                 (not (and (procedure? (eval-syntax #'invariant))
-                           (eq? (procedure-arity (eval-syntax #'invariant)) 1))))
-            (raise-syntax-error #f "invariant on property value expected." stx #'invariant)]
-           [else #'(struct id observed-property ()
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define/generic super-get-type get-type)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (and (super-valid? (observed-property
-                                            (made-data-proxy-flag self)
-                                            (observed-property-valid-datetime self)
-                                            (observed-property-value self)))
-                             (eq? (super-get-type (observed-property-value self)) type)
-                             (invariant (observed-property-value self))))])])]
-
-    [(define-observation id dimensioned units invariant)
+    [(define-observation id dimensioned units (... invariant))
      (eq? 'dimensioned (syntax->datum #'dimensioned))
-     (cond [(not (identifier? #'id))
-            (raise-syntax-error #f "identifier expected." stx #'id)]
-           [(not (symbol? (eval-syntax #'units)))
-            (raise-syntax-error #f "symbol expected." stx #'units)]
-           [(and (not (identifier? #'invariant))
-                 (not (and (procedure? (eval-syntax #'invariant))
-                           (eq? (procedure-arity (eval-syntax #'invariant)) 1))))
-            (raise-syntax-error #f "invariant on property value expected." stx #'invariant)]
-           [else #'(struct id observed-property ()
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (and (super-valid? (observed-property
-                                            (made-data-proxy-flag self)
-                                            (observed-property-valid-datetime self)
-                                            (observed-property-value self)))
-                             (dimensioned? (observed-property-value self))
-                             (eq? units (dimensioned-units (observed-property-value self)))
-                             (invariant (observed-property-value self))))])])]))
+     (begin
+       (raise-if-not-identifier #'id stx)
+       (raise-if-not-symbol #'units stx)
+       (raise-if-not-lambda #'invariant 1 stx)
+       (with-syntax ([get-id (build-getter-name #'id)])
+         #'(begin
+             (struct id observed-property ()
+               #:methods gen:typed
+               [(define/generic super-valid? valid?)
+                (define (get-type self) id)
+                (define (valid? self)
+                  (and (super-valid? (observed-property
+                                      (made-data-proxy-flag self)
+                                      (observed-property-valid-datetime self)
+                                      (observed-property-value self)))
+                       (dimensioned? (observed-property-value self))
+                       (eq? units (dimensioned-units (observed-property-value self)))
+                       (invariant (observed-property-value self))))])
+             (define get-id
+               (lambda () (id (get-proxy) (get-datetime) (get-dimensioned units)))))))]))
 
 ; define-abstraction creates a new type of abstraction. 
 ; It requires the following inputs:

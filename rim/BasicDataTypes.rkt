@@ -8,6 +8,8 @@
 (provide (struct-out enumerated) gen:enum enum>? enum<?)
 (provide (struct-out dimensioned))
 (provide (struct-out bool))
+(provide (struct-out proportion))
+(provide (struct-out count))
 
 ; The complete MADE reference information model (RIM) is constructed from 10
 ; primitive data types: Id, Boolean, Nominal, Enumerated, Count, Proportion,

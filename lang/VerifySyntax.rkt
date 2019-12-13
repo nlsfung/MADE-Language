@@ -6,7 +6,8 @@
 
 (provide define-datetime-generator
          get-proxy
-         get-dimensioned)
+         get-dimensioned
+         get-bool)
 
 ; This file contains the syntax of functions for verifying concrete MADE models.
 
@@ -52,4 +53,18 @@
 (define (get-dimensioned units)
   (define-symbolic* dim real?)
   (dimensioned dim units))
-  
+
+; get-bool creates a symbolic bool value.
+(define (get-bool)
+  (define-symbolic* bool-val boolean?)
+  (bool bool-val))
+
+; get-count creates a symbolic count value.
+(define (get-count)
+  (define-symbolic* count-val integer?)
+  (count count-val))
+
+; get-proportion creates a symbolic proportion value.
+(define (get-proportion)
+  (define-symbolic* prop-val real?)
+  (proportion prop-val))
