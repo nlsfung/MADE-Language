@@ -59,13 +59,15 @@
    (define (valid? self) (and (integer? (count-value self))
                               (>= (count-value self) 0)))])
 
+; Note: To support verification, any real number is permitted as a proportion
+; instead of only rational numbers.
 (struct proportion (value)
   #:transparent
   #:methods gen:basic
   [(define (get-value self) (proportion-value self))]
   #:methods gen:typed
   [(define (get-type self) proportion)
-   (define (valid? self) (rational? (proportion-value self)))])
+   (define (valid? self) (real? (proportion-value self)))])
 
 ; Nominal is a family of datatypes, each of which consists of a finite number
 ; of unordered values (see ISO/IEC 11404 standard). It is therefore specified
