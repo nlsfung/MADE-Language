@@ -1,6 +1,10 @@
 #lang rosette/safe
 
 (require (only-in rosette symbol? syntax->datum eval-syntax check-duplicates raise-argument-error))
+
+(require (for-syntax "./SyntaxUtil.rkt"))
+(require "./VerifySyntax.rkt")
+
 (require "../rim/BasicDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
 (require "../rim/TemporalDataTypes.rkt")
@@ -15,41 +19,28 @@
 (define-syntax (define-measurement stx)
   (syntax-case stx ()
     [(define-measurement id units)
-     (cond [(not (identifier? #'id))
-            (raise-syntax-error #f "identifier expected." stx #'id)]
-           [(not (symbol? (eval-syntax #'units)))
-            (raise-syntax-error #f "symbol expected." stx #'units)]
-           [else #'(struct id measurement ()
-                     #:transparent
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (and (super-valid? (measurement (made-data-proxy-flag self)
-                                                        (measurement-valid-datetime self)
-                                                        (measurement-value self)))
-                             (eq? (dimensioned-units (measurement-value self)) units)))])])]
+     #'(define-measurement id units (lambda (d) #t))]
 
-    [(define-measurement id units invariant)
-     (cond [(not (identifier? #'id))
-            (raise-syntax-error #f "identifier expected." stx #'id)]
-           [(not (symbol? (eval-syntax #'units)))
-            (raise-syntax-error #f "symbol expected." stx #'units)]
-           [(and (not (identifier? #'invariant))
-                 (not (and (procedure? (eval-syntax #'invariant))
-                           (eq? (procedure-arity (eval-syntax #'invariant)) 1))))
-            (raise-syntax-error #f "invariant on measurement value expected." stx #'invariant)]
-           [else #'(struct id measurement ()
-                     #:transparent
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (and (super-valid? (measurement (made-data-proxy-flag self)
-                                                        (measurement-valid-datetime self)
-                                                        (measurement-value self)))
-                             (eq? (dimensioned-units (measurement-value self)) units)
-                             (invariant (measurement-value self))))])])]))
+    [(define-measurement id units (... invariant))
+     (begin
+       (raise-if-not-identifier #'id stx)
+       (raise-if-not-symbol #'units stx)
+       (raise-if-not-lambda #'invariant 1 stx)
+       (with-syntax ([get-id (build-getter-name #'id)])
+         #'(begin             
+             (struct id measurement ()
+               #:transparent
+               #:methods gen:typed
+               [(define/generic super-valid? valid?)
+                (define (get-type self) id)
+                (define (valid? self)
+                  (and (super-valid? (measurement (made-data-proxy-flag self)
+                                                  (measurement-valid-datetime self)
+                                                  (measurement-value self)))
+                       (eq? (dimensioned-units (measurement-value self)) units)
+                       (invariant (measurement-value self))))])
+             (define get-id
+               (lambda () (id (get-proxy) (get-datetime) (get-dimensioned units)))))))]))
 
 ; define-observation creates a new type of observed property or observed event.
 ; It requires the following inputs:
