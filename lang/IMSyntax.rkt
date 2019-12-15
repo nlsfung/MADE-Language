@@ -201,63 +201,107 @@
 ; define-action-plan creates a new type of action plan. 
 ; It requires the following inputs:
 ; 1) An identifier for the new action plan datatype.
-; 2) An optional list of struct constructors specifying the accepted targets.
+; 2) A list of struct constructors specifying the accepted targets.
+;    The list is divided into three categories:
+;    a) control for scheduled control instructions.
+;    b) homogeneous-action for scheduled homogeneous action instructions.
+;    c) culminating-action for scheduled culminating action instructions.
 (define-syntax (define-action-plan stx)
-  (syntax-case stx ()
-    [(define-action-plan id)
-     (cond [(not (identifier? #'id))
-            (raise-syntax-error #f "identifier expected." stx #'id)]
-           [else #'(struct id action-plan ()
-                     #:transparent
-                     #:methods gen:typed
-                     [(define/generic super-valid? valid?)
-                      (define (get-type self) id)
-                      (define (valid? self)
-                        (super-valid? (action-plan
-                                       (made-data-proxy-flag self)
-                                       (action-plan-valid-datetime self)
-                                       (action-plan-instruction-set self))))])])]
+  ; Helper function for extracting the IDs for the input type of scheduled instructions.
+  (define (extract-instructions type stx)
+    (syntax-case stx ()
+      [(type-id id ...)
+       (eq? (syntax->datum #'type-id) type)
+       (begin
+         (raise-if-not-identifier #'(id ...) stx)
+         #'(id ...))]
+      [((type-id id ...) rest ...)
+       (cond [(eq? (syntax->datum #'type-id) type)
+              (extract-instructions type #'(type-id id ...))]
+             [else (extract-instructions type #'(rest ...))])]
+      [() #'()]))
 
-    [(define-action-plan id target-list)
-     (cond [(not (identifier? #'id))
-            (raise-syntax-error #f "identifier expected." stx #'id)]
-           [(not (list? (syntax->datum #'target-list)))
-            (raise-syntax-error #f "list of identifiers expected." stx #'target-list)]
-           [else (let* ([bad-target (find-invalid-target #'target-list)])
-                   (if bad-target
-                       (raise-syntax-error #f "identifier expected." stx bad-target)
-                       #'(struct id action-plan ()
-                           #:transparent
-                           #:methods gen:typed
-                           [(define/generic super-valid? valid?)
-                            (define (get-type self) id)
-                            (define (valid? self)
-                              (and (super-valid? (action-plan
-                                                  (made-data-proxy-flag self)
-                                                  (action-plan-valid-datetime self)
-                                                  (action-plan-instruction-set self)))
-                                   (not (eq? (andmap
-                                              (lambda (i)
-                                                (member (cond [(scheduled-control? i)
-                                                               (scheduled-control-target-process i)]
-                                                              [(scheduled-homogeneous-action? i)
-                                                               (scheduled-homogeneous-action-action-type i)]
-                                                              [(scheduled-culminating-action? i)
-                                                               (scheduled-culminating-action-action-type i)])
-                                                        target-list))
-                                              (action-plan-instruction-set self))
-                                             #f))))])))])]))
+  ; Helper function for creating a syntax object for a list of input IDs.
+  (define (add-list-prefix stx)
+    (syntax-case stx ()
+      [(id ...) #'(list id ...)]))
 
-; Helper function to check that the target list contains identifiers only.
-; Returns the first invalid input found or #f if all inputs are identifiers.
-(define-for-syntax (find-invalid-target stx)
+  ; Helper function for creating a list of "get-x" syntax objects.
+  (define (build-getter-name-list stx)
+    (syntax-case stx ()
+      [(id) (list (syntax->datum (build-getter-name #'id)))]
+      [(id-1 id-2 ...) (append (build-getter-name-list #'(id-1))
+                               (build-getter-name-list #'(id-2 ...)))]
+      [() null]))
+ 
   (syntax-case stx ()
-    [(id)
-     (if (not (identifier? #'id)) #'id #f)]
-    [(id-1 id-2 ...)
-     (if (not (identifier? #'id-1))
-         #'id-1
-         (find-invalid-target #'(id-2 ...)))]))
+    [(define-action-plan id target ...)
+     (let* ([control-ids (extract-instructions 'control #'(target ...))]
+            [homogeneous-ids (extract-instructions 'homogeneous-action #'(target ...))]
+            [culminating-ids (extract-instructions 'culminating-action #'(target ...))])
+       (raise-if-not-identifier #'id stx)
+       (with-syntax ([get-id (build-getter-name #'id)]
+                     [control-list (add-list-prefix control-ids)]
+                     [homogeneous-list (add-list-prefix homogeneous-ids)]
+                     [culminating-list (add-list-prefix culminating-ids)]
+                     [get-homogeneous-list (add-list-prefix
+                                            (datum->syntax stx
+                                                           (build-getter-name-list
+                                                            homogeneous-ids)
+                                                           stx))]
+                     [get-culminating-list (add-list-prefix
+                                            (datum->syntax stx
+                                                           (build-getter-name-list
+                                                            culminating-ids)
+                                                           stx))])
+         #'(begin
+             (struct id action-plan ()
+               #:transparent
+               #:methods gen:typed
+               [(define/generic super-valid? valid?)
+                (define (get-type self) id)
+                (define (valid? self)
+                  (and (super-valid? (action-plan
+                                      (made-data-proxy-flag self)
+                                      (action-plan-valid-datetime self)
+                                      (action-plan-instruction-set self)))
+                       (not (eq? (andmap
+                                  (lambda (i)
+                                    (cond [(scheduled-control? i)
+                                           (member (scheduled-control-target-process i)
+                                                   control-list)]
+                                          [(scheduled-homogeneous-action? i)
+                                           (member (scheduled-homogeneous-action-action-type i)
+                                                   homogeneous-list)]
+                                          [(scheduled-culminating-action? i)
+                                           (member (scheduled-culminating-action-action-type i)
+                                                   culminating-list)]))
+                                  (action-plan-instruction-set self))
+                                 #f))))])
+             (define get-id
+               (lambda ([pat-length 2]
+                        [units-list (list 'units)])
+                 (id (get-proxy)
+                     (get-datetime)
+                     (append (map (lambda (i)
+                                    (scheduled-control
+                                     i (get-schedule pat-length) (get-status)))
+                                  control-list)
+                             (map (lambda (get-inst)
+                                    (let ([inst (get-inst)])
+                                      (scheduled-homogeneous-action
+                                       (get-type inst)
+                                       (get-schedule pat-length)
+                                       (homogeneous-action-rate inst)
+                                       (homogeneous-action-duration inst))))
+                                  get-homogeneous-list)
+                             (map (lambda (get-inst)
+                                    (let ([inst (get-inst)])
+                                      (scheduled-culminating-action
+                                       (get-type inst)
+                                       (get-schedule pat-length)
+                                       (culminating-action-goal-state inst))))
+                                  get-culminating-list))))))))]))
 
 ; define-action-instruction creates a new type of action instruction. 
 ; It requires the following inputs:
@@ -404,7 +448,7 @@
                                                      (list target ...))
                                              #f))))])
              (define get-id
-               (lambda (pat-length)
+               (lambda ([pat-length 2])
                  (id (get-proxy)
                      (list-ref (list target ...) (get-target-val))
                      (get-datetime)
