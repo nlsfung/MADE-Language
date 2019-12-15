@@ -29,12 +29,14 @@
           #'(gen-dt-part min max))))
 
   (syntax-case stx ()
-    [(_ (dt-1 yr-1 mth-1 d-1 hr-1 min-1 sec-1)
-        (dt-2 yr-2 mth-2 d-2 hr-2 min-2 sec-2))
+    [(define-dt-gen (dt-1 yr-1 mth-1 d-1 hr-1 min-1 sec-1)
+                    (dt-2 yr-2 mth-2 d-2 hr-2 min-2 sec-2))
      (begin
        (raise-if-not-datetime #'(dt-1 yr-1 mth-1 d-1 hr-1 min-1 sec-1) stx)
        (raise-if-not-datetime #'(dt-2 yr-2 mth-2 d-2 hr-2 min-2 sec-2) stx)
-       (with-syntax ([get-dt (build-getter-name #'dt-1)]
+       (with-syntax ([get-dt (datum->syntax #'define-dt-gen
+                                            'get-datetime
+                                            #'define-dt-gen)]
                      [year (gen-stx-part #'yr-1 #'yr-2)]
                      [month (gen-stx-part #'mth-1 #'mth-2)]
                      [day (gen-stx-part #'d-1 #'d-2)]
@@ -47,7 +49,10 @@
                  (define-symbolic* dt-part integer?)
                  (assert (and (>= dt-part lo) (<= dt-part hi)))
                  dt-part)
-               (datetime year month day hour minute second)))))]))
+               (datetime year month day hour minute second)))))]
+    [(define-dt-gen) #'(define-dt-gen
+                         (datetime 2019 12 15 0 0 0)
+                         (datetime 2019 12 15 23 0 0))]))
 
 ; get-duration creates a symbolic duration value.
 (define (get-duration)
