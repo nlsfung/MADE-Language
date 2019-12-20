@@ -13,13 +13,16 @@
          get-dimensioned
          get-bool
          get-count
-         get-proportion)
+         get-proportion
+         get-datetime
+         verify-getter)
 
 ; This file contains the syntax of functions for verifying concrete MADE models.
 
 ; define-datetime-generator creates a get-datetime function for creating
 ; symbolic datetime values. It accepts as input two concrete datetime values to
 ; indicate the range of possible datetime values.
+(define get-datetime (define-datetime-generator))
 (define-syntax (define-datetime-generator stx)
   (define (gen-stx-part lo hi)
     (if (eq? (syntax->datum lo) (syntax->datum hi))
@@ -43,13 +46,12 @@
                      [hour (gen-stx-part #'hr-1 #'hr-2)]
                      [minute (gen-stx-part #'min-1 #'min-2)]
                      [second (gen-stx-part #'sec-1 #'sec-2)])
-         #'(define get-dt
-             (lambda ()
-               (define (gen-dt-part lo hi)
-                 (define-symbolic* dt-part integer?)
-                 (assert (and (>= dt-part lo) (<= dt-part hi)))
-                 dt-part)
-               (datetime year month day hour minute second)))))]
+         #'(lambda ()
+             (define (gen-dt-part lo hi)
+               (define-symbolic* dt-part integer?)
+               (assert (and (>= dt-part lo) (<= dt-part hi)))
+               dt-part)
+             (datetime year month day hour minute second))))]
     [(define-dt-gen) #'(define-dt-gen
                          (datetime 2019 12 15 0 0 0)
                          (datetime 2019 12 15 23 0 0))]))
@@ -105,3 +107,18 @@
 (define (get-proportion)
   (define-symbolic* prop-val real?)
   (proportion prop-val))
+
+; verify-getter checks whether the input getter can return a valid instance. If
+; not a warning is displayed. If yes, then an example is displayed.
+(define (verify-getter get-id id)
+  (let* ([example-1 (get-id)]
+                    [example-2 (get-id)]
+                    [solution (solve (assert (and (valid? example-1)
+                                                  (valid? example-2)
+                                                  (not (eq? example-1 example-2)))))])
+               (if (eq? solution (unsat))
+                   (displayln (format "Valid ~a cannot be generated from specification." id))
+                   (begin
+                     (displayln (format "Example ~a: " id))
+                     (displayln (evaluate example-1 solution))
+                     (displayln "")))))

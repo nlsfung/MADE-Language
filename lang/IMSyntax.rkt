@@ -1,6 +1,13 @@
 #lang rosette/safe
 
-(require (only-in rosette symbol? syntax->datum eval-syntax check-duplicates raise-argument-error))
+(require (only-in rosette
+                  symbol?
+                  syntax->datum
+                  eval-syntax
+                  check-duplicates
+                  raise-argument-error
+                  for/list
+                  in-list))
 
 (require (for-syntax "./SyntaxUtil.rkt"))
 (require "./VerifySyntax.rkt")
@@ -9,6 +16,13 @@
 (require "../rim/BasicDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
 (require "../rim/TemporalDataTypes.rkt")
+
+(provide define-measurement
+         define-observation
+         define-abstraction
+         define-action-instruction
+         define-control-instruction
+         define-action-plan)
 
 ; This file contains the syntax for specifying new MADE information models.
 
@@ -41,7 +55,8 @@
                        (eq? (dimensioned-units (measurement-value self)) units)
                        (invariant (measurement-value self))))])
              (define get-id
-               (lambda () (id (get-proxy) (get-datetime) (get-dimensioned units)))))))]))
+               (lambda () (id (get-proxy) (get-datetime) (get-dimensioned units))))
+             (verify-getter get-id id))))]))
 
 ; define-observation creates a new type of observed property or observed event.
 ; It requires the following inputs:
@@ -70,7 +85,8 @@
              (define get-id               
                (lambda () (id (get-proxy)
                               (datetime-range (get-datetime) (get-datetime))
-                              (get-bool)))))))]
+                              (get-bool))))
+             (verify-getter get-id id))))]
 
     [(define-observation id type)
      (cond [(eq? (syntax->datum #'type) 'dimensioned)
@@ -103,7 +119,8 @@
                        (eq? (super-get-type (observed-property-value self)) type)
                        (invariant (observed-property-value self))))])
              (define get-id
-               (lambda () (id (get-proxy) (get-datetime) (get-val)))))))]
+               (lambda () (id (get-proxy) (get-datetime) (get-val))))
+             (verify-getter get-id id))))]
 
     [(define-observation id dimensioned units (... invariant))
      (eq? 'dimensioned (syntax->datum #'dimensioned))
@@ -127,7 +144,8 @@
                        (eq? units (dimensioned-units (observed-property-value self)))
                        (invariant (observed-property-value self))))])
              (define get-id
-               (lambda () (id (get-proxy) (get-datetime) (get-dimensioned units)))))))]))
+               (lambda () (id (get-proxy) (get-datetime) (get-dimensioned units))))
+             (verify-getter get-id id))))]))
 
 ; define-abstraction creates a new type of abstraction. 
 ; It requires the following inputs:
@@ -170,7 +188,8 @@
            (define get-id
              (lambda () (id (get-proxy)
                             (datetime-range (get-datetime) (get-datetime))
-                            (get-val)))))))]
+                            (get-val))))
+           (verify-getter get-id id))))]
 
     [(define-abstraction id dimensioned units (... invariant))
      (eq? 'dimensioned (syntax->datum #'dimensioned))
@@ -196,7 +215,8 @@
              (define get-id
                (lambda () (id (get-proxy)
                               (datetime-range (get-datetime) (get-datetime))
-                              (get-dimensioned units)))))))]))
+                              (get-dimensioned units))))
+             (verify-getter get-id id))))]))
 
 ; define-action-plan creates a new type of action plan. 
 ; It requires the following inputs:
@@ -213,14 +233,14 @@
       [(type-id id ...)
        (eq? (syntax->datum #'type-id) type)
        (begin
-         (raise-if-not-identifier #'(id ...) stx)
+         (raise-if-not-symbol #'(id ...) stx)
          #'(id ...))]
       [((type-id id ...) rest ...)
        (cond [(eq? (syntax->datum #'type-id) type)
               (extract-instructions type #'(type-id id ...))]
              [else (extract-instructions type #'(rest ...))])]
       [() #'()]))
-
+  
   ; Helper function for creating a syntax object for a list of input IDs.
   (define (add-list-prefix stx)
     (syntax-case stx ()
@@ -245,15 +265,17 @@
                      [homogeneous-list (add-list-prefix homogeneous-ids)]
                      [culminating-list (add-list-prefix culminating-ids)]
                      [get-homogeneous-list (add-list-prefix
-                                            (datum->syntax stx
-                                                           (build-getter-name-list
-                                                            homogeneous-ids)
-                                                           stx))]
+                                            (datum->syntax
+                                             stx
+                                             (build-getter-name-list
+                                              (symbol->identifier homogeneous-ids))
+                                             stx))]
                      [get-culminating-list (add-list-prefix
-                                            (datum->syntax stx
-                                                           (build-getter-name-list
-                                                            culminating-ids)
-                                                           stx))])
+                                            (datum->syntax
+                                             stx
+                                             (build-getter-name-list
+                                              (symbol->identifier culminating-ids))
+                                             stx))])
          #'(begin
              (struct id action-plan ()
                #:transparent
@@ -287,21 +309,22 @@
                                     (scheduled-control
                                      i (get-schedule pat-length) (get-status)))
                                   control-list)
-                             (map (lambda (get-inst)
-                                    (let ([inst (get-inst)])
-                                      (scheduled-homogeneous-action
-                                       (get-type inst)
-                                       (get-schedule pat-length)
-                                       (homogeneous-action-rate inst)
-                                       (homogeneous-action-duration inst))))
-                                  get-homogeneous-list)
-                             (map (lambda (get-inst)
-                                    (let ([inst (get-inst)])
-                                      (scheduled-culminating-action
-                                       (get-type inst)
-                                       (get-schedule pat-length)
-                                       (culminating-action-goal-state inst))))
-                                  get-culminating-list))))))))]))
+                             (for/list ([inst-type (in-list homogeneous-list)]
+                                        [get-inst (in-list get-homogeneous-list)])
+                               (let ([inst (get-inst)])
+                                 (scheduled-homogeneous-action
+                                  inst-type
+                                  (get-schedule pat-length)
+                                  (homogeneous-action-rate inst)
+                                  (homogeneous-action-duration inst))))
+                             (for/list ([inst-type (in-list culminating-list)]
+                                        [get-inst (in-list get-culminating-list)])
+                               (let ([inst (get-inst)])
+                                 (scheduled-culminating-action
+                                  inst-type
+                                  (get-schedule pat-length)
+                                  (culminating-action-goal-state inst))))))))
+             (verify-getter get-id id))))]))
 
 ; define-action-instruction creates a new type of action instruction. 
 ; It requires the following inputs:
@@ -355,7 +378,8 @@
                (lambda () (id (get-proxy)
                               (get-datetime)
                               (get-dimensioned units)
-                              (get-duration)))))))]))
+                              (get-duration))))
+             (verify-getter get-id id))))]))
 
 ; Helper function for creating new culminating action instruction types.
 (define-syntax (define-culminating-action stx)
@@ -391,7 +415,8 @@
                        (eq? (super-get-type (culminating-action-goal-state self)) type)
                        (invariant (culminating-action-goal-state self))))])
              (define get-id
-               (lambda () (id (get-proxy) (get-datetime) (get-val)))))))]
+               (lambda () (id (get-proxy) (get-datetime) (get-val))))
+             (verify-getter get-id id))))]
 
     [(_ id dimensioned units (... invariant))
      (eq? 'dimensioned (syntax->datum #'dimensioned))
@@ -415,7 +440,8 @@
                        (eq? units (dimensioned-units (culminating-action-goal-state self)))
                        (invariant (culminating-action-goal-state self))))])
              (define get-id
-               (lambda () (id (get-proxy) (get-datetime) (get-dimensioned units)))))))]))
+               (lambda () (id (get-proxy) (get-datetime) (get-dimensioned units))))
+             (verify-getter get-id id))))]))
 
 ; define-control-instruction creates a new type of control instruction. 
 ; It requires the following inputs:
@@ -453,4 +479,5 @@
                      (list-ref (list target ...) (get-target-val))
                      (get-datetime)
                      (if (get-void-sched) (void) (get-schedule pat-length))
-                     (if (get-void-stat) (void) (get-status))))))))]))
+                     (if (get-void-stat) (void) (get-status)))))
+             (verify-getter get-id id))))]))

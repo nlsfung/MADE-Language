@@ -1,5 +1,6 @@
 #lang rosette/safe
 
+(require (only-in rosette symbol?))
 (require "./BasicDataTypes.rkt")
 (require "./TemporalDataTypes.rkt")
 
@@ -144,7 +145,7 @@
   [(define/generic super-valid? valid?)
    (define (get-type self) control-instruction)
    (define (valid? self)
-     (and (procedure? (control-instruction-target-process self))
+     (and (symbol? (control-instruction-target-process self))
           (datetime? (control-instruction-valid-datetime self))
           (super-valid? (control-instruction-valid-datetime self))
           (or (and (schedule? (control-instruction-schedule self))
@@ -186,7 +187,7 @@
   [(define/generic super-valid? valid?)
    (define (get-type self) scheduled-control)
    (define (valid? self)
-     (and (procedure? (scheduled-control-target-process self))
+     (and (symbol? (scheduled-control-target-process self))
           (or (and (schedule? (scheduled-control-schedule self))
                    (super-valid? (scheduled-control-schedule self)))
               (void? (scheduled-control-schedule self)))
@@ -208,7 +209,7 @@
   [(define/generic super-valid? valid?)
    (define (get-type self) scheduled-homogeneous-action)
    (define (valid? self)
-     (and (procedure? (scheduled-homogeneous-action-action-type self))
+     (and (symbol? (scheduled-homogeneous-action-action-type self))
           (schedule? (scheduled-homogeneous-action-schedule self))
           (dimensioned? (scheduled-homogeneous-action-rate self))
           (duration? (scheduled-homogeneous-action-duration self))
@@ -222,7 +223,7 @@
   [(define/generic super-valid? valid?)
    (define (get-type self) scheduled-culminating-action)
    (define (valid? self)
-     (and (procedure? (scheduled-culminating-action-action-type self))
+     (and (symbol? (scheduled-culminating-action-action-type self))
           (schedule? (scheduled-culminating-action-schedule self))
           (basic? (scheduled-culminating-action-goal-state self))
           (super-valid? (scheduled-culminating-action-schedule self))

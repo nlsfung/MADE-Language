@@ -10,6 +10,7 @@
                   string-append))
 
 (provide build-getter-name
+         symbol->identifier
          raise-if-not-identifier
          raise-if-not-symbol
          raise-if-not-unique
@@ -28,6 +29,18 @@
                   (string-append "get-"
                                  (symbol->string (syntax->datum id))))
                  id))
+
+; Helper function for removing the quotes from a symbol or a list of symbols.
+; Returns the syntax objects for the resulting identifiers.
+(define (symbol->identifier stx)
+  (syntax-case stx ()
+    [((q id))
+     (list (symbol->identifier #'(q id)))]
+    [((q id) (... sym-2) ...)
+     (append (symbol->identifier #'((q id)))
+             (symbol->identifier #'(sym-2 ...)))]
+    [(q id) #'id]
+    [() #'()]))
 
 ; Helper function for raising syntax error if input is not an identifier or a
 ; list of identifiers. Returns the syntax object for void if the check succeeds.
