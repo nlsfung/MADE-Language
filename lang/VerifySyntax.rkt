@@ -74,8 +74,9 @@
 
 ; get-interval creates a symbolic value for the repeat interval of a schedule.
 (define (get-interval)
-  (define-symbolic* int boolean?)
-  (if int (get-duration) #f))
+  (define-symbolic* bool-int? boolean?)
+  (define-symbolic* bool-val boolean?)
+  (if bool-int? bool-val (get-duration)))
 
 ; get-proxy creates a symbolic boolean value for the proxy.
 (define (get-proxy)

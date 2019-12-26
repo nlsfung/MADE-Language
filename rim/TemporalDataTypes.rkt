@@ -13,12 +13,12 @@
 ; should be unwound a finite number of times or not, and if so, the number
 ; of unwindings. It must take the value #f or a natural number.
 ; Set to 2 by default.
-(define datetime-unwind 2)
+(define datetime-unwind 0)
 
 ; The schedule-unwind parameter determines how many times the on-schedule
 ; operation should be unwound, if any. 
 ; Set to 5 by default.
-(define schedule-unwind 5)
+(define schedule-unwind 0)
 
 ; Duration contains a day, hour, minute and second. Months (and therefore
 ; year) are not included as a month can contain a variable number of days.
@@ -228,7 +228,9 @@
 ; Schedules are modelled as a pair containing a set of starting pattern and
 ; a duration indicating the period with which the pattern repeats. If the
 ; duration is set to #f, then the starting pattern is never repeated. If the
-; starting pattern is null, then the scheduled activity will never occur.
+; duration is set to #t, then the scheduled activity will occur at every time
+; instant on or after the starting pattern. If the starting pattern is null,
+; then the scheduled activity will never occur.
 (define-generics sched
   [on-schedule? sched elem])
 
@@ -244,7 +246,7 @@
                   (schedule-pattern self))
           (or (and (duration? (schedule-interval self))
                    (super-valid? (schedule-interval self)))
-              (eq? (schedule-interval self) #f))))]
+              (boolean? (schedule-interval self)))))]
   
   #:methods gen:sched
   [(define (update-interval self)
@@ -254,9 +256,7 @@
    (define (on-schedule-rec? self dt unwind)
      (if (memf (lambda (sched-dt) (dt=? sched-dt dt)) (schedule-pattern self))
          #t
-         (if (or (eq? unwind 0)
-                 (not (schedule-interval self))
-                 (null? (schedule-pattern self)))
+         (if (eq? unwind 0)
              #f
              (on-schedule-rec?
               (schedule (update-interval self) (schedule-interval self))
@@ -264,7 +264,18 @@
               (if (not unwind) #f (- unwind 1))))))
    
    (define (on-schedule? self dt)
-     (on-schedule-rec? self dt schedule-unwind))])
+     (cond [(null? (schedule-pattern self))
+            #f]
+           [(eq? (schedule-interval self) #t)
+            (not (eq? (memf (lambda (pat) (or (dt=? pat dt)
+                                              (dt<? pat dt)))
+                            (schedule-pattern self))
+                      #f))]
+           [(eq? (schedule-interval self) #f)
+            (not (eq? (memf (lambda (pat) (dt=? pat dt))
+                            (schedule-pattern self))
+                      #f))]
+           [else (on-schedule-rec? self dt schedule-unwind)]))])
 
 ;; Symbolic constants for checking properties of date-time manipulation.
 ;(define-symbolic dt-year dt-month dt-day dt-hour dt-minute dt-second integer?)
