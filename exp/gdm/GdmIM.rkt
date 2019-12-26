@@ -45,45 +45,34 @@
 
 (define-observation conception-event 'event)
 
-; Ten different types of abstractions can be identified from the GDM 
+; Nine different types of abstractions can be identified from the GDM 
 ; workflows, namely for capturing:
-; 1) Degree of glycemic control (with insulin prescribed).
-; 2) Degree of glycemic control when insulin is not prescribed (which has
-;    a different condition for detecting "poor control" but the same one for 
-;    "good control".)
-; 3) Severity of ketonuria in the patient.
-; 4) Degree of non-compliance to the recommended carbohydrates intake.
-; 5) Exercise compliance in the resting context.
-; 6) Exercise compliance in the active context.
-; 7) Individual poor blood pressure readings.
-; 8) Collection of poor (or good) blood pressure readings.
-; 9) Target organ damage.
-; 10) Proteinuria.
-(define-nominal glycemic-control-with-insulin-value-space 'good 'poor)
-(define-abstraction glycemic-control-with-insulin
-  glycemic-control-with-insulin-value-space)
-
+; 1) Degree of glycemic control
+; 2) Severity of ketonuria in the patient.
+; 3) Degree of non-compliance to the recommended carbohydrates intake.
+; 4) Exercise compliance in the resting context.
+; 5) Exercise compliance in the active context.
+; 6) Degree of hypertension.
+; 7) Target organ damage.
+; 8) Proteinuria.
 (define-nominal glycemic-control-value-space
-  'good 'poor-meal 'poor-same-interval 'poor-diff-interval 'very-poor)
+  'good 'poor 'meal-compliant-poor 'meal-incompliant-poor
+  'non-related-poor 'very-poor)
 (define-abstraction glycemic-control glycemic-control-value-space)
 
-(define-enumerated ketonuria-value-space
-  '-ve-two-weeks '-ve-one-week '+ve-insufficient-dinner '+ve-sufficient-dinner)
+(define-enumerated ketonuria-value-space'negative 'positive)
 (define-abstraction ketonuria ketonuria-value-space)
 
-(define-enumerated carbohydrates-value-space 'very-poor 'poor)
+(define-enumerated carbohydrates-value-space 'insufficient 'non-compliant)
 (define-abstraction carbohydrates-compliance carbohydrates-value-space)
 
 (define-abstraction exercise-compliance-resting bool)
 
 (define-abstraction exercise-compliance-active bool)
 
-(define-enumerated hypertension-suspicion-value-space
-  '>=140/90 '>=140/100 '>=160/110)
-(define-abstraction hypertension-suspicion hypertension-suspicion-value-space)
-
-(define-nominal hypertension-value-space 'negative 'indicisive 'positive)
-(define-abstraction hypertension hypertension-value-space)
+(define-enumerated hypertension-value-space
+  'high 'very-high 'normal 'sustained-high 'extremely-high)
+(define-abstraction hypertension-suspicion hypertension-value-space)
 
 (define-abstraction target-organ-damage bool)
 
