@@ -1,6 +1,6 @@
 #lang rosette/safe
 
-(require (only-in rosette symbol?))
+(require (only-in rosette symbol? eval string=?))
 (require "../rim/BasicDataTypes.rkt")
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
@@ -120,8 +120,9 @@
          
          [new-control (findf (lambda (d) (and (control-instruction? d)
                                               (not (made-data-proxy-flag d))
-                                              (eq? (get-type made-proc)
-                                                   (control-instruction-target-process d))
+                                              (for/all ([target (control-instruction-target-process d)])
+                                                  (string=? (format "~a" (get-type made-proc))
+                                                            (format "#<procedure:~a>" target)))
                                               (dt=? datetime
                                                     (control-instruction-valid-datetime d))))
                              in-data)]
@@ -150,8 +151,8 @@
 ;  
 ;  #:methods gen:made-proc
 ;  [(define (proxy? self) #f)
-;   (define (generate-data self datetime)
-;     (gen-proc-generate-data (lambda (d-state dt) #f) self datetime))])   
+;   (define (generate-data self in-data datetime)
+;     (gen-proc-generate-data (lambda (d-state dt) #f) self in-data datetime))])   
 ;
 ;(define-symbolic p-data integer?)
 ;(define-symbolic p-sched p-stat integer?)
@@ -164,7 +165,7 @@
 ;(define new-data-proc (update-data-state a-proc in-data))
 ;
 ;(define-symbolic t-id-num integer?)
-;(define t-id (if (eq? t-id-num 0) sample-process t-id-num))
+;(define t-id (if (eq? t-id-num 0) 'sample-process t-id-num))
 ;(define-symbolic v-dt-h v-dt-min v-dt-s integer?)
 ;(define-symbolic c-inst-sched c-inst-stat integer?)
 ;(define-symbolic c-inst-sched-void c-inst-stat-void boolean?)
@@ -195,7 +196,7 @@
 ;          #:guarantee (assert (implies (eq? a-proc new-ctrl-proc)
 ;                                       (or c-proxy
 ;                                           (not (dt=? v-dt cur-dt))
-;                                           (not (eq? sample-process t-id))
+;                                           (not (eq? 'sample-process t-id))
 ;                                           (and (or (= p-sched c-inst-sched)
 ;                                                    c-inst-sched-void)
 ;                                                (or (= p-stat c-inst-stat)
