@@ -1,6 +1,6 @@
 #lang rosette/safe
 
-(require (only-in rosette symbol? eval string=?))
+(require (only-in rosette string-contains?))
 (require "../rim/BasicDataTypes.rkt")
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
@@ -121,8 +121,8 @@
          [new-control (findf (lambda (d) (and (control-instruction? d)
                                               (not (made-data-proxy-flag d))
                                               (for/all ([target (control-instruction-target-process d)])
-                                                  (string=? (format "~a" (get-type made-proc))
-                                                            (format "#<procedure:~a>" target)))
+                                                (string-contains? (format "~a" (get-type made-proc))
+                                                                  (format "#<procedure:~a>" target)))
                                               (dt=? datetime
                                                     (control-instruction-valid-datetime d))))
                              in-data)]
