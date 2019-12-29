@@ -5,8 +5,7 @@
 (require "../rim/BasicDataTypes.rkt")
 (require "../rim/TemporalDataTypes.rkt")
 
-(provide define-datetime-generator
-         get-duration
+(provide get-duration
          get-schedule
          get-status
          get-proxy
@@ -19,42 +18,35 @@
 
 ; This file contains the syntax of functions for verifying concrete MADE models.
 
-; define-datetime-generator creates a get-datetime function for creating
-; symbolic datetime values. It accepts as input two concrete datetime values to
-; indicate the range of possible datetime values.
-(define get-datetime (define-datetime-generator))
-(define-syntax (define-datetime-generator stx)
-  (define (gen-stx-part lo hi)
-    (if (eq? (syntax->datum lo) (syntax->datum hi))
-        lo
-        (with-syntax ([min lo]
-                      [max hi])
-          #'(gen-dt-part min max))))
+; get-datetime creates a symbolic datetime values. It accepts as input two
+; optional concrete datetime values to indicate the range of possible datetime
+; values.
+(define get-datetime
+  (case-lambda
+    [()
+     (get-datetime (datetime 2019 12 15 0 0 0)
+                   (datetime 2019 12 15 23 0 0))]
+    [(start-dt end-dt)
+     (datetime (get-datetime-part (datetime-year start-dt)
+                                  (datetime-year end-dt))
+               (get-datetime-part (datetime-month start-dt)
+                                  (datetime-month end-dt))
+               (get-datetime-part (datetime-day start-dt)
+                                  (datetime-day end-dt))
+               (get-datetime-part (datetime-hour start-dt)
+                                  (datetime-hour end-dt))
+               (get-datetime-part (datetime-minute start-dt)
+                                  (datetime-minute end-dt))
+               (get-datetime-part (datetime-second start-dt)
+                                  (datetime-second end-dt)))]))
 
-  (syntax-case stx ()
-    [(define-dt-gen (dt-1 yr-1 mth-1 d-1 hr-1 min-1 sec-1)
-                    (dt-2 yr-2 mth-2 d-2 hr-2 min-2 sec-2))
-     (begin
-       (raise-if-not-datetime #'(dt-1 yr-1 mth-1 d-1 hr-1 min-1 sec-1) stx)
-       (raise-if-not-datetime #'(dt-2 yr-2 mth-2 d-2 hr-2 min-2 sec-2) stx)
-       (with-syntax ([get-dt (datum->syntax #'define-dt-gen
-                                            'get-datetime
-                                            #'define-dt-gen)]
-                     [year (gen-stx-part #'yr-1 #'yr-2)]
-                     [month (gen-stx-part #'mth-1 #'mth-2)]
-                     [day (gen-stx-part #'d-1 #'d-2)]
-                     [hour (gen-stx-part #'hr-1 #'hr-2)]
-                     [minute (gen-stx-part #'min-1 #'min-2)]
-                     [second (gen-stx-part #'sec-1 #'sec-2)])
-         #'(lambda ()
-             (define (gen-dt-part lo hi)
-               (define-symbolic* dt-part integer?)
-               (assert (and (>= dt-part lo) (<= dt-part hi)))
-               dt-part)
-             (datetime year month day hour minute second))))]
-    [(define-dt-gen) #'(define-dt-gen
-                         (datetime 2019 12 15 0 0 0)
-                         (datetime 2019 12 15 23 0 0))]))
+(define (get-datetime-part lo hi)
+  (if (= lo hi)
+      lo
+      (begin
+  (define-symbolic* dt-part integer?)
+  (assert (and (>= dt-part lo) (<= dt-part hi)))
+  dt-part)))
 
 ; get-duration creates a symbolic duration value.
 (define (get-duration)
@@ -113,13 +105,14 @@
 ; not a warning is displayed. If yes, then an example is displayed.
 (define (verify-getter get-id id)
   (let* ([example-1 (get-id)]
-                    [example-2 (get-id)]
-                    [solution (solve (assert (and (valid? example-1)
-                                                  (valid? example-2)
-                                                  (not (eq? example-1 example-2)))))])
-               (if (eq? solution (unsat))
-                   (displayln (format "Valid ~a cannot be generated from specification." id))
-                   (begin
-                     (displayln (format "Example ~a: " id))
-                     (displayln (evaluate example-1 solution))
-                     (displayln "")))))
+         [example-2 (get-id)]
+         [solution (solve (assert (and (valid? example-1)
+                                       (valid? example-2)
+                                       (not (eq? example-1 example-2)))))])
+    (if (eq? solution (unsat))
+        (displayln (format "Valid ~a cannot be generated from specification." id))
+        (begin
+          (displayln (format "Example ~a: " id))
+          (displayln (evaluate example-1 solution))
+          (displayln "")))
+    (clear-asserts!)))

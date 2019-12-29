@@ -13,12 +13,12 @@
 ; should be unwound a finite number of times or not, and if so, the number
 ; of unwindings. It must take the value #f or a natural number.
 ; Set to 2 by default.
-(define datetime-unwind 0)
+(define datetime-unwind 2)
 
 ; The schedule-unwind parameter determines how many times the on-schedule
 ; operation should be unwound, if any. 
 ; Set to 5 by default.
-(define schedule-unwind 0)
+(define schedule-unwind 5)
 
 ; Duration contains a day, hour, minute and second. Months (and therefore
 ; year) are not included as a month can contain a variable number of days.

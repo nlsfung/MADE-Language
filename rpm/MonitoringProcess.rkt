@@ -13,6 +13,9 @@
          property-specification
          event-specification
          event-trigger)
+(provide verify-monitoring-property
+         measurement-generator
+         generate-measurement-list)
 
 ; This file contains the implementation of Monitoring processes.
 
@@ -183,6 +186,80 @@
                               dt-start dt-end)))
           d-state))
 
+; verify-monitoring-property helps verify a Monitoring process for observed properties.
+; It accepts as input:
+; 1) The struct-constructor for the monitoring process.
+; 2) A list of measurement generators.
+; 3) The execution datetime (which can be symbolic).
+; The verifier outputs (unsat) if the input Monitoring process cannot generate
+; a valid output observed property from the specified input measurements. Otherwise,
+; it returns a satisfiable model.
+(define (verify-monitoring-property proc-constructor measurement-gen-list dt)
+  (let* ([c-state (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t)]
+         [proc (proc-constructor null c-state)]
+         [t-window (property-specification-time-window
+                    (monitoring-process-output-specification proc))]
+         [p-func (property-specification-value-function
+                  (monitoring-process-output-specification proc))]
+         [o-type (monitoring-process-output-type proc)]
+         
+         [d-list (foldl (lambda (generator result)
+                           (append result
+                                   (generate-measurement-list
+                                    (measurement-generator-getter generator)
+                                    (measurement-generator-start-datetime generator)
+                                    (measurement-generator-end-datetime generator)
+                                    (measurement-generator-frequency generator))))
+                         null
+                         measurement-gen-list)]
+         [filtered-data (sort (filter-expired-data d-list (dt- dt t-window) dt)
+                              dt<? #:key measurement-valid-datetime)]
+         [property-value (p-func filtered-data)]
+         [output (o-type #f dt property-value)]
+         [sol (solve (assert (and (not (void? property-value))
+                        (valid? output))))])
+    (if (eq? sol (unsat))
+        (displayln (unsat))
+        (begin
+          (displayln "Input data:")
+          (displayln (evaluate d-list sol))
+          (displayln "Current date-time:")
+          (displayln (evaluate dt sol))
+          (displayln "")))
+    (clear-asserts!)))
+
+; Measurement generator contains the specification for generating a list of
+; symbolic measurements (for verification purposes). It comprises:
+; 1) A measurement getter.
+; 2) A starting date-time for the corresponding measurements.
+; 3) An ending date-time for the measurements.
+; 4) A frequency which can either be:
+;    a) A duration indicating how often the measurements should be repeated.
+;    b) A positive integer indicating the total number of measurements between
+;       the given start date-time and end-datetime.
+(struct measurement-generator
+  (getter start-datetime end-datetime frequency)
+  #:transparent)
+
+; generate-measurement-list generates a list of measurements 
+(define (generate-measurement-list getter start-datetime end-datetime frequency)
+  (define (generate-count total)
+    (if (or (<= total 0) (dt>? start-datetime end-datetime))
+        null
+        (append (list (getter start-datetime end-datetime))
+                (generate-count (- total 1)))))
+  
+  (define (generate-interval cur-dt)  
+    (if (dt>? cur-dt end-datetime)
+        null
+        (let ([data (getter cur-dt cur-dt)]
+              [next-dt (dt+ cur-dt frequency)])
+          (append (list data)
+                  (generate-interval next-dt)))))
+  
+  (cond [(integer? frequency) (generate-count frequency)]
+        [(duration? frequency) (generate-interval start-datetime)]))
+         
 ;; Symbolic constants for verifying generate data.
 ;; Executed with datetime-unwind and schedule-unwind set to 0.
 ;(define (gen-dt-part) (define-symbolic* dt-part integer?) dt-part)

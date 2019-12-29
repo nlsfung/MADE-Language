@@ -5,6 +5,9 @@
          "../../lang/NomEnumSyntax.rkt"
          "../../rim/BasicDataTypes.rkt")
 
+(require "../../rpm/MonitoringProcess.rkt"
+         "../../rim/TemporalDataTypes.rkt")
+
 ; This file contains the specification of the information model for the clinical
 ; guideline for gestational diabetes mellitus (GDM).
 
@@ -250,5 +253,3 @@
 (define-action-plan gestational-weekly-two-days-plan
   (control 'monitor-bp-control 'gestational-bp-two-days-workflow-control
            'gestational-bp-weekly-workflow-control))
-
-

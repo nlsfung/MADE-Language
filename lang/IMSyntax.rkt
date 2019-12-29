@@ -55,7 +55,11 @@
                        (eq? (dimensioned-units (measurement-value self)) units)
                        (invariant (measurement-value self))))])
              (define get-id
-               (lambda () (id (get-proxy) (get-datetime) (get-dimensioned units))))
+               (case-lambda
+                 [()
+                  (id (get-proxy) (get-datetime) (get-dimensioned units))]
+                 [(start-dt end-dt)
+                  (id (get-proxy) (get-datetime start-dt end-dt) (get-dimensioned units))]))
              (verify-getter get-id id))))]))
 
 ; define-observation creates a new type of observed property or observed event.
