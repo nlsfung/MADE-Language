@@ -14,6 +14,7 @@
          event-specification
          event-trigger)
 (provide verify-monitoring-property
+         verify-monitoring-event
          measurement-generator
          generate-measurement-list)
 
@@ -227,6 +228,69 @@
           (displayln (evaluate dt sol))
           (displayln "")))
     (clear-asserts!)))
+
+; verify-monitoring-event helps verify a Monitoring process for observed events.
+; It accepts as input:
+; 1) The struct-constructor for the monitoring process.
+; 2) A list of measurement generators.
+; 3) The execution datetime (which can be symbolic).
+; The verifier outputs a model (if any) for each of the following conditions:
+; 1) The input measurements satisfy the start trigger.
+; 2) The input measurements satisfy the end trigger.
+; 3) The input measurements satisfy both the start and end triggers.
+(define (verify-monitoring-event proc-constructor measurement-gen-list dt)
+  (define (display-solution d-list dt sol)
+    (displayln "Input data:")
+    (displayln (evaluate d-list sol))
+    (displayln "Current date-time:")
+    (displayln (evaluate dt sol)))
+  
+  (let* ([c-state (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t)]
+         [proc (proc-constructor null c-state)]
+         [start-trigger (event-specification-start-trigger
+                         (monitoring-process-output-specification proc))]
+         [end-trigger (event-specification-end-trigger
+                       (monitoring-process-output-specification proc))]
+
+         [d-list (foldl (lambda (generator result)
+                           (append result
+                                   (generate-measurement-list
+                                    (measurement-generator-getter generator)
+                                    (measurement-generator-start-datetime generator)
+                                    (measurement-generator-end-datetime generator)
+                                    (measurement-generator-frequency generator))))
+                         null
+                         measurement-gen-list)]
+
+         [start-win (event-trigger-time-window start-trigger)]
+         [start-pred (event-trigger-trigger-predicate start-trigger)]
+         [start-event? (start-pred (filter-expired-data d-list (dt- dt start-win) dt))]
+
+         [end-win (event-trigger-time-window end-trigger)]
+         [end-pred (event-trigger-trigger-predicate end-trigger)]
+         [end-event? (end-pred (filter-expired-data d-list (dt- dt end-win) dt))]
+
+         [start-sol (solve (assert start-event?))]
+         [end-sol (solve (assert end-event?))]
+         [both-sol (solve (assert (and start-event? end-event?)))])
+    
+    (displayln "Model for start trigger:")
+    (if (eq? start-sol (unsat))
+        (displayln (unsat))
+        (display-solution d-list dt start-sol))
+    (displayln "")
+    
+    (displayln "Model for end trigger:")
+    (if (eq? end-sol (unsat))
+        (displayln (unsat))
+        (display-solution d-list dt end-sol))
+    (displayln "")
+    
+    (displayln "Model for both start and end trigger:")
+    (if (eq? both-sol (unsat))
+        (displayln (unsat))
+        (display-solution d-list dt both-sol))
+    (displayln "")))
 
 ; Measurement generator contains the specification for generating a list of
 ; symbolic measurements (for verification purposes). It comprises:
