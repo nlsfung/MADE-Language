@@ -6,20 +6,20 @@
 (require "../rim/MadeDataStructures.rkt")
 
 (provide gen:analysis
-         analysis-process-time-window
          analysis-process-output-type
-         analysis-process-abstraction-functions
+         analysis-process-output-specification
          analysis-process-proxy-flag)
-(provide (struct-out analysis-process))
+(provide (struct-out analysis-process)
+         (struct-out abstraction-pair))
 
 ; This file contains the implementation of Analysis processes.
 
 ; Analysis process inherit from the generic MADE process, extending it with
-; a time window, the output type identifier and a list of abstraction functions.
+; the output type identifier and the output specification, which in turn
+; comprises a set of abstraction pairs.
 (define-generics analysis
-  [analysis-process-time-window analysis]
   [analysis-process-output-type analysis]
-  [analysis-process-abstraction-functions analysis]
+  [analysis-process-output-specification analysis]
   [analysis-process-proxy-flag analysis])
 
 (struct analysis-process made-process ()
@@ -44,9 +44,8 @@
       (lambda (d-list dt)
         (execute-analysis-body d-list
                                dt
-                               (analysis-process-time-window self)
                                (analysis-process-output-type self)
-                               (analysis-process-abstraction-functions self)
+                               (analysis-process-output-specification self)
                                (analysis-process-proxy-flag self)))
       self
       in-data
@@ -55,31 +54,61 @@
    (define/generic super-valid-spec? valid-spec?)
    (define (valid-spec? self)
      (and (super-valid-spec? (made-process null (made-process-control-state self)))
-          (duration? (analysis-process-time-window self))
-          (valid? (analysis-process-time-window self))
           (procedure? (analysis-process-output-type self))
-          (list? (analysis-process-abstraction-functions self))
-          (andmap (lambda (f) (procedure? f)) (analysis-process-abstraction-functions self))))])
+          (list? (analysis-process-output-specification self))
+          (andmap (lambda (p) (and (abstraction-pair? p)
+                                   (valid? p)))
+                  (analysis-process-output-specification self))))])
+
+; An abstraction pair consists of a time window as well as an abstraction function.
+(struct abstraction-pair (time-window abstraction-function)
+  #:transparent
+  #:methods gen:typed
+  [(define/generic super-valid? valid?)
+   (define (get-type self) abstraction-pair)
+   (define (valid? self)
+     (and (duration? (abstraction-pair-time-window self))
+          (super-valid? (abstraction-pair-time-window self))
+          (procedure? (abstraction-pair-abstraction-function self))))])
 
 ; Helper function for defining the main behaviour of analysis processes.
-(define (execute-analysis-body d-list dt t-window out-type ab-funcs proxy-flag)
+(define (execute-analysis-body d-list dt out-type ab-spec proxy-flag)
   ; To generate output data, an Analysis process follows the following steps:
+  ; 1) Find an abstraction pair from which an abstraction can be generated.
+  ; 2) If none can be found, return an empty list.
+  ;    Otherwise, return the generated abstraction.
+  (let* ([output-list
+          (map (lambda (ab-pair)
+                 (execute-abstraction-pair
+                  d-list
+                  dt
+                  (abstraction-pair-time-window ab-pair)
+                  out-type
+                  (abstraction-pair-abstraction-function ab-pair)
+                  proxy-flag))
+               ab-spec)]
+         [output (findf (lambda (d) (not (void? d))) output-list)])
+    (if output
+        output
+        null)))
+
+; Helper function for executing an individual abstraction pair.
+(define (execute-abstraction-pair d-list dt t-window out-type ab-func proxy-flag)
+  ; To generate output data from an abstraction pair, the following steps are followed:
   ; 1) Filter out any data that falls outside the time window.
-  ; 2) Feed the filtered data into the input list of abstraction functions, one
-  ;    of which may produce a non-void output value.
-  ; 3) If an output value is produced, determine its valid datetime range.
+  ; 2) Feed the filtered data into the input abstraction function.
+  ; 3) If a (non-void) output value is produced, determine its valid datetime range.
   ; 4) Generate the output abstraction, if any.
   (let* ([filtered-data (sort (filter-expired-data d-list (dt- dt t-window) dt)
                               observed-after?)]
-         [output-func (findf (lambda (f) (not (void? (f filtered-data)))) ab-funcs)]
-         [output-value (if output-func (output-func filtered-data) (void))]
+         [output-value (ab-func filtered-data)]
 
          [latest-significant-data
           (if (void? output-value)
               (void)
               (foldl (lambda (d result)
                        (if (eq? output-value
-                                (output-func (member d (reverse filtered-data))))
+                                (ab-func (member d (reverse filtered-data))))
                            (if result result d)
                            #f))
                      #f
@@ -97,7 +126,7 @@
                        latest-significant-data))]))])
 
     (if (void? output-value)
-        null
+        (void)
         (list (out-type proxy-flag
                         (datetime-range dt (dt+ latest-start-time t-window))
                         output-value)))))
@@ -191,14 +220,15 @@
 ;(define c-state (control-state (schedule (list sched-dt) #f) proc-status))
 ;(define t-window (duration 0 win-length 0 0))
 ;(define out-type room-temperature-grade)
-;(define ab-funcs (list grade-temp-low grade-temp-high))
+;(define ab-spec
+;  (list (abstraction-pair t-window grade-temp-low)
+;           (abstraction-pair t-window grade-temp-high)))
 ;(define proc-proxy (gen-temp-proxy))
 ;  
 ;(struct sample-process analysis-process ()
 ;  #:methods gen:analysis
-;  [(define (analysis-process-time-window self) t-window)
-;   (define (analysis-process-output-type self) room-temperature-grade)
-;   (define (analysis-process-abstraction-functions self) ab-funcs)
+;  [(define (analysis-process-output-type self) room-temperature-grade)
+;   (define (analysis-process-output-specification self) ab-spec)
 ;   (define (analysis-process-proxy-flag self) proc-proxy)]
 ;
 ;  #:methods gen:typed
@@ -254,7 +284,7 @@
 ;; Verify the implementation of determining abstraction validity range.
 ;(define new-dt (datetime 7 9 12 (gen-dt-part) 0 0))
 ;(assert (normalized? new-dt))
-;(define new-output (execute-analysis-body d-state new-dt t-window out-type ab-funcs #f))
+;(define new-output (execute-analysis-body d-state new-dt out-type ab-spec #f))
 ;(define (verify-valid-range)
 ;  (verify (assert
 ;           (implies (and (not (null? output))

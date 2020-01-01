@@ -79,19 +79,18 @@
 ; 5) A list of abstraction functions for the process.
 (define-syntax (define-analysis stx)
   (syntax-case stx ()
-    [(define-analysis id proxy output-type (... duration) (... lambda) ...)
+    [(define-analysis id proxy output-type ab-pair ...)
      (begin
        (raise-if-not-identifier #'id stx)
        (raise-if-not-boolean #'proxy stx)
        (raise-if-not-identifier #'output-type stx)
-       (raise-if-not-duration #'duration stx)
-       (raise-if-not-lambda #'(lambda ...) 1 stx)
        #'(struct id analysis-process ()
            #:transparent
            #:methods gen:analysis
            [(define (analysis-process-time-window self) duration)
             (define (analysis-process-output-type self) output-type)
-            (define (analysis-process-abstraction-functions self) (list lambda ...))
+            (define (analysis-process-output-specification self)
+              (define-analysis-specification ab-pair ...))
             (define (analysis-process-proxy-flag self) proxy)]
 
            #:methods gen:typed
@@ -101,6 +100,22 @@
               (and (valid-spec? self)
                    (super-valid? (made-process (made-process-data-state self)
                                                (made-process-control-state self)))))]))]))
+
+; define-analysis-specification creates a new list of abstraction pairs.
+; It requires a list of pairs as inputs, each containing:
+; 1) A time window for the abstraction.
+; 2) A function for outputting the appropriate abstraction value.
+(define-syntax (define-analysis-specification stx)
+  (syntax-case stx ()
+    [(define-analysis-specification ((... duration) (... lambda)))
+     (begin
+       (raise-if-not-duration #'duration stx)
+       (raise-if-not-lambda #'lambda 1 stx)
+       #'(list (abstraction-pair duration lambda)))]
+    [(define-analysis-specification ((... duration) (... lambda)) ab-pair-2 ...)
+     (begin
+       #'(append (define-analysis-specification (duration lambda))
+                 (define-analysis-specification ab-pair-2 ...)))]))
 
 ; define-decision creates a new Decision process.
 ; It requires the following inputs:
