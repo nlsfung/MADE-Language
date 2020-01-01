@@ -11,6 +11,9 @@
          analysis-process-proxy-flag)
 (provide (struct-out analysis-process)
          (struct-out abstraction-pair))
+(provide verify-analysis
+         (struct-out observation-generator)
+         generate-observation-list)
 
 ; This file contains the implementation of Analysis processes.
 
@@ -166,6 +169,110 @@
                  (datetime-range-start range-2))
            (dt=? (datetime-range-end range-1)
                  (datetime-range-start range-2)))))
+
+; verify-analysis helps verify an Analysis process. 
+; It accepts as input:
+; 1) The struct-constructor for the analysis process.
+; 2) A list of observation generators.
+; 3) The execution datetime (which can be symbolic).
+; The verifier outputs a model (if any) for each of the following conditions:
+; 1) The input observations satisfy one abstraction specification.
+;    (A seperate model is produced for each specification).
+; 2) The input observations satisfy a pair of abstraction specifications.
+;    (A separate model is produced for each pair).
+(define (verify-analysis proc-constructor obs-gen-list dt)
+  (define (display-solution d-list dt sol ab-pair-1 ab-pair-2)
+    (if (eq? ab-pair-1 ab-pair-2)
+        (displayln (format "Model for abstraction pair: ~a" ab-pair-1))
+        (displayln (format "Model for abstraction pairs: ~a and ~a" ab-pair-1 ab-pair-2)))
+    (displayln "Input data:")
+    (displayln (evaluate d-list sol))
+    (displayln "Current date-time:")
+    (displayln (evaluate dt sol)))
+  
+  (let* ([d-list (foldl (lambda (generator result)
+                           (append result
+                                   (generate-observation-list
+                                    (observation-generator-getter generator)
+                                    (observation-generator-start-datetime generator)
+                                    (observation-generator-end-datetime generator)
+                                    (observation-generator-frequency generator))))
+                         null
+                         obs-gen-list)]
+
+         [c-state (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t)]
+         [proc (proc-constructor null c-state)]
+         [out-type (analysis-process-output-type proc)]
+         [proxy-flag (analysis-process-proxy-flag proc)]
+         [proc-spec (analysis-process-output-specification proc)]
+
+         [output-num (map (lambda (ab-pair)
+                            (- (length proc-spec) (member ab-pair proc-spec)))
+                          proc-spec)]
+         [output-list (map (lambda (n)
+                             (let* ([ab-pair (list-ref proc-spec n)]
+                                    [t-window (abstraction-pair-time-window ab-pair)]
+                                    [ab-func (abstraction-pair-abstraction-function ab-pair)])
+                             (execute-abstraction-pair d-list dt t-window out-type ab-func proxy-flag)))
+                           output-num)]
+         [output-sol (foldl (lambda (m result)
+                              (append
+                               (map (lambda (n)
+                                      (list m
+                                            n 
+                                            (solve
+                                             (assert
+                                              (and (not (void? (list-ref output-list m)))
+                                                   (not (void? (list-ref output-list n)))
+                                                   (valid? (list-ref output-list m))
+                                                   (valid? (list-ref output-list n)))))))
+                                    (member m output-num))
+                               result))
+                            null
+                            output-num)])
+    (for-each (lambda (o)
+                (display-solution d-list
+                                  dt
+                                  (list-ref o 2)
+                                  (list-ref o 0)
+                                  (list-ref o 1)))
+              output-sol)))
+
+; Observation generator contains the specification for generating a list of
+; symbolic observations (for verification purposes). It comprises:
+; 1) An observation getter.
+; 2) A starting date-time for the corresponding observations.
+; 3) An ending date-time for the observations.
+; 4) A frequency which can either be:
+;    a) A duration indicating how often the observations should be repeated.
+;    b) A positive integer indicating the number of observations to generate.
+;       In this case, the start date-time indicates the earliest date-time for
+;       the measurement and the end date-time latest.
+(struct observation-generator
+  (getter start-datetime end-datetime frequency)
+  #:transparent)
+
+; generate-observation-list generates a list of observations.
+(define (generate-observation-list getter start-datetime end-datetime frequency)
+  (define (generate-count total)
+    (if (or (<= total 0) (dt>? start-datetime end-datetime))
+        null
+        (let ([data (getter start-datetime end-datetime)])
+          (assert (valid? data))
+          (append (list (getter start-datetime end-datetime))
+                  (generate-count (- total 1))))))
+  
+  (define (generate-interval cur-dt)  
+    (if (dt>? cur-dt end-datetime)
+        null
+        (let ([data (getter cur-dt cur-dt)]
+              [next-dt (dt+ cur-dt frequency)])
+          (assert (valid? data))
+          (append (list data)
+                  (generate-interval next-dt)))))
+  
+  (cond [(integer? frequency) (generate-count frequency)]
+        [(duration? frequency) (generate-interval start-datetime)]))
 
 ;; Symbolic constants for verifying generate data.
 ;(define (gen-dt-part) (define-symbolic* dt-part integer?) dt-part)

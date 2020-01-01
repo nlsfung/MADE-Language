@@ -205,20 +205,20 @@
          [o-type (monitoring-process-output-type proc)]
          
          [d-list (foldl (lambda (generator result)
-                           (append result
-                                   (generate-measurement-list
-                                    (measurement-generator-getter generator)
-                                    (measurement-generator-start-datetime generator)
-                                    (measurement-generator-end-datetime generator)
-                                    (measurement-generator-frequency generator))))
-                         null
-                         measurement-gen-list)]
+                          (append result
+                                  (generate-measurement-list
+                                   (measurement-generator-getter generator)
+                                   (measurement-generator-start-datetime generator)
+                                   (measurement-generator-end-datetime generator)
+                                   (measurement-generator-frequency generator))))
+                        null
+                        measurement-gen-list)]
          [filtered-data (sort (filter-expired-data d-list (dt- dt t-window) dt)
                               dt<? #:key measurement-valid-datetime)]
          [property-value (p-func filtered-data)]
          [output (o-type #f dt property-value)]
          [sol (solve (assert (and (not (void? property-value))
-                        (valid? output))))])
+                                  (valid? output))))])
     (if (eq? sol (unsat))
         (displayln (unsat))
         (begin
@@ -310,14 +310,17 @@
   (define (generate-count total)
     (if (or (<= total 0) (dt>? start-datetime end-datetime))
         null
-        (append (list (getter start-datetime end-datetime))
-                (generate-count (- total 1)))))
+        (let ([data (getter start-datetime end-datetime)])
+          (assert (valid? data))
+          (append (list (getter start-datetime end-datetime))
+                  (generate-count (- total 1))))))
   
   (define (generate-interval cur-dt)  
     (if (dt>? cur-dt end-datetime)
         null
         (let ([data (getter cur-dt cur-dt)]
               [next-dt (dt+ cur-dt frequency)])
+          (assert (valid? data))
           (append (list data)
                   (generate-interval next-dt)))))
   

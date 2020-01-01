@@ -86,10 +86,22 @@
                                  (made-data-proxy-flag self)
                                  (observed-event-valid-datetime-range self)
                                  (observed-event-value self))))])
-             (define get-id               
-               (lambda () (id (get-proxy)
-                              (datetime-range (get-datetime) (get-datetime))
-                              (get-bool))))
+             (define get-id
+               (case-lambda
+                 [()
+                  (id (get-proxy)
+                      (datetime-range (get-datetime) (get-datetime))
+                      (get-bool))]
+                 [(start-dt end-dt)
+                  (id (get-proxy)
+                      (datetime-range (get-datetime start-dt end-dt)
+                                      (get-datetime start-dt end-dt))
+                      (get-bool))]
+                 [(start-dt-1 end-dt-1 start-dt-2 end-dt-2)
+                  (id (get-proxy)
+                      (datetime-range (get-datetime start-dt-1 end-dt-1)
+                                      (get-datetime start-dt-2 end-dt-2))
+                      (get-bool))]))
              (verify-getter get-id id))))]
 
     [(define-observation id type)
@@ -123,7 +135,11 @@
                        (eq? (super-get-type (observed-property-value self)) type)
                        (invariant (observed-property-value self))))])
              (define get-id
-               (lambda () (id (get-proxy) (get-datetime) (get-val))))
+               (case-lambda
+                 [()
+                  (id (get-proxy) (get-datetime) (get-val))]
+                 [(start-dt end-dt)
+                  (id (get-proxy) (get-datetime start-dt end-dt) (get-val))]))
              (verify-getter get-id id))))]
 
     [(define-observation id dimensioned units (... invariant))
@@ -148,7 +164,11 @@
                        (eq? units (dimensioned-units (observed-property-value self)))
                        (invariant (observed-property-value self))))])
              (define get-id
-               (lambda () (id (get-proxy) (get-datetime) (get-dimensioned units))))
+               (case-lambda
+                 [()
+                  (id (get-proxy) (get-datetime) (get-dimensioned units))]
+                 [(start-dt end-dt)
+                  (id (get-proxy) (get-datetime start-dt end-dt) (get-dimensioned units))]))
              (verify-getter get-id id))))]))
 
 ; define-abstraction creates a new type of abstraction. 
