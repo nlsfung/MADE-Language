@@ -203,6 +203,7 @@
          [p-func (property-specification-value-function
                   (monitoring-process-output-specification proc))]
          [o-type (monitoring-process-output-type proc)]
+         [proxy-flag (monitoring-process-proxy-flag proc)]
          
          [d-list (foldl (lambda (generator result)
                           (append result
@@ -213,10 +214,11 @@
                                    (measurement-generator-frequency generator))))
                         null
                         measurement-gen-list)]
+
          [filtered-data (sort (filter-expired-data d-list (dt- dt t-window) dt)
                               dt<? #:key measurement-valid-datetime)]
          [property-value (p-func filtered-data)]
-         [output (o-type #f dt property-value)]
+         [output (o-type proxy-flag dt property-value)]
          [sol (solve (assert (and (not (void? property-value))
                                   (valid? output))))])
     (if (eq? sol (unsat))
@@ -226,6 +228,8 @@
           (displayln (evaluate d-list sol))
           (displayln "Current date-time:")
           (displayln (evaluate dt sol))
+          (displayln "Output data:")
+          (displayln (evaluate output sol))
           (displayln "")))
     (clear-asserts!)))
 
@@ -323,9 +327,12 @@
           (assert (valid? data))
           (append (list data)
                   (generate-interval next-dt)))))
-  
-  (cond [(integer? frequency) (generate-count frequency)]
-        [(duration? frequency) (generate-interval start-datetime)]))
+  (let ([d-list (cond [(integer? frequency) (generate-count frequency)]
+                      [(duration? frequency) (generate-interval start-datetime)])])
+    (assert (eq? (length d-list)
+                 (remove-duplicates (map (lambda (d) (measurement-valid-datetime d))
+                                         d-list))))
+    d-list))
          
 ;; Symbolic constants for verifying generate data.
 ;; Executed with datetime-unwind and schedule-unwind set to 0.

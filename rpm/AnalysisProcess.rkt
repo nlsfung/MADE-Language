@@ -182,7 +182,7 @@
 ; 2) The input observations satisfy a pair of abstraction specifications.
 ;    (A separate model is produced for each pair).
 (define (verify-analysis proc-constructor obs-gen-list dt)
-  (define (display-solution d-list dt sol ab-pair-1 ab-pair-2)
+  (define (display-solution d-list dt sol ab-pair-1 ab-pair-2 output-1 output-2)
     (if (eq? ab-pair-1 ab-pair-2)
         (displayln (format "Model for abstraction pair: ~a" ab-pair-1))
         (displayln (format "Model for abstraction pairs: ~a and ~a" ab-pair-1 ab-pair-2)))
@@ -192,7 +192,11 @@
           (displayln "Input data:")
           (displayln (evaluate d-list sol))
           (displayln "Current date-time:")
-          (displayln (evaluate dt sol))))
+          (displayln (evaluate dt sol))
+          (displayln "Output data:")
+          (if (>= ab-pair-1 ab-pair-2)
+              (displayln (evaluate output-1 sol))
+              (displayln (evaluate output-2 sol)))))
     (displayln ""))
   
   (let* ([d-list (foldl (lambda (generator result)
@@ -240,7 +244,9 @@
                                   dt
                                   (list-ref o 2)
                                   (list-ref o 0)
-                                  (list-ref o 1)))
+                                  (list-ref o 1)
+                                  (list-ref output-list (list-ref o 0))
+                                  (list-ref output-list (list-ref o 1))))
               output-sol)))
 
 ; Observation generator contains the specification for generating a list of
@@ -276,8 +282,28 @@
           (append (list data)
                   (generate-interval next-dt)))))
   
-  (cond [(integer? frequency) (generate-count frequency)]
-        [(duration? frequency) (generate-interval start-datetime)]))
+  (let ([sample-data (getter)]
+        [d-list (cond [(integer? frequency) (generate-count frequency)]
+                      [(duration? frequency) (generate-interval start-datetime)])])
+    (cond [(observed-property? sample-data)
+           (assert (eq? (length d-list)
+                        (length (remove-duplicates
+                                 (map (lambda (d) (observed-property-valid-datetime d))
+                                      d-list)))))]
+          [(observed-event? sample-data)
+           (assert (and (eq? (length d-list)
+                             (remove-duplicates
+                              (map (lambda (d)
+                                     (datetime-range-start
+                                      (observed-event-valid-datetime-range d)))
+                                   d-list)))
+                        (eq? (length d-list)
+                             (length (remove-duplicates
+                                      (map (lambda (d)
+                                             (datetime-range-end
+                                              (observed-event-valid-datetime-range d)))
+                                           d-list))))))])
+    d-list))
 
 ;; Symbolic constants for verifying generate data.
 ;(define (gen-dt-part) (define-symbolic* dt-part integer?) dt-part)
