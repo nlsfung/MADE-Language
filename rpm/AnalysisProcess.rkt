@@ -13,7 +13,8 @@
          (struct-out abstraction-pair))
 (provide verify-analysis
          (struct-out observation-generator)
-         generate-observation-list)
+         generate-observation-list
+         execute-abstraction-pair)
 
 ; This file contains the implementation of Analysis processes.
 
@@ -92,7 +93,7 @@
                ab-spec)]
          [output (findf (lambda (d) (not (void? d))) output-list)])
     (if output
-        output
+        (list output)
         null)))
 
 ; Helper function for executing an individual abstraction pair.
@@ -130,9 +131,9 @@
 
     (if (void? output-value)
         (void)
-        (list (out-type proxy-flag
-                        (datetime-range dt (dt+ latest-start-time t-window))
-                        output-value)))))
+        (out-type proxy-flag
+                  (datetime-range dt (dt+ latest-start-time t-window))
+                  output-value))))
 
 ; Helper function to determine the temporal order of two observations.
 (define (observed-after? ob1 ob2)
@@ -185,10 +186,14 @@
     (if (eq? ab-pair-1 ab-pair-2)
         (displayln (format "Model for abstraction pair: ~a" ab-pair-1))
         (displayln (format "Model for abstraction pairs: ~a and ~a" ab-pair-1 ab-pair-2)))
-    (displayln "Input data:")
-    (displayln (evaluate d-list sol))
-    (displayln "Current date-time:")
-    (displayln (evaluate dt sol)))
+    (if (eq? sol (unsat))
+        (displayln (unsat))
+        (begin
+          (displayln "Input data:")
+          (displayln (evaluate d-list sol))
+          (displayln "Current date-time:")
+          (displayln (evaluate dt sol))))
+    (displayln ""))
   
   (let* ([d-list (foldl (lambda (generator result)
                            (append result
@@ -207,7 +212,7 @@
          [proc-spec (analysis-process-output-specification proc)]
 
          [output-num (map (lambda (ab-pair)
-                            (- (length proc-spec) (member ab-pair proc-spec)))
+                            (- (length proc-spec) (length (member ab-pair proc-spec))))
                           proc-spec)]
          [output-list (map (lambda (n)
                              (let* ([ab-pair (list-ref proc-spec n)]

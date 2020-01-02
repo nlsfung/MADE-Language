@@ -9,6 +9,9 @@
 (require "../rim/TemporalDataTypes.rkt")
 (require "../rim/MadeDataStructures.rkt")
 
+(provide define-monitoring
+         define-analysis)
+
 ; This file contains the syntax for specifying new MADE processes.
 
 ; define-monitoring creates a new Monitoring process.
@@ -75,8 +78,7 @@
 ; 1) An identifier for the new process.
 ; 2) A boolean indicating whether the process is a proxy or not.
 ; 3) The output type of the process.
-; 4) The time window for the process.
-; 5) A list of abstraction functions for the process.
+; 4) A list of abstraction pairs.
 (define-syntax (define-analysis stx)
   (syntax-case stx ()
     [(define-analysis id proxy output-type ab-pair ...)
@@ -95,7 +97,7 @@
 
            #:methods gen:typed
            [(define/generic super-valid? valid?)
-            (define (get-type self) sample-process)
+            (define (get-type self) id)
             (define (valid? self)
               (and (valid-spec? self)
                    (super-valid? (made-process (made-process-data-state self)

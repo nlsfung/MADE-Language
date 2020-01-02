@@ -8,6 +8,8 @@
 (require "../../rpm/MonitoringProcess.rkt"
          "../../rim/TemporalDataTypes.rkt")
 
+(provide (all-defined-out))
+
 ; This file contains the specification of the information model for the clinical
 ; guideline for gestational diabetes mellitus (GDM).
 

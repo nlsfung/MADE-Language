@@ -60,7 +60,8 @@
                   (id (get-proxy) (get-datetime) (get-dimensioned units))]
                  [(start-dt end-dt)
                   (id (get-proxy) (get-datetime start-dt end-dt) (get-dimensioned units))]))
-             (verify-getter get-id id))))]))
+;             (verify-getter get-id id)
+             )))]))
 
 ; define-observation creates a new type of observed property or observed event.
 ; It requires the following inputs:
@@ -102,7 +103,8 @@
                       (datetime-range (get-datetime start-dt-1 end-dt-1)
                                       (get-datetime start-dt-2 end-dt-2))
                       (get-bool))]))
-             (verify-getter get-id id))))]
+;             (verify-getter get-id id)
+             )))]
 
     [(define-observation id type)
      (cond [(eq? (syntax->datum #'type) 'dimensioned)
@@ -140,7 +142,8 @@
                   (id (get-proxy) (get-datetime) (get-val))]
                  [(start-dt end-dt)
                   (id (get-proxy) (get-datetime start-dt end-dt) (get-val))]))
-             (verify-getter get-id id))))]
+;             (verify-getter get-id id)
+             )))]
 
     [(define-observation id dimensioned units (... invariant))
      (eq? 'dimensioned (syntax->datum #'dimensioned))
@@ -169,7 +172,8 @@
                   (id (get-proxy) (get-datetime) (get-dimensioned units))]
                  [(start-dt end-dt)
                   (id (get-proxy) (get-datetime start-dt end-dt) (get-dimensioned units))]))
-             (verify-getter get-id id))))]))
+;             (verify-getter get-id id)
+             )))]))
 
 ; define-abstraction creates a new type of abstraction. 
 ; It requires the following inputs:
@@ -213,7 +217,8 @@
              (lambda () (id (get-proxy)
                             (datetime-range (get-datetime) (get-datetime))
                             (get-val))))
-           (verify-getter get-id id))))]
+;           (verify-getter get-id id)
+           )))]
 
     [(define-abstraction id dimensioned units (... invariant))
      (eq? 'dimensioned (syntax->datum #'dimensioned))
@@ -240,7 +245,8 @@
                (lambda () (id (get-proxy)
                               (datetime-range (get-datetime) (get-datetime))
                               (get-dimensioned units))))
-             (verify-getter get-id id))))]))
+;             (verify-getter get-id id)
+             )))]))
 
 ; define-action-plan creates a new type of action plan. 
 ; It requires the following inputs:
@@ -348,7 +354,8 @@
                                   inst-type
                                   (get-schedule pat-length)
                                   (culminating-action-goal-state inst))))))))
-             (verify-getter get-id id))))]))
+ ;            (verify-getter get-id id)
+             )))]))
 
 ; define-action-instruction creates a new type of action instruction. 
 ; It requires the following inputs:
@@ -403,7 +410,8 @@
                               (get-datetime)
                               (get-dimensioned units)
                               (get-duration))))
-             (verify-getter get-id id))))]))
+;             (verify-getter get-id id)
+             )))]))
 
 ; Helper function for creating new culminating action instruction types.
 (define-syntax (define-culminating-action stx)
@@ -440,7 +448,8 @@
                        (invariant (culminating-action-goal-state self))))])
              (define get-id
                (lambda () (id (get-proxy) (get-datetime) (get-val))))
-             (verify-getter get-id id))))]
+;             (verify-getter get-id id)
+             )))]
 
     [(_ id dimensioned units (... invariant))
      (eq? 'dimensioned (syntax->datum #'dimensioned))
@@ -465,7 +474,8 @@
                        (invariant (culminating-action-goal-state self))))])
              (define get-id
                (lambda () (id (get-proxy) (get-datetime) (get-dimensioned units))))
-             (verify-getter get-id id))))]))
+;             (verify-getter get-id id)
+             )))]))
 
 ; define-control-instruction creates a new type of control instruction. 
 ; It requires the following inputs:
@@ -504,4 +514,5 @@
                      (get-datetime)
                      (if (get-void-sched) (void) (get-schedule pat-length))
                      (if (get-void-stat) (void) (get-status)))))
-             (verify-getter get-id id))))]))
+;             (verify-getter get-id id)
+             )))]))
