@@ -162,14 +162,10 @@
 
 ; Helper function to determine if a datetime range intersects with another.
 (define (dt-range-overlap? range-1 range-2)
-  (and (or (dt<? (datetime-range-start range-1)
-                 (datetime-range-end range-2))
-           (dt=? (datetime-range-start range-1)
-                 (datetime-range-end range-2)))
-       (or (dt>? (datetime-range-end range-1)
-                 (datetime-range-start range-2))
-           (dt=? (datetime-range-end range-1)
-                 (datetime-range-start range-2)))))
+  (and (dt<=? (datetime-range-start range-1)
+              (datetime-range-end range-2))
+       (dt>=? (datetime-range-end range-1)
+              (datetime-range-start range-2))))
 
 ; verify-analysis helps verify an Analysis process. 
 ; It accepts as input:
@@ -194,20 +190,20 @@
           (displayln "Current date-time:")
           (displayln (evaluate dt sol))
           (displayln "Output data:")
-          (if (>= ab-pair-1 ab-pair-2)
+          (if (<= ab-pair-1 ab-pair-2)
               (displayln (evaluate output-1 sol))
               (displayln (evaluate output-2 sol)))))
     (displayln ""))
   
   (let* ([d-list (foldl (lambda (generator result)
-                           (append result
-                                   (generate-observation-list
-                                    (observation-generator-getter generator)
-                                    (observation-generator-start-datetime generator)
-                                    (observation-generator-end-datetime generator)
-                                    (observation-generator-frequency generator))))
-                         null
-                         obs-gen-list)]
+                                  (append result
+                                          (generate-observation-list
+                                           (observation-generator-getter generator)
+                                           (observation-generator-start-datetime generator)
+                                           (observation-generator-end-datetime generator)
+                                           (observation-generator-frequency generator))))
+                                null
+                                obs-gen-list)]
 
          [c-state (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t)]
          [proc (proc-constructor null c-state)]
@@ -222,32 +218,19 @@
                              (let* ([ab-pair (list-ref proc-spec n)]
                                     [t-window (abstraction-pair-time-window ab-pair)]
                                     [ab-func (abstraction-pair-abstraction-function ab-pair)])
-                             (execute-abstraction-pair d-list dt t-window out-type ab-func proxy-flag)))
-                           output-num)]
-         [output-sol (foldl (lambda (m result)
-                              (append
-                               (map (lambda (n)
-                                      (list m
-                                            n 
-                                            (solve
-                                             (assert
-                                              (and (not (void? (list-ref output-list m)))
-                                                   (not (void? (list-ref output-list n)))
-                                                   (valid? (list-ref output-list m))
-                                                   (valid? (list-ref output-list n)))))))
-                                    (member m output-num))
-                               result))
-                            null
-                            output-num)])
-    (for-each (lambda (o)
-                (display-solution d-list
-                                  dt
-                                  (list-ref o 2)
-                                  (list-ref o 0)
-                                  (list-ref o 1)
-                                  (list-ref output-list (list-ref o 0))
-                                  (list-ref output-list (list-ref o 1))))
-              output-sol)))
+                               (execute-abstraction-pair d-list dt t-window out-type ab-func proxy-flag)))
+                           output-num)])
+    (for-each (lambda (m)
+                (for-each (lambda (n)
+                            (let* ([output-1 (list-ref output-list m)]
+                                   [output-2 (list-ref output-list n)]
+                                   [sol (solve (assert (and (not (void? output-1))
+                                                            (not (void? output-2))
+                                                            (valid? output-1)
+                                                            (valid? output-2))))])
+                              (display-solution d-list dt sol m n output-1 output-2)))
+                          (member m output-num)))
+                output-num)))
 
 ; Observation generator contains the specification for generating a list of
 ; symbolic observations (for verification purposes). It comprises:
@@ -292,11 +275,11 @@
                                       d-list)))))]
           [(observed-event? sample-data)
            (assert (and (eq? (length d-list)
-                             (remove-duplicates
-                              (map (lambda (d)
-                                     (datetime-range-start
-                                      (observed-event-valid-datetime-range d)))
-                                   d-list)))
+                             (length (remove-duplicates
+                                      (map (lambda (d)
+                                             (datetime-range-start
+                                              (observed-event-valid-datetime-range d)))
+                                           d-list))))
                         (eq? (length d-list)
                              (length (remove-duplicates
                                       (map (lambda (d)

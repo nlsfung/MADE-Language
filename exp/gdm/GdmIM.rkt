@@ -40,7 +40,7 @@
 (define-observation meal-event 'event)
 
 (define-enumerated carbohydrate-intake-value-space '-- '- '-/+ '+ '++)
-(define-observation carbohydrate-inake carbohydrate-intake-value-space)
+(define-observation carbohydrate-intake carbohydrate-intake-value-space)
 
 (define-observation exercise-intensity proportion)
 
@@ -77,7 +77,7 @@
 
 (define-enumerated hypertension-value-space
   'high 'very-high 'normal 'sustained-high 'extremely-high)
-(define-abstraction hypertension-suspicion hypertension-value-space)
+(define-abstraction hypertension hypertension-value-space)
 
 (define-abstraction target-organ-damage bool)
 

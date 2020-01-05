@@ -2,7 +2,10 @@
 
 (require (only-in "./BasicDataTypes.rkt" gen:typed get-type valid?))
 
-(provide (struct-out datetime) dt=? dt- dt+ dt>? dt<? normalized? dt-between? datetime->number)
+(provide (struct-out datetime)
+         dt=? dt- dt+ dt>? dt<?
+         dt<=? dt>=?
+         normalized? dt-between? datetime->number)
 (provide (struct-out schedule) on-schedule?)
 (provide (struct-out duration) dur- dur+ dur<? dur>? dur=? duration->second)
 
@@ -79,6 +82,8 @@
   [dt=? dt elem]
   [dt>? dt elem]
   [dt<? dt elem]
+  [dt>=? dt elem]
+  [dt<=? dt elem]
   [dt+ dt elem]
   [dt- dt elem])
 
@@ -101,6 +106,8 @@
    (define (dt=? self dt) (compare-with-datetime = self dt))
    (define (dt>? self dt) (compare-with-datetime > self dt))
    (define (dt<? self dt) (compare-with-datetime < self dt))
+   (define (dt>=? self dt) (compare-with-datetime >= self dt))
+   (define (dt<=? self dt) (compare-with-datetime <= self dt))
 
    (define-syntax-rule (add/sub-with-datetime op self dur)
      (normalize-datetime
@@ -222,8 +229,8 @@
 
 ; Helper function to determine if a datetime is in between a given range.
 (define (dt-between? dt dt-low dt-high)
-  (and (or (dt>? dt dt-low) (dt=? dt dt-low))
-       (or (dt<? dt dt-high) (dt=? dt dt-high))))
+  (and (dt>=? dt dt-low)
+       (dt<=? dt dt-high)))
 
 ; Schedules are modelled as a pair containing a set of starting pattern and
 ; a duration indicating the period with which the pattern repeats. If the

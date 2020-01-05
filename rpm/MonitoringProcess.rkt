@@ -257,14 +257,14 @@
                        (monitoring-process-output-specification proc))]
 
          [d-list (foldl (lambda (generator result)
-                           (append result
-                                   (generate-measurement-list
-                                    (measurement-generator-getter generator)
-                                    (measurement-generator-start-datetime generator)
-                                    (measurement-generator-end-datetime generator)
-                                    (measurement-generator-frequency generator))))
-                         null
-                         measurement-gen-list)]
+                          (append result
+                                  (generate-measurement-list
+                                   (measurement-generator-getter generator)
+                                   (measurement-generator-start-datetime generator)
+                                   (measurement-generator-end-datetime generator)
+                                   (measurement-generator-frequency generator))))
+                        null
+                        measurement-gen-list)]
 
          [start-win (event-trigger-time-window start-trigger)]
          [start-pred (event-trigger-trigger-predicate start-trigger)]

@@ -6,7 +6,7 @@
 (provide gen:basic basic? get-value)
 (provide (struct-out nominal))
 (provide (struct-out enumerated) gen:enum enum>? enum<?)
-(provide (struct-out dimensioned))
+(provide (struct-out dimensioned) gen:dim dim>=? dim<=? dim<?)
 (provide (struct-out bool))
 (provide (struct-out proportion))
 (provide (struct-out count))
@@ -98,6 +98,8 @@
 (define-generics dim
   [dim>? dim elem]
   [dim<? dim elem]
+  [dim>=? dim elem]
+  [dim<=? dim elem]
   [dim+ dim elem units]
   [dim- dim elem units]
   [dim* dim elem units]
@@ -126,6 +128,8 @@
            [else (op (dimensioned-value dim) (dimensioned-value elem))]))
    (define (dim>? dim elem) (compare-with-units > dim elem 'dim>?))
    (define (dim<? dim elem) (compare-with-units < dim elem 'dim<?))
+   (define (dim>=? dim elem) (compare-with-units >= dim elem 'dim>=?))
+   (define (dim<=? dim elem) (compare-with-units <= dim elem 'dim<=?))
 
    (define-syntax-rule (arithmetic-with-units op dim elem units)
      (if (dimensioned? elem)
