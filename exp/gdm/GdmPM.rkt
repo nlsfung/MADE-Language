@@ -101,20 +101,20 @@
 ;   analyse-blood-glucose
 ;   (list (observation-generator
 ;          get-blood-glucose
-;          (datetime 2019 12 1 1 0 0)
-;          (datetime 2019 12 8 1 0 0)
-;          (duration 3 1 0 0))
+;          (datetime 2019 12 2 7 0 0)
+;          (datetime 2019 12 3 24 0 0)
+;          (duration 0 12 0 0))
 ;         (observation-generator
 ;          get-meal-event
-;          (datetime 2019 12 1 0 0 0)
-;          (datetime 2019 12 8 0 0 0)
-;          (duration 3 1 0 0))
+;          (datetime 2019 12 2 6 0 0)
+;          (datetime 2019 12 3 24 0 0)
+;          (duration 0 12 0 0))
 ;         (observation-generator
 ;          get-carbohydrate-intake
-;          (datetime 2019 12 1 0 0 0)
-;          (datetime 2019 12 8 0 0 0)
-;          (duration 3 1 0 0)))
-;   (get-datetime (datetime 2019 12 7 3 0 0) (datetime 2019 12 7 3 0 0)))
+;          (datetime 2019 12 2 6 0 0)
+;          (datetime 2019 12 3 24 0 0)
+;          (duration 0 12 0 0)))
+;   (get-datetime (datetime 2019 12 3 19 0 0) (datetime 2019 12 3 19 0 0)))
 
 ; Helper function for determining if a BG measurement is post- or pre-prandial.
 ; Returns the associated meal event if measurement is post-prandial.

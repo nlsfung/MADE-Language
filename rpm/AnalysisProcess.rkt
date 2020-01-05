@@ -1,5 +1,6 @@
 #lang rosette/safe
 
+(require (only-in rosette string?))
 (require "./MadeProcess.rkt")
 (require "../rim/BasicDataTypes.rkt")
 (require "../rim/TemporalDataTypes.rkt")
@@ -190,9 +191,14 @@
           (displayln "Current date-time:")
           (displayln (evaluate dt sol))
           (displayln "Output data:")
-          (if (<= ab-pair-1 ab-pair-2)
-              (displayln (evaluate output-1 sol))
-              (displayln (evaluate output-2 sol)))))
+          (cond [(string? ab-pair-1)
+                 (displayln (evaluate output-2 sol))]
+                [(string? ab-pair-2)
+                 (displayln (evaluate output-1 sol))]
+                [else 
+                 (if (<= ab-pair-1 ab-pair-2)
+                     (displayln (evaluate output-1 sol))
+                     (displayln (evaluate output-2 sol)))])))
     (displayln ""))
   
   (let* ([d-list (foldl (lambda (generator result)
@@ -219,18 +225,45 @@
                                     [t-window (abstraction-pair-time-window ab-pair)]
                                     [ab-func (abstraction-pair-abstraction-function ab-pair)])
                                (execute-abstraction-pair d-list dt t-window out-type ab-func proxy-flag)))
-                           output-num)])
-    (for-each (lambda (m)
-                (for-each (lambda (n)
-                            (let* ([output-1 (list-ref output-list m)]
-                                   [output-2 (list-ref output-list n)]
-                                   [sol (solve (assert (and (not (void? output-1))
-                                                            (not (void? output-2))
-                                                            (valid? output-1)
-                                                            (valid? output-2))))])
-                              (display-solution d-list dt sol m n output-1 output-2)))
-                          (member m output-num)))
-                output-num)))
+                           output-num)]
+         [output-unsat? (map (lambda (n)
+                               (let* ([output (list-ref output-list n)]
+                                      [sol (solve (assert (and (not (void? output))
+                                                               (valid? output))))])
+                                 (display-solution d-list dt sol n n output output)
+                                 (eq? sol (unsat))))
+                             output-num)])
+    (for-each
+     (lambda (m)
+       (if (list-ref output-unsat? m)
+           (void)
+           (for-each
+            (lambda (n)
+              (if (list-ref output-unsat? n)
+                  (void)
+                  (let* ([output-1 (list-ref output-list m)]
+                         [output-2 (list-ref output-list n)]
+                         [sol-inter (solve (assert (and (not (void? output-1))
+                                                        (not (void? output-2))
+                                                        (valid? output-1)
+                                                        (valid? output-2))))])
+                    (display-solution d-list dt sol-inter m n output-1 output-2)
+                    (if (eq? sol-inter (unsat))
+                        (void)
+                        (let ([sol-1 (solve (assert (and (not (void? output-1))
+                                                         (void? output-2)
+                                                         (valid? output-1))))]
+                              [sol-2 (solve (assert (and (void? output-1)
+                                                         (not (void? output-2))
+                                                         (valid? output-2))))])
+                          (display-solution d-list dt sol-1
+                                            m (format "not ~a" n)
+                                            output-1 output-2)
+                          (display-solution d-list dt sol-2
+                                            (format "not ~a" m) n
+                                            output-1 output-2))))))
+            (list-tail (member m output-num) 1))))
+     output-num)))
 
 ; Observation generator contains the specification for generating a list of
 ; symbolic observations (for verification purposes). It comprises:
