@@ -7,7 +7,9 @@
                   datum->syntax
                   string->symbol
                   symbol->string
-                  string-append))
+                  string-append
+                  rational?
+                  symbol?))
 
 (provide build-getter-name
          symbol->identifier
@@ -16,7 +18,12 @@
          raise-if-not-unique
          raise-if-not-lambda
          raise-if-not-datetime
-         raise-if-not-integer)
+         raise-if-not-integer
+         raise-if-not-boolean
+         raise-if-not-duration
+         raise-if-not-basic
+         raise-if-not-dimensioned
+         raise-if-not-real)
 
 ; This file contains some common functions that are useful in specifying the
 ; syntax for creating concrete MADE models.
@@ -71,7 +78,9 @@
      (if (not (and (eq? (syntax->datum #'q) 'quote)
                    (identifier? #'id)))
          (raise-syntax-error #f "symbol expected." src-stx #'id)
-         #'(void))]))
+         #'(void))]
+    [id
+     (raise-syntax-error #f "symbol expected." src-stx #'id)]))
 
 ; Helper function for raising syntax error if input is not a list of unique
 ; symbols. Returns the syntax object for void if the check succeeds.
@@ -104,6 +113,51 @@
     [val
      (if (not (integer? (syntax->datum #'val)))
          (raise-syntax-error #f "integer expected." src-stx #'val)
+         #'(void))]))
+
+; Helper function for raising syntax error if input is not a boolean or a
+; list of booleans. Returns the syntax object for void if the check succeeds.
+(define (raise-if-not-boolean stx src-stx)
+  (syntax-case stx ()
+    [(val)
+     (raise-if-not-boolean #'val src-stx)]
+    [(val-1 val-2 ...)
+     (begin
+       (raise-if-not-boolean #'val-1 src-stx)
+       (raise-if-not-boolean #'(val-2 ...) src-stx))]
+    [val
+     (if (not (boolean? (syntax->datum #'val)))
+         (raise-syntax-error #f "boolean expected." src-stx #'val)
+         #'(void))]))
+
+; Helper function for raising syntax error if input is not a real or a list of 
+; real values. Returns the syntax object for void if the check succeeds.
+(define (raise-if-not-real stx src-stx)
+  (syntax-case stx ()
+    [(val)
+     (raise-if-not-real #'val src-stx)]
+    [(val-1 val-2 ...)
+     (begin
+       (raise-if-not-real #'val-1 src-stx)
+       (raise-if-not-real #'(val-2 ...) src-stx))]
+    [val
+     (if (not (real? (syntax->datum #'val)))
+         (raise-syntax-error #f "real expected." src-stx #'val)
+         #'(void))]))
+
+; Helper function for raising syntax error if input is not a rational or a list of 
+; rational values. Returns the syntax object for void if the check succeeds.
+(define (raise-if-not-rational stx src-stx)
+  (syntax-case stx ()
+    [(val)
+     (raise-if-not-rational #'val src-stx)]
+    [(val-1 val-2 ...)
+     (begin
+       (raise-if-not-rational #'val-1 src-stx)
+       (raise-if-not-rational #'(val-2 ...) src-stx))]
+    [val
+     (if (not (rational? (syntax->datum #'val)))
+         (raise-syntax-error #f "rational expected." src-stx #'val)
          #'(void))]))
 
 ; Helper function for raising syntax error if input is not a lambda expression
@@ -146,3 +200,74 @@
             (raise-syntax-error #f "datetime expected." src-stx #'datetime)]
            [else (begin (raise-if-not-integer #'(int-1 int-2 int-3 int-4 int-5 int-6) src-stx)
                         #'(void))])]))
+
+; Helper function for raising syntax error if input is not a duration or a list
+; of durations. Returns the syntax object for void if the check succeeds.
+(define (raise-if-not-duration stx src-stx)
+  (syntax-case stx ()
+    [((duration int-1 int-2 int-3 int-4))
+     (raise-if-not-duration #'(duration int-1 int-2 int-3 int-4) src-stx)]
+    [((duration int-1 int-2 int-3 int-4) (... duration-2) ...)
+     (begin
+       (raise-if-not-duration #'(duration int-1 int-2 int-3 int-4) src-stx)
+       (raise-if-not-duration #'(duration-2 ...) src-stx))]
+    [(duration int-1 int-2 int-3 int-4)
+     (cond [(not (eq? (syntax->datum #'duration) 'duration))
+            (raise-syntax-error #f "duration expected." src-stx #'duration)]
+           [else (begin (raise-if-not-integer #'(int-1 int-2 int-3 int-4) src-stx)
+                        #'(void))])]))
+
+; Helper function for raising syntax error if input is not a dimensioned or a
+; list of dimensioned value. Returns the syntax object for void if the check
+; succeeds.
+(define (raise-if-not-dimensioned stx src-stx)
+  (syntax-case stx ()
+    [((dimensioned value units))
+     (raise-if-not-dimensioned #'(dimensioned value units) src-stx)]
+    [((dimensioned value units) (... dimensioned-2) ...)
+     (begin
+       (raise-if-not-dimensioned #'(dimensioned value units) src-stx)
+       (raise-if-not-dimensioned #'(dimensioned-2 ...) src-stx))]
+    [(dimensioned value units)
+     (cond [(not (eq? (syntax->datum #'dimensioned) 'dimensioned))
+            (raise-syntax-error #f "dimensioned expected." src-stx #'dimensioned)]
+           [else (begin (raise-if-not-real #'value src-stx)
+                        (raise-if-not-symbol #'units src-stx)
+                        #'(void))])]))
+
+; Helper function for raising syntax error if input is not of a basic data type
+; (or a list of values of basic data types). Returns the syntax object for void
+; if the check succeeds.
+; Note: Nominal and enumerated data types are not checked becuase they are
+; specified at run-time.
+(define (raise-if-not-basic stx src-stx)
+  (syntax-case stx ()
+    [((type value))
+     (raise-if-not-basic #'(type value) src-stx)]
+    [((dimensioned value units))
+     (raise-if-not-basic #'(dimensioned value units) src-stx)]
+
+    [((type value) (... basic-2) ...)
+     (begin
+       (raise-if-not-basic #'(type value) src-stx)
+       (raise-if-not-basic #'(basic-2 ...) src-stx))]
+    [((dimensioned value units) (... basic-2) ...)
+     (begin
+       (raise-if-not-basic #'(dimensioned value units) src-stx)
+       (raise-if-not-basic #'(basic-2 ...) src-stx))]
+    
+    [(type value)
+     (eq? (syntax->datum #'type) 'id)
+     (raise-if-not-symbol #'value src-stx)]
+    [(type value)
+     (eq? (syntax->datum #'type) 'bool)
+     (raise-if-not-boolean #'value src-stx)]
+    [(type value)
+     (eq? (syntax->datum #'type) 'count)
+     (raise-if-not-integer #'value src-stx)]
+    [(type value)
+     (eq? (syntax->datum #'type) 'proportion)
+     (raise-if-not-rational #'value src-stx)]
+    [(type value) #'(void)]
+    [(dimensioned value units)
+     (raise-if-not-dimensioned #'(dimensioned value units) src-stx)]))
