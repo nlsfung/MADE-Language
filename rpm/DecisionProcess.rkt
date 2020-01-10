@@ -1,5 +1,6 @@
 #lang rosette/safe
 
+(require (only-in rosette string? symbol?))
 (require "./MadeProcess.rkt")
 (require "./AnalysisProcess.rkt")
 (require "../rim/BasicDataTypes.rkt")
@@ -18,6 +19,10 @@
          control-template
          homogeneous-action-template
          culminating-action-template)
+(provide verify-decision
+         (struct-out abstraction-generator)
+         generate-abstraction-list
+         execute-decision-body)
 
 ; This file contains the implementation of Decision processes.
 
@@ -138,7 +143,7 @@
   [(define/generic super-valid? valid?)
    (define (get-type self) control-template)
    (define (valid? self)
-     (and (procedure? (control-template-target-process self))
+     (and (symbol? (control-template-target-process self))
           (or (and (relative-schedule? (control-template-relative-schedule self))
                    (super-valid? (control-template-relative-schedule self)))
               (void? (control-template-relative-schedule self)))
@@ -164,7 +169,7 @@
   [(define/generic super-valid? valid?)
    (define (get-type self) homogeneous-action-template)
    (define (valid? self)
-     (and (procedure? (homogeneous-action-template-action-type self))
+     (and (symbol? (homogeneous-action-template-action-type self))
           (relative-schedule? (homogeneous-action-template-relative-schedule self))
           (super-valid? (homogeneous-action-template-relative-schedule self))
           (dimensioned? (homogeneous-action-template-rate self))
@@ -186,7 +191,7 @@
   [(define/generic super-valid? valid?)
    (define (get-type self) culminating-action-template)
    (define (valid? self)
-     (and (procedure? (culminating-action-template-action-type self))
+     (and (symbol? (culminating-action-template-action-type self))
           (relative-schedule? (culminating-action-template-relative-schedule self))
           (super-valid? (culminating-action-template-relative-schedule self))
           (basic? (culminating-action-template-goal-state self))
@@ -218,7 +223,7 @@
                   (relative-schedule-relative-pattern self))
           (or (and (duration? (relative-schedule-interval self))
                    (super-valid? (relative-schedule-interval self)))
-              (eq? (relative-schedule-interval self) #f))))]
+              (boolean? (relative-schedule-interval self)))))]
   
   #:methods gen:rel-sched
   [(define (sched-instantiate self dt)
@@ -265,6 +270,111 @@
                         0
                         (- (* round-sec (ceiling (/ dt-sec round-sec))) dt-sec))])
     (duration 0 0 0 extra-sec)))
+
+; verify-decision helps verify a Decision process. 
+; It accepts as input:
+; 1) The struct-constructor for the decision process.
+; 2) A list of abstraction generators.
+; 3) The execution datetime (which can be symbolic).
+; The verifier outputs a model (if any) for each of the following conditions:
+; 1) The input observations satisfy one decision criterion.
+;    (A seperate model is produced for each criterion).
+(define (verify-decision proc-constructor abs-gen-list dt)
+  (define (display-solution d-list dt sol d-crit output)
+    (displayln (format "Model for decision criterion: ~a" d-crit))
+    (if (eq? sol (unsat))
+        (displayln (unsat))
+        (begin
+          (displayln "Input data:")
+          (displayln (evaluate d-list sol))
+          (displayln "Current date-time:")
+          (displayln (evaluate dt sol))
+          (displayln "Output data:")
+          (displayln (evaluate output sol))))
+    (displayln ""))
+  
+  (let* ([d-list (foldl (lambda (generator result)
+                                  (append result
+                                          (generate-abstraction-list
+                                           (abstraction-generator-getter generator)
+                                           (abstraction-generator-start-datetime generator)
+                                           (abstraction-generator-end-datetime generator)
+                                           (abstraction-generator-frequency generator))))
+                                null
+                                abs-gen-list)]
+
+         [c-state (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t)]
+         [proc (proc-constructor null c-state)]
+         [p-temp (decision-process-plan-template proc)]
+         [decision-criteria (decision-process-decision-criteria proc)]
+         [proxy-flag (decision-process-proxy-flag proc)]
+
+         [output-num (map (lambda (d-crit)
+                            (- (length decision-criteria) (length (member d-crit decision-criteria))))
+                          decision-criteria)]
+         [output-list (map (lambda (n)
+                             (let* ([d-crit (list-ref decision-criteria n)])
+                               (execute-decision-body d-list dt p-temp (list d-crit) proxy-flag)))
+                           output-num)])
+    (for-each
+     (lambda (n)
+       (let* ([output (list-ref output-list n)]
+              [sol (solve (assert (and (not (null? output))
+                                       (valid? (list-ref output 0)))))])
+         (display-solution d-list dt sol n output)))
+     output-num)
+    (clear-asserts!)))
+
+; Abstraction generator contains the specification for generating a list of
+; symbolic abstractions (for verification purposes). It comprises:
+; 1) An abstraction getter.
+; 2) A starting date-time for the corresponding abstraction.
+; 3) An ending date-time for the abstraction.
+; 4) A frequency which can either be:
+;    a) A duration indicating how often the observations should be repeated.
+;    b) A positive integer indicating the number of observations to generate.
+;       In this case, the start date-time indicates the earliest date-time for
+;       the measurement and the end date-time latest.
+(struct abstraction-generator
+  (getter start-datetime end-datetime frequency)
+  #:transparent)
+
+; generate-abstraction-list generates a list of abstractions.
+(define (generate-abstraction-list getter start-datetime end-datetime frequency)
+  (define (generate-count total)
+    (if (or (<= total 0) (dt>? start-datetime end-datetime))
+        null
+        (let ([data (getter start-datetime end-datetime)])
+          (assert (valid? data))
+          (append (list (getter start-datetime end-datetime))
+                  (generate-count (- total 1))))))
+  
+  (define (generate-interval cur-dt)  
+    (if (dt>? cur-dt end-datetime)
+        null
+        (let ([data (getter cur-dt cur-dt)]
+              [next-dt (dt+ cur-dt frequency)])
+          (assert (valid? data))
+          (append (list data)
+                  (generate-interval next-dt)))))
+  
+  (let ([sample-data (getter)]
+        [d-list (cond [(integer? frequency) (generate-count frequency)]
+                      [(duration? frequency) (generate-interval start-datetime)])])
+    
+    (assert (and (eq? (length d-list)
+                      (length (remove-duplicates
+                               (map (lambda (d)
+                                      (datetime-range-start
+                                       (abstraction-valid-datetime-range d)))
+                                    d-list))))
+                 (eq? (length d-list)
+                      (length (remove-duplicates
+                               (map (lambda (d)
+                                      (datetime-range-end
+                                       (abstraction-valid-datetime-range d)))
+                                    d-list))))))
+    d-list))
 
 ;; Symbolic constants for verifying generate data.
 ;(define (gen-dt-part) (define-symbolic* dt-part integer?) dt-part)

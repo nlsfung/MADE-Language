@@ -178,6 +178,8 @@
 ;    (A seperate model is produced for each specification).
 ; 2) The input observations satisfy a pair of abstraction specifications.
 ;    (A separate model is produced for each pair).
+; 3) The input observations satisfy only one abstraction specification in each pair.
+;    (Only relevant if a model can be found that satisfy both).
 (define (verify-analysis proc-constructor obs-gen-list dt)
   (define (display-solution d-list dt sol ab-pair-1 ab-pair-2 output-1 output-2)
     (if (eq? ab-pair-1 ab-pair-2)
@@ -263,7 +265,8 @@
                                             (format "not ~a" m) n
                                             output-1 output-2))))))
             (list-tail (member m output-num) 1))))
-     output-num)))
+     output-num)
+    (clear-asserts!)))
 
 ; Observation generator contains the specification for generating a list of
 ; symbolic observations (for verification purposes). It comprises:

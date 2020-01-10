@@ -65,7 +65,7 @@
   'non-related-poor 'very-poor)
 (define-abstraction glycemic-control glycemic-control-value-space)
 
-(define-enumerated ketonuria-value-space'negative 'positive)
+(define-enumerated ketonuria-value-space 'negative 'positive)
 (define-abstraction ketonuria ketonuria-value-space)
 
 (define-enumerated carbohydrates-value-space 'insufficient 'non-compliant)
@@ -196,21 +196,51 @@
 ; 18) Switching from monitoring blood pressure once a week in the context of
 ;     gestational hypertenation.
 (define-action-plan bg-twice-weekly-plan
-  (control 'monitor-bg-control 'bg-twice-weekly-workflow-control 'bg-daily-workflow-control))
+  (control 'monitor-blood-glucose
+           'decide-bg-nutrition-change
+           'decide-bg-insulin
+           'decide-bg-insulin-post-nutrition
+           'decide-bg-insulin-adjust
+           'decide-bg-twice-weekly
+           'decide-bg-twice-weekly-post-insulin
+           'decide-bg-twice-weekly-post-nutrition
+           'decide-bg-daily
+           'decide-bg-daily-post-insulin
+           'decide-bg-daily-post-nutrition))
 
-(define-action-plan adjust-insulin-plan (culminating-action 'administer-insulin-action))
+(define-action-plan adjust-insulin-plan
+  (culminating-action 'administer-insulin-action))
 
 (define-action-plan change-nutrition-plan
   (culminating-action 'change-diet-action)
-  (control 'diet-workflow-control 'start-insulin-workflow-control 'post-diet-insulin-workflow-control))
+  (control 'decide-bg-twice-weekly
+           'decide-bg-twice-weekly-post-nutrition
+           'decide-bg-nutrition-change
+           'decide-bg-insulin
+           'decide-bg-insulin-post-nutrition))
 
 (define-action-plan start-insulin-plan
   (culminating-action 'administer-insulin-action)
-  (control 'diet-workflow-control 'start-insulin-workflow-control
-           'adjust-insulin-workflow-control 'post-diet-insulin-workflow-control))
+  (control 'decide-bg-nutrition-change
+           'decide-bg-twice-weekly
+           'decide-bg-twice-weekly-post-insulin
+           'decide-bg-twice-weekly-post-nutrition
+           'decide-bg-insulin
+           'decide-bg-insulin-post-nutrition
+           'decide-bg-insulin-adjust))
 
 (define-action-plan bg-daily-plan
-  (control 'monitor-bg-control 'bg-twice-weekly-workflow-control 'bg-daily-workflow-control))
+  (control 'monitor-blood-glucose
+           'decide-bg-nutrition-change
+           'decide-bg-insulin
+           'decide-bg-insulin-post-nutrition
+           'decide-bg-insulin-adjust
+           'decide-bg-twice-weekly
+           'decide-bg-twice-weekly-post-insulin
+           'decide-bg-twice-weekly-post-nutrition
+           'decide-bg-daily
+           'decide-bg-daily-post-insulin
+           'decide-bg-daily-post-nutrition))
 
 (define-action-plan ktn-twice-weekly-plan
   (control 'monitor-urinary-ketones-control 'ktn-twice-weekly-workflow-control 'ktn-daily-workflow-control))

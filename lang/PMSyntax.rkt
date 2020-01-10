@@ -160,7 +160,7 @@
            
            #:methods gen:typed
            [(define/generic super-valid? valid?)
-            (define (get-type self) sample-process)
+            (define (get-type self) id)
             (define (valid? self)
               (and (valid-spec? self)
                    (super-valid? (made-process (made-process-data-state self)
@@ -198,7 +198,8 @@
                            (define-relative-schedule relative-schedule)
                            status))]
     [(_ control-template target-process status)
-     (eq? (syntax->datum #'control-template) 'control-template)
+     (and (eq? (syntax->datum #'control-template) 'control-template)
+          (boolean? (syntax->datum #'status)))
      (begin
        (raise-if-not-symbol #'target-process stx)
        (raise-if-not-boolean #'status stx)
@@ -240,7 +241,9 @@
      (begin
        (raise-if-not-duration #'rounding stx)
        (raise-if-not-duration #'offset stx)
-       (raise-if-not-duration #'(pattern ...) stx)
+       (if (not (null? (syntax->datum #'(pattern ...))))
+           (raise-if-not-duration #'(pattern ...) stx)
+           void)
        (raise-if-not-boolean #'bool-val stx)
        (if (not (eq? (syntax->datum #'rel-sched) 'relative-schedule))
            (raise-syntax-error #f "relative scheduled expected." stx #'rel-sched)
@@ -251,7 +254,9 @@
      (begin
        (raise-if-not-duration #'rounding stx)
        (raise-if-not-duration #'offset stx)
-       (raise-if-not-duration #'(pattern ...) stx)
+       (if (not (null? (syntax->datum #'(pattern ...))))
+           (raise-if-not-duration #'(pattern ...) stx)
+           void)
        (raise-if-not-duration #'interval stx)
        (if (not (eq? (syntax->datum #'rel-sched) 'relative-schedule))
            (raise-syntax-error #f "relative scheduled expected." stx #'rel-sched)
@@ -284,7 +289,7 @@
 
            #:methods gen:typed
            [(define/generic super-valid? valid?)
-            (define (get-type self) sample-process)
+            (define (get-type self) id)
             (define (valid? self)
               (and (valid-spec? self)
                    (super-valid? (made-process (made-process-data-state self)

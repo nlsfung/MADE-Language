@@ -214,9 +214,21 @@
                      (eq? (super-get-type (abstraction-value self)) type)
                      (invariant (abstraction-value self))))])
            (define get-id
-             (lambda () (id (get-proxy)
-                            (datetime-range (get-datetime) (get-datetime))
-                            (get-val))))
+             (case-lambda
+               [()
+                (id (get-proxy)
+                    (datetime-range (get-datetime) (get-datetime))
+                    (get-val))]
+               [(start-dt end-dt)
+                (id (get-proxy)
+                    (datetime-range (get-datetime start-dt end-dt)
+                                    (get-datetime start-dt end-dt))
+                    (get-val))]
+               [(start-dt-1 end-dt-1 start-dt-2 end-dt-2)
+                  (id (get-proxy)
+                      (datetime-range (get-datetime start-dt-1 end-dt-1)
+                                      (get-datetime start-dt-2 end-dt-2))
+                      (get-val))]))
 ;           (verify-getter get-id id)
            )))]
 

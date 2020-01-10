@@ -8,7 +8,8 @@
          "../../rim/TemporalDataTypes.rkt"
          "../../rim/MadeDataStructures.rkt"
          "../../rpm/MadeProcess.rkt"
-         "../../rpm/AnalysisProcess.rkt")
+         "../../rpm/AnalysisProcess.rkt"
+         "../../rpm/DecisionProcess.rkt")
 
 ; This file contains the specification of the process model for the clinical
 ; guideline for gestational diabetes mellitus (GDM).
@@ -299,6 +300,630 @@
 ;          2)
 ;         (observation-generator
 ;          get-diastolic-blood-pressure
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bg-twice-weekly (DBg2Wk) relates to the decision to adjust blood
+; glucose monitoring to two days each week instead of daily. The decision
+; criteria involves the following abstraction(s):
+; 1) glycemic-control ('good)
+; It affects the following actions and processes:
+; 1) monitor-blood-glucose (two days every week)
+; 2) decide-bg-nutrition-change (disabled)
+; 3) decide-bg-insulin (disabled)
+; 4) decide-bg-twice-weekly (disabled)
+; 5) decide-bg-daily (enabled after 7 days)
+(define-decision
+  decide-bg-twice-weekly
+  #f
+  bg-twice-weekly-plan
+  (#:instructions
+   (control-template 'monitor-blood-glucose
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern
+                      (duration 0 7 0 0) (duration 0 9 0 0)
+                      (duration 0 14 0 0) (duration 0 20 0 0)
+                      (duration 3 7 0 0) (duration 3 9 0 0)
+                      (duration 3 14 0 0) (duration 3 20 0 0)
+                      #:interval (duration 7 0 0 0))
+                     #t)
+   (control-template 'decide-bg-nutrition-change #f)
+   (control-template 'decide-bg-insulin #f)
+   (control-template 'decide-bg-twice-weekly #f)
+   (control-template 'decide-bg-daily
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d) (and (glycemic-control? d)
+                       (eq? (abstraction-value d)
+                            (glycemic-control-value-space 'good))))
+      d-list))))
+
+;(verify-decision
+;   decide-bg-twice-weekly
+;   (list (abstraction-generator
+;          get-glycemic-control
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bg-daily (DBgDaily) relates to the decision to adjust blood glucose
+; monitoring to daily (instead of two days each week). The decision criteria
+; involves the following abstraction(s):
+; 1) glycemic-control (2 abnormal values in a week)
+; It affects the following actions and processes:
+; 1) monitor-blood-glucose (daily)
+; 2) decide-bg-nutrition-change (enabled after 7 days)
+; 3) decide-bg-insulin (enabled after 7 days)
+; 4) decide-bg-twice-weekly (enabled after 7 days)
+; 5) decide-bg-daily (disabled)
+(define-decision
+  decide-bg-daily
+  #f
+  bg-daily-plan
+  (#:instructions
+   (control-template 'monitor-blood-glucose
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern
+                      (duration 0 7 0 0) (duration 0 9 0 0)
+                      (duration 0 14 0 0) (duration 0 20 0 0)
+                      #:interval (duration 1 0 0 0))
+                     #t)
+   (control-template 'decide-bg-nutrition-change
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-bg-insulin
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-bg-twice-weekly
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-bg-daily #f))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d)
+        (and (glycemic-control? d)
+             (or (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'meal-compliant-poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'meal-incompliant-poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'non-related-poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'very-poor)))))
+      d-list))))
+
+;(verify-decision
+;   decide-bg-daily
+;   (list (abstraction-generator
+;          get-glycemic-control
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bg-insulin (DBgInsulin) is a proxy process for deciding to start
+; insulin therapy. The decision criteria involves the following abstraction(s):
+; 1) glycemic-control (not 'good or 'poor)
+; 2) ketonuria ('positive)
+; It affects the following actions and processes:
+; 1) decide-bg-nutrition-change (disabled)
+; 2) decide-bg-twice-weekly (disabled)
+; 3) decide-bg-insulin (disabled)
+; 4) decide-bg-twice-weekly-post-insulin (enabled after 7 days)
+; 5) decide-bg-insulin-adjust (enabled after 7 days)
+; 6) administer-insulin-action (4 times each day)
+; (Note: Since the guideline does not specify the amount of insulin to 
+; prescribe, its set to an arbitrary value of -1.
+(define-decision
+  decide-bg-insulin
+  #t
+  start-insulin-plan
+  (#:instructions
+   (control-template 'decide-bg-nutrition-change #f)
+   (control-template 'decide-bg-twice-weekly #f)
+   (control-template 'decide-bg-insulin #f)
+   (control-template 'decide-bg-twice-weekly-post-insulin
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-bg-insulin-adjust
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (culminating-action-template 'administer-insulin-action
+                                (relative-schedule
+                                 #:rounding (duration 1 0 0 0)
+                                 #:offset (duration 0 0 0 0)
+                                 #:pattern
+                                 (duration 0 7 0 0) (duration 0 9 0 0)
+                                 (duration 0 14 0 0) (duration 0 20 0 0)
+                                 #:interval (duration 1 0 0 0))
+                                (dimensioned -1 'IU)))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d)
+        (and (glycemic-control? d)
+             (or (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'non-related-poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'very-poor)))))
+      d-list))
+   (lambda (d-list)
+     (findf
+      (lambda (d)
+        (and (glycemic-control? d)
+             (eq? (abstraction-value d)
+                  (glycemic-control-value-space 'meal-incompliant-poor))))
+      d-list))
+   (lambda (d-list)
+     (and (findf (lambda (d)
+                   (and (glycemic-control? d)
+                        (eq? (abstraction-value d)
+                             (glycemic-control-value-space 'meal-compliant-poor))))
+                 d-list)
+          (findf (lambda (d)
+                   (and (ketonuria? d)
+                        (eq? (abstraction-value d)
+                             (ketonuria-value-space 'positive))))
+                 d-list)))))
+
+;(verify-decision
+;   decide-bg-insulin
+;   (list (abstraction-generator
+;          get-glycemic-control
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2)
+;         (abstraction-generator
+;          get-ketonuria
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bg-twice-weekly-post-insulin (DBg2WkPostInsulin) relates to the
+; decision to adjust blood glucose monitoring to two days each week instead of
+; daily (after the prescription of insulin). The decision criteria involves the
+; following abstraction(s):
+; 1) glycemic-control ('good)
+; It affects the following actions and processes:
+; 1) monitor-blood-glucose (two days every week)
+; 2) decide-bg-insulin-adjust (disabled)
+; 3) decide-bg-twice-weekly-post-insulin (disabled)
+; 4) decide-bg-daily-post-insulin (enabled after 7 days)
+(define-decision
+  decide-bg-twice-weekly-post-insulin
+  #f
+  bg-twice-weekly-plan
+  (#:instructions
+   (control-template 'monitor-blood-glucose
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern
+                      (duration 0 7 0 0) (duration 0 9 0 0)
+                      (duration 0 14 0 0) (duration 0 20 0 0)
+                      (duration 3 7 0 0) (duration 3 9 0 0)
+                      (duration 3 14 0 0) (duration 3 20 0 0)
+                      #:interval (duration 7 0 0 0))
+                     #t)
+   (control-template 'decide-bg-insulin-adjust #f)
+   (control-template 'decide-bg-twice-weekly-post-insulin #f)
+   (control-template 'decide-bg-daily-post-insulin
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d) (and (glycemic-control? d)
+                       (eq? (abstraction-value d)
+                            (glycemic-control-value-space 'good))))
+      d-list))))
+
+;(verify-decision
+;   decide-bg-twice-weekly-post-insulin
+;   (list (abstraction-generator
+;          get-glycemic-control
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bg-daily-post-insulin (DBgDailyPostInsulin) relates to the decision
+; to adjust blood glucose monitoring to daily (instead of two days each week)
+; after the prescription of insulin. The decision criteria involves the
+; following abstraction(s):
+; 1) glycemic-control (2 abnormal values in a week)
+; It affects the following actions and processes:
+; 1) monitor-blood-glucose (daily)
+; 2) decide-bg-insulin-adjust (enabled after 7 days)
+; 3) decide-bg-twice-weekly-post-insulin (enabled after 7 days)
+; 4) decide-bg-daily-post-insulin (disabled)
+(define-decision
+  decide-bg-daily-post-insulin
+  #f
+  bg-daily-plan
+  (#:instructions
+   (control-template 'monitor-blood-glucose
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern
+                      (duration 0 7 0 0) (duration 0 9 0 0)
+                      (duration 0 14 0 0) (duration 0 20 0 0)
+                      #:interval (duration 1 0 0 0))
+                     #t)
+   (control-template 'decide-bg-insulin-adjust
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-bg-twice-weekly-post-insulin
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-bg-daily-post-insulin #f))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d)
+        (and (glycemic-control? d)
+             (or (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'meal-compliant-poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'meal-incompliant-poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'non-related-poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'very-poor)))))
+      d-list))))
+
+;(verify-decision
+;   decide-bg-daily-post-insulin
+;   (list (abstraction-generator
+;          get-glycemic-control
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bg-insulin-adjust (DBgInsAdjust) is a proxy process for adjusting the
+; insulin therapy for the patient. The decision criteria involves the following
+; abstraction(s):
+; 1) glycemic-control (1 abnormal value detected).
+; It affects the following actions and processes:
+; 1) administer-insulin-action.
+(define-decision
+  decide-bg-insulin-adjust
+  #t
+  adjust-insulin-plan
+  (#:instructions
+   (culminating-action-template 'administer-insulin-action
+                                (relative-schedule
+                                 #:rounding (duration 1 0 0 0)
+                                 #:offset (duration 0 0 0 0)
+                                 #:pattern
+                                 (duration 0 7 0 0) (duration 0 9 0 0)
+                                 (duration 0 14 0 0) (duration 0 20 0 0)
+                                 #:interval (duration 1 0 0 0))
+                                (dimensioned -1 'IU)))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d)
+        (and (glycemic-control? d)
+             (or (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'meal-compliant-poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'meal-incompliant-poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'non-related-poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'very-poor)))))
+      d-list))))
+
+;(verify-decision
+;   decide-bg-insulin-adjust
+;   (list (abstraction-generator
+;          get-glycemic-control
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bg-nutrition-change (DBgCarb) is a proxy process for changing the
+; nutritional prescription of the patient due to poor glycemic control.
+; Specifically, the decision criteria involves the following abstraction(s):
+; 1) glyemic-control ('meal-compliant-poor)
+; 2) ketonuria ('negative)
+; It affects the following actions and processes:
+; 1) decide-bg-twice-weekly (disabled)
+; 2) decide-bg-nutrition-change (disabled)
+; 3) decide-bg-insulin (disabled)
+; 4) decide-bg-twice-weekly-post-nutrition (enabled after 7 days)
+; 5) decide-bg-insulin-post-nutrition (enabled after 7 days)
+; 6) change-diet-action (4 times each day)
+; Note: Since the guideline does not specify a concrete nutrition change,
+; its set to an arbitrary value of -1.
+(define-decision
+  decide-bg-nutrition-change
+  #t
+  change-nutrition-plan
+  (#:instructions
+   (control-template 'decide-bg-twice-weekly #f)
+   (control-template 'decide-bg-nutrition-change #f)
+   (control-template 'decide-bg-insulin #f)
+   (control-template 'decide-bg-twice-weekly-post-nutrition
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-bg-insulin-post-nutrition
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (culminating-action-template 'change-diet-action
+                                (relative-schedule
+                                 #:rounding (duration 1 0 0 0)
+                                 #:offset (duration 0 0 0 0)
+                                 #:pattern
+                                 (duration 0 7 0 0) (duration 0 9 0 0)
+                                 (duration 0 14 0 0) (duration 0 20 0 0)
+                                 #:interval (duration 1 0 0 0))
+                                (dimensioned -1 'g)))
+  (#:criteria
+   (lambda (d-list)
+     (and (findf (lambda (d)
+                   (and (glycemic-control? d)
+                        (eq? (abstraction-value d)
+                             (glycemic-control-value-space 'meal-compliant-poor))))
+                 d-list)
+          (findf (lambda (d)
+                   (and (ketonuria? d)
+                        (eq? (abstraction-value d)
+                             (ketonuria-value-space 'negative))))
+                 d-list)))))
+
+;(verify-decision
+;   decide-bg-nutrition-change
+;   (list (abstraction-generator
+;          get-glycemic-control
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2)
+;         (abstraction-generator
+;          get-ketonuria
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bg-twice-weekly-post-nutrition (DBg2WkPostNutrition) relates to the
+; decision to adjust blood glucose monitoring to two days each week instead of
+; daily (after the changing nutrition prescription). The decision criteria
+; involves the following abstraction(s):
+; 1) glycemic-control ('good)
+; It affects the following actions and processes:
+; 1) monitor-blood-glucose (two days every week)
+; 2) decide-bg-twice-weekly-post-nutrition (disabled)
+; 3) decide-bg-insulin-post-nutrition (disabled)
+; 4) decide-bg-daily-post-nutrition (enabled after 7 days)
+(define-decision
+  decide-bg-twice-weekly-post-nutrition
+  #f
+  bg-twice-weekly-plan
+  (#:instructions
+   (control-template 'monitor-blood-glucose
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern
+                      (duration 0 7 0 0) (duration 0 9 0 0)
+                      (duration 0 14 0 0) (duration 0 20 0 0)
+                      (duration 3 7 0 0) (duration 3 9 0 0)
+                      (duration 3 14 0 0) (duration 3 20 0 0)
+                      #:interval (duration 7 0 0 0))
+                     #t)
+   (control-template 'decide-bg-twice-weekly-post-nutrition #f)
+   (control-template 'decide-bg-insulin-post-nutrition #f)
+   (control-template 'decide-bg-daily-post-nutrition
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d) (and (glycemic-control? d)
+                       (eq? (abstraction-value d)
+                            (glycemic-control-value-space 'good))))
+      d-list))))
+
+;(verify-decision
+;   decide-bg-twice-weekly-post-nutrition
+;   (list (abstraction-generator
+;          get-glycemic-control
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bg-daily-post-nutrition (DBgDailyPostNutrition) relates to the decision
+; to adjust blood glucose monitoring to daily (instead of two days each week)
+; after the changing nutrition prescription. The decision criteria involves the
+; following abstraction(s):
+; 1) glycemic-control (2 abnormal values in a week)
+; It affects the following actions and processes:
+; 1) monitor-blood-glucose (daily)
+; 2) decide-bg-insulin-post-nutrition (enabled after 7 days)
+; 3) decide-bg-twice-weekly-post-nutrition (enabled after 7 days)
+; 4) decide-bg-daily-post-nutrition (disabled)
+(define-decision
+  decide-bg-daily-post-nutrition
+  #f
+  bg-daily-plan
+  (#:instructions
+   (control-template 'monitor-blood-glucose
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern
+                      (duration 0 7 0 0) (duration 0 9 0 0)
+                      (duration 0 14 0 0) (duration 0 20 0 0)
+                      #:interval (duration 1 0 0 0))
+                     #t)
+   (control-template 'decide-bg-insulin-post-nutrition
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-bg-twice-weekly-post-nutrition
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-bg-daily-post-nutrition #f))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d)
+        (and (glycemic-control? d)
+             (or (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'meal-compliant-poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'meal-incompliant-poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'non-related-poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'very-poor)))))
+      d-list))))
+
+;(verify-decision
+;   decide-bg-daily-post-nutrition
+;   (list (abstraction-generator
+;          get-glycemic-control
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bg-insulin-post-nutrition (DBgInsulinPostNutrition) is a proxy process
+; for deciding to start insulin therapy (after changing nutrition prescription).
+; The decision criteria involves the following abstraction(s):
+; 1) glycemic-control (not 'good or 'poor)
+; It affects the following actions and processes:
+; 1) decide-bg-twice-weekly-post-nutrition (disabled)
+; 2) decide-bg-insulin-post-nutrition (disabled)
+; 3) decide-bg-twice-weekly-post-insulin (enabled after 7 days)
+; 4) decide-bg-insulin-adjust (enabled after 7 days)
+; 5) administer-insulin-action (4 times each day)
+; (Note: Since the guideline does not specify the amount of insulin to 
+; prescribe, its set to an arbitrary value of -1.
+(define-decision
+  decide-bg-insulin-post-nutrition
+  #t
+  start-insulin-plan
+  (#:instructions
+   (control-template 'decide-bg-twice-weekly-post-nutrition #f)
+   (control-template 'decide-bg-insulin-post-nutrition #f)
+   (control-template 'decide-bg-twice-weekly-post-insulin
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-bg-insulin-adjust
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (culminating-action-template 'administer-insulin-action
+                                (relative-schedule
+                                 #:rounding (duration 1 0 0 0)
+                                 #:offset (duration 0 0 0 0)
+                                 #:pattern
+                                 (duration 0 7 0 0) (duration 0 9 0 0)
+                                 (duration 0 14 0 0) (duration 0 20 0 0)
+                                 #:interval (duration 1 0 0 0))
+                                (dimensioned -1 'IU)))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d)
+        (and (glycemic-control? d)
+             (or (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'meal-compliant-poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'meal-incompliant-poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'non-related-poor))
+                 (eq? (abstraction-value d)
+                      (glycemic-control-value-space 'very-poor)))))
+      d-list))))
+
+;(verify-decision
+;   decide-bg-insulin-post-nutrition
+;   (list (abstraction-generator
+;          get-glycemic-control
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
