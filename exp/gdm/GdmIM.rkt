@@ -242,15 +242,28 @@
            'decide-bg-daily-post-insulin
            'decide-bg-daily-post-nutrition))
 
-(define-action-plan ktn-twice-weekly-plan
-  (control 'monitor-urinary-ketones-control 'ktn-twice-weekly-workflow-control 'ktn-daily-workflow-control))
+(define-action-plan uk-twice-weekly-plan
+  (control 'monitor-urinary-ketones
+           'decide-uk-dinner-increase
+           'decide-uk-twice-weekly
+           'decide-uk-twice-weekly-post-dinner
+           'decide-uk-daily
+           'decide-uk-daily-post-dinner))
 
-(define-action-plan increse-dinner-intake-plan
-  (culminating 'change-dinner-action)
-  (control 'dinner-workflow-control))
+(define-action-plan uk-daily-plan
+  (control 'monitor-urinary-ketones
+           'decide-uk-dinner-increase
+           'decide-uk-twice-weekly
+           'decide-uk-twice-weekly-post-dinner
+           'decide-uk-daily
+           'decide-uk-daily-post-dinner))
 
-(define-action-plan ktn-daily-plan
-  (control 'monitor-urinary-ketones-control 'ktn-twice-weekly-workflow-control 'ktn-daily-workflow-control))
+(define-action-plan increase-dinner-intake-plan
+  (culminating-action 'change-dinner-action)
+  (control 'decide-uk-dinner-increase
+           'decide-uk-twice-weekly
+           'decide-uk-daily
+           'decide-uk-twice-weekly-post-dinner))
 
 (define-action-plan bp-weekly-plan
   (control 'monitor-bp-control 'bp-once-weekly-workflow-control 'bp-twice-weekly-workflow-control))

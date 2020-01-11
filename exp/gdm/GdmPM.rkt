@@ -928,3 +928,256 @@
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
 ;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-uk-twice-weekly (DUk2Wk) relates to the decision to adjust urinary
+; ketone monitoring to two days each week instead of daily. The decision
+; criteria involves the following abstraction(s):
+; 1) ketonuria ('negative)
+; It affects the following actions and processes:
+; 1) monitor-urinary-ketones (two days every week)
+; 2) decide-uk-dinner-increase (disabled)
+; 3) decide-uk-twice-weekly (disabled)
+; 4) decide-uk-daily (enabled after 7 days)
+(define-decision
+  decide-uk-twice-weekly
+  #f
+  uk-twice-weekly-plan
+  (#:instructions
+   (control-template 'monitor-urinary-ketones
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern (duration 0 7 0 0) (duration 3 7 0 0)
+                      #:interval (duration 7 0 0 0))
+                     #t)
+   (control-template 'decide-uk-dinner-increase #f)
+   (control-template 'decide-uk-twice-weekly #f)
+   (control-template 'decide-uk-daily
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d) (and (ketonuria? d)
+                       (eq? (abstraction-value d)
+                            (ketonuria-value-space 'negative))))
+      d-list))))
+
+;(verify-decision
+;   decide-uk-twice-weekly
+;   (list (abstraction-generator
+;          get-ketonuria
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-uk-daily (DUkDaily) relates to the decision to adjust urinary ketone
+; monitoring to daily (instead of two days each week). The decision criteria
+; involves the following abstraction(s):
+; 1) ketonuria ('positive)
+; It affects the following actions and processes:
+; 1) monitor-urinary-ketones (daily)
+; 2) decide-uk-dinner-increase (enabled after 7 days)
+; 3) decide-uk-twice-weekly (enabled after 7 days)
+; 4) decide-uk-daily (disabled)
+(define-decision
+  decide-uk-daily
+  #f
+  uk-daily-plan
+  (#:instructions
+   (control-template 'monitor-urinary-ketones
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern (duration 0 7 0 0)
+                      #:interval (duration 1 0 0 0))
+                     #t)
+   (control-template 'decide-uk-dinner-increase
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-uk-twice-weekly
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-uk-daily #f))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d) (and (ketonuria? d)
+                       (eq? (abstraction-value d)
+                            (ketonuria-value-space 'positive))))
+      d-list))))
+
+;(verify-decision
+;   decide-uk-daily
+;   (list (abstraction-generator
+;          get-ketonuria
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-uk-dinner-increase (DUkCarb) relates to the decision to increase
+; carbohydrates intake at dinner. The decision criteria involves the following
+; abstraction(s):
+; 1) ketonuria ('positive)
+; 2) carbohydrates-compliance (not 'insufficient)
+; It affects the following actions and processes:
+; 1) decide-uk-dinner-increase (disabled)
+; 2) decide-uk-twice-weekly (disabled)
+; 3) decide-uk-daily (disabled)
+; 4) decide-uk-twice-weekly-post-dinner (enabled after 7 days)
+; 5) change-dinner-action (daily)
+(define-decision
+  decide-uk-dinner-increase
+  #f
+  increase-dinner-intake-plan
+  (#:instructions
+   (control-template 'decide-uk-dinner-increase #f)
+   (control-template 'decide-uk-twice-weekly #f)
+   (control-template 'decide-uk-daily #f)
+   (control-template 'decide-uk-twice-weekly-post-dinner
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (culminating-action-template 'change-dinner-action
+                                (relative-schedule
+                                 #:rounding (duration 1 0 0 0)
+                                 #:offset (duration 0 0 0 0)
+                                 #:pattern (duration 0 19 0 0)
+                                 #:interval (duration 1 0 0 0))
+                                (dimensioned 10 'g)))
+  (#:criteria
+   (lambda (d-list)
+     (and 
+      (findf
+       (lambda (d) (and (ketonuria? d)
+                        (eq? (abstraction-value d)
+                             (ketonuria-value-space 'positive))))
+       d-list)
+      (not (findf
+            (lambda (d) (and (carbohydrates-compliance? d)
+                             (eq? (abstraction-value d)
+                                  (carbohydrates-value-space 'insufficient))))
+            d-list))))))
+
+;(verify-decision
+;   decide-uk-dinner-increase
+;   (list (abstraction-generator
+;          get-ketonuria
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2)
+;         (abstraction-generator
+;          get-carbohydrates-compliance
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-uk-twice-weekly-post-dinner (DUk2WkPostDinner) relates to the decision
+; to adjust urinary ketone monitoring to two days each week instead of daily
+; (after increasing carbohydrates intake at dinner). The decision criteria
+; involves the following abstraction(s):
+; 1) ketonuria ('negative)
+; It affects the following actions and processes:
+; 1) monitor-urinary-ketones (two days every week)
+; 3) decide-uk-twice-weekly-post-dinner (disabled)
+; 4) decide-uk-daily-post-dinner (enabled after 7 days)
+(define-decision
+  decide-uk-twice-weekly-post-dinner
+  #f
+  uk-twice-weekly-plan
+  (#:instructions
+   (control-template 'monitor-urinary-ketones
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern (duration 0 7 0 0) (duration 3 7 0 0)
+                      #:interval (duration 7 0 0 0))
+                     #t)
+   (control-template 'decide-uk-twice-weekly-post-dinner #f)
+   (control-template 'decide-uk-daily-post-dinner
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d) (and (ketonuria? d)
+                       (eq? (abstraction-value d)
+                            (ketonuria-value-space 'negative))))
+      d-list))))
+
+;(verify-decision
+;   decide-uk-twice-weekly-post-dinner
+;   (list (abstraction-generator
+;          get-ketonuria
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-uk-daily-post-dinner (DUkDailyPostDinner) relates to the decision to
+; adjust urinary ketone monitoring to daily (instead of two days each week)
+; after increasing carbohydrates intake. The decision criteria involves the
+; following abstraction(s):
+; 1) ketonuria ('positive)
+; It affects the following actions and processes:
+; 1) monitor-urinary-ketones (daily)
+; 2) decide-uk-twice-weekly-post-dinner (enabled after 7 days)
+; 3) decide-uk-daily-post-dinner (disabled)
+(define-decision
+  decide-uk-daily-post-dinner
+  #f
+  uk-daily-plan
+  (#:instructions
+   (control-template 'monitor-urinary-ketones
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern (duration 0 7 0 0)
+                      #:interval (duration 1 0 0 0))
+                     #t)
+   (control-template 'decide-uk-twice-weekly-post-dinner
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-uk-daily-post-dinner #f))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d) (and (ketonuria? d)
+                       (eq? (abstraction-value d)
+                            (ketonuria-value-space 'positive))))
+      d-list))))
+
+;(verify-decision
+;   decide-uk-daily-post-dinner
+;   (list (abstraction-generator
+;          get-ketonuria
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
