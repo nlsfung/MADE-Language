@@ -75,7 +75,7 @@
 
 (define-abstraction exercise-compliance-active bool)
 
-(define-enumerated hypertension-value-space
+(define-nominal hypertension-value-space
   'high 'very-high 'normal 'sustained-high 'extremely-high)
 (define-abstraction hypertension hypertension-value-space)
 
@@ -165,7 +165,7 @@
 
 (define-control-instruction gestational-bp-hours-workflow-control 'gestational-bp-hours-workflow)
 
-; The twenty three different instruction archetypes constitute 18 different
+; The twenty three different instruction archetypes constitute 14 different
 ; types of action plans, namely for:
 ; 1) Monitoring blood glucose for two days every week.
 ; 2) Adjusting the prescribed insulin therapy.
@@ -178,23 +178,10 @@
 ; 9) Monitoring blood pressure once a week (for no hypertension).
 ; 10) Monitoring blood pressure in the context of chronic hypertension.
 ; 11) Monitoring blood pressure every two days for gestational hypertension.
-; 12) Monitoring blood pressure again after 4-6 hours, which is modelled as 
-;     a separate parallel workflow.
-; 13) Re-activate plan for monitoring blood pressure again, which is only
-;     necessary for the workflow to monitor blood pressure every two days in
-;     the context of no hypertension.
-; 14) Monitoring blood pressure twice a week (for no hypertension).
-; 15) Monitoring blood pressure once a week (for gestational hypertension).
-; 16) Starting treatment for high blood pressure (gestational hypertension). 
-;     Note: Since no details are provided about the treatment, it is assumed
-;     that the treatment itself is prescribed by the clinician and that the
-;     system should only notify the clinician when treatment may be needed.
-;     Thus this plan is only needed to ensure that the clinician will not
-;     be notified more than once.
-; 17) Monitoring blood pressure every few hours in the context of 
+; 12) Monitoring blood pressure twice a week (for no hypertension).
+; 13) Monitoring blood pressure once a week (for gestational hypertension).
+; 14) Monitoring blood pressure every few hours in the context of 
 ;     gestational hypertension. 
-; 18) Switching from monitoring blood pressure once a week in the context of
-;     gestational hypertenation.
 (define-action-plan bg-twice-weekly-plan
   (control 'monitor-blood-glucose
            'decide-bg-nutrition-change
@@ -265,36 +252,38 @@
            'decide-uk-daily
            'decide-uk-twice-weekly-post-dinner))
 
-(define-action-plan bp-weekly-plan
-  (control 'monitor-bp-control 'bp-once-weekly-workflow-control 'bp-twice-weekly-workflow-control))
-
-(define-action-plan chronic-hypertension-plan
-  (control 'monitor-bp-control 'chronic-bp-workflow-control 'normal-bp-workflow-control))
-
-(define-action-plan gestational-hypertension-plan
-  (control 'monitor-bp-control 'gestational-bp-two-days-workflow-control 'normal-bp-workflow-control))
-
-(define-action-plan bp-repeat-plan
-  (control 'monitor-bp-control 'bp-repeat-workflow-control))
-
-(define-action-plan bp-reactivate-repeat-plan
-  (control 'monitor-bp-control 'bp-repeat-workflow-control))
+(define-action-plan bp-once-weekly-plan
+  (control 'monitor-blood-pressure
+           'decide-bp-once-weekly
+           'decide-bp-twice-weekly))
 
 (define-action-plan bp-twice-weekly-plan
-  (control 'monitor-bp-control 'bp-once-weekly-workflow-control
-           'bp-twice-weekly-workflow-control 'bp-repeat-workflow-control))
+  (control 'monitor-blood-pressure
+           'decide-bp-once-weekly
+           'decide-bp-twice-weekly))
+
+(define-action-plan chronic-hypertension-plan
+  (control 'monitor-blood-pressure
+           'decide-bp-once-weekly
+           'decide-bp-twice-weekly
+           'decide-bp-chronic))
+
+(define-action-plan gestational-hypertension-plan
+  (control 'monitor-blood-pressure
+           'decide-bp-once-weekly
+           'decide-bp-twice-weekly
+           'decide-bp-gestational
+           'decide-bp-once-weekly-gestational
+           'decide-bp-hourly-gestational
+           'decide-bp-two-days-gestational))
 
 (define-action-plan gestational-weekly-plan
-  (control 'monitor-bp-control 'gestational-bp-two-days-workflow-control
-           'gestational-bp-weekly-workflow-control))
-
-(define-action-plan gestational-treatment-plan
-  (control 'gestational-bp-treatment-workflow-control))
+  (control 'monitor-blood-pressure
+           'decide-bp-once-weekly-gestational
+           'decide-bp-hourly-gestational
+           'decide-bp-two-days-gestational))
 
 (define-action-plan gestational-hours-plan
-  (control 'monitor-bp-control 'gestational-bp-two-days-workflow-control
-           'gestational-bp-hours-workflow-control))
-
-(define-action-plan gestational-weekly-two-days-plan
-  (control 'monitor-bp-control 'gestational-bp-two-days-workflow-control
-           'gestational-bp-weekly-workflow-control))
+  (control 'monitor-blood-pressure
+           'decide-bp-once-weekly-gestational
+           'decide-bp-hourly-gestational))

@@ -1181,3 +1181,372 @@
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
 ;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bp-once-weekly (DBp1Wk) relates to the decision to adjust blood
+; pressure monitoring to once a week instead of twice a week. The decision
+; criteria involves the following abstraction(s):
+; 1) hypertension ('normal)
+; It affects the following actions and processes:
+; 1) monitor-blood-pressure (once every week)
+; 2) decide-bp-once-weekly (disabled)
+; 3) decide-bp-twice-weekly (enabled after 7 days)
+(define-decision
+  decide-bp-once-weekly
+  #f
+  bp-once-weekly-plan
+  (#:instructions
+   (control-template 'monitor-blood-pressure
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern (duration 0 7 0 0) (duration 0 11 0 0)
+                      #:interval (duration 7 0 0 0))
+                     #t)
+   (control-template 'decide-bp-once-weekly #f)
+   (control-template 'decide-bp-twice-weekly
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d) (and (hypertension? d)
+                       (eq? (abstraction-value d)
+                            (hypertension-value-space 'normal))))
+      d-list))))
+
+;(verify-decision
+;   decide-bp-once-weekly
+;   (list (abstraction-generator
+;          get-hypertension
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bp-twice-weekly (DBp2Wk) relates to the decision to adjust blood
+; pressure monitoring to twice a week instead of once a week. The decision
+; criteria involves the following abstraction(s):
+; 1) hypertension ('high)
+; It affects the following actions and processes:
+; 1) monitor-blood-pressure (twice every week)
+; 2) decide-bp-once-weekly (enabled after 7 days)
+; 3) decide-bp-twice-weekly (disabled)
+(define-decision
+  decide-bp-twice-weekly
+  #f
+  bp-twice-weekly-plan
+  (#:instructions
+   (control-template 'monitor-blood-pressure
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern
+                      (duration 0 7 0 0) (duration 0 11 0 0)
+                      (duration 3 7 0 0) (duration 3 11 0 0)
+                      #:interval (duration 7 0 0 0))
+                     #t)
+   (control-template 'decide-bp-once-weekly
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-bp-twice-weekly #f))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d) (and (hypertension? d)
+                       (eq? (abstraction-value d)
+                            (hypertension-value-space 'high))))
+      d-list))))
+
+;(verify-decision
+;   decide-bp-twice-weekly
+;   (list (abstraction-generator
+;          get-hypertension
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bp-chronic (DBpChronic) is a proxy process for starting the chronic
+; blood pressure monitoring plan. The decision criteria involves the following
+; abstraction(s):
+; 1) hypertension ('sustained-high)
+; It affects the following actions and processes:
+; 1) monitor-blood-pressure (every two days)
+; 2) decide-bp-once-weekly (disabled)
+; 3) decide-bp-twice-weekly (disabled)
+; 4) decide-bp-chronic (disabled)
+(define-decision
+  decide-bp-chronic
+  #t
+  chronic-hypertension-plan
+  (#:instructions
+   (control-template 'monitor-blood-pressure
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern (duration 0 7 0 0)
+                      #:interval (duration 2 0 0 0))
+                     #t)
+   (control-template 'decide-bp-once-weekly #f)
+   (control-template 'decide-bp-twice-weekly #f)
+   (control-template 'decide-bp-chronic #f))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d) (and (hypertension? d)
+                       (eq? (abstraction-value d)
+                            (hypertension-value-space 'sustained-high))))
+      d-list))))
+
+;(verify-decision
+;   decide-bp-chronic
+;   (list (abstraction-generator
+;          get-hypertension
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bp-gestational (DBpGestational) is a proxy process for starting the
+; gestational blood pressure monitoring plan. The decision criteria involves
+; the following abstraction(s):
+; 1) hypertension ('sustained-high)
+; It affects the following actions and processes:
+; 1) monitor-blood-pressure (every two days)
+; 2) decide-bp-once-weekly (disabled)
+; 3) decide-bp-twice-weekly (disabled)
+; 4) decide-bp-gestational (disabled)
+; 5) decide-bp-once-weekly-gestational (enabled after 7 days)
+; 6) decide-bp-hourly-gestational (enabled after 7 days)
+(define-decision
+  decide-bp-gestational
+  #t
+  gestational-hypertension-plan
+  (#:instructions
+   (control-template 'monitor-blood-pressure
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern (duration 0 7 0 0)
+                      #:interval (duration 2 0 0 0))
+                     #t)
+   (control-template 'decide-bp-once-weekly #f)
+   (control-template 'decide-bp-twice-weekly #f)
+   (control-template 'decide-bp-gestational #f)
+   (control-template 'decide-bp-once-weekly-gestational
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-bp-hourly-gestational
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d) (and (hypertension? d)
+                       (eq? (abstraction-value d)
+                            (hypertension-value-space 'sustained-high))))
+      d-list))))
+
+;(verify-decision
+;   decide-bp-gestational
+;   (list (abstraction-generator
+;          get-hypertension
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bp-once-weekly-gestational (DBp1WkGestational) relates to the decision
+; to adjust blood pressure monitoring to once a week instead of every two days
+; (in the gestational hypertension plan). The decision criteria involves the
+; following abstraction(s):
+; 1) hypertension (not 'very-high or 'extremely-high)
+; 2) proteinuria (false)
+; It affects the following actions and processes:
+; 1) monitor-blood-pressure (once a week)
+; 2) decide-bp-once-weekly-gestational (disabled)
+; 3) decide-bp-hourly-gestational (disabled)
+; 4) decide-bp-two-days-gestational (enabled after 7 days)
+(define-decision
+  decide-bp-once-weekly-gestational
+  #f
+  gestational-weekly-plan
+  (#:instructions
+   (control-template 'monitor-blood-pressure
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern (duration 0 7 0 0)
+                      #:interval (duration 7 0 0 0))
+                     #t)
+   (control-template 'decide-bp-once-weekly-gestational #f)
+   (control-template 'decide-bp-hourly-gestational #f)
+   (control-template 'decide-bp-two-days-gestational
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t))
+  (#:criteria
+   (lambda (d-list)
+     (and (not (findf
+                (lambda (d) (and (hypertension? d)
+                                 (or (eq? (abstraction-value d)
+                                          (hypertension-value-space 'very-high))
+                                     (eq? (abstraction-value d)
+                                          (hypertension-value-space 'extremely-high)))))
+                d-list))
+          (findf
+           (lambda (d) (and (proteinuria? d)
+                            (eq? (abstraction-value d) (bool #f))))
+           d-list)))))
+
+;(verify-decision
+;   decide-bp-once-weekly-gestational
+;   (list (abstraction-generator
+;          get-hypertension
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2)
+;         (abstraction-generator
+;          get-proteinuria
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bp-two-days-gestational (DBp2DaysGest) relates to decision to adjust
+; blood pressure monitoring to every two days instead of once a week (in the
+; gestational hypertension workflow). It is equivalent to the process decide-
+; bp-gestational except that the decision criteria involves:
+; 1) hypertension ('very-high or 'extremely-high)
+; 2) proteinuria (true)
+; It affects the following actions and processes:
+; 1) monitor-blood-pressure (every two days)
+; 2) decide-bp-once-weekly-gestational (enabled after 7 days)
+; 3) decide-bp-hourly-gestational (enabled after 7 days)
+; 4) decide-bp-two-days-gestational (disabled)
+(define-decision
+  decide-bp-two-days-gestational
+  #f
+  gestational-hypertension-plan
+  (#:instructions
+   (control-template 'monitor-blood-pressure
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern (duration 0 7 0 0)
+                      #:interval (duration 2 0 0 0))
+                     #t)
+   (control-template 'decide-bp-once-weekly-gestational
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-bp-hourly-gestational
+                     (relative-schedule
+                      #:rounding (duration 0 0 0 0)
+                      #:offset (duration 7 0 0 0)
+                      #:pattern (duration 0 0 0 0)
+                      #:interval #t)
+                     #t)
+   (control-template 'decide-bp-two-days-gestational #f))
+  (#:criteria
+   (lambda (d-list)
+     (findf
+      (lambda (d) (and (hypertension? d)
+                       (or (eq? (abstraction-value d)
+                            (hypertension-value-space 'very-high))
+                           (eq? (abstraction-value d)
+                            (hypertension-value-space 'extremely-high)))))
+      d-list))
+   (lambda (d-list)
+     (findf
+      (lambda (d) (and (proteinuria? d)
+                       (eq? (abstraction-value d) (bool #t))))
+      d-list))))
+
+;(verify-decision
+;   decide-bp-two-days-gestational
+;   (list (abstraction-generator
+;          get-hypertension
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2)
+;         (abstraction-generator
+;          get-proteinuria
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; decide-bp-hourly-gestational (DBpHoursGest) is a proxy process for deciding
+; to adjust blood pressure monitoring to every few hours (e.g. 4) instead of
+; once a week (in the gestational hypertension workflow). The decision criteria
+; involves:
+; 1) hypertension (not 'very-high or 'extremely-high)
+; 2) proteinuria (true)
+; It affects the following actions and processes:
+; 1) monitor-blood-pressure (every 4 hours)
+; 2) decide-bp-once-weekly-gestational (disabled)
+; 3) decide-bp-hourly-gestational (disabled)
+(define-decision
+  decide-bp-hourly-gestational
+  #t
+  gestational-hours-plan
+  (#:instructions
+   (control-template 'monitor-blood-pressure
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
+                      #:offset (duration 0 0 0 0)
+                      #:pattern (duration 0 7 0 0)
+                      #:interval (duration 0 4 0 0))
+                     #t)
+   (control-template 'decide-bp-once-weekly-gestational #f)
+   (control-template 'decide-bp-hourly-gestational #f))
+  (#:criteria
+   (lambda (d-list)
+     (and (not (findf
+                (lambda (d) (and (hypertension? d)
+                                 (or (eq? (abstraction-value d)
+                                          (hypertension-value-space 'very-high))
+                                     (eq? (abstraction-value d)
+                                          (hypertension-value-space 'extremely-high)))))
+                d-list))
+          (findf
+           (lambda (d) (and (proteinuria? d)
+                            (eq? (abstraction-value d) (bool #t))))
+           d-list)))))
+
+;(verify-decision
+;   decide-bp-hourly-gestational
+;   (list (abstraction-generator
+;          get-hypertension
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2)
+;         (abstraction-generator
+;          get-proteinuria
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
