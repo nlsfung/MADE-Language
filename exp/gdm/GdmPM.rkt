@@ -9,7 +9,8 @@
          "../../rim/MadeDataStructures.rkt"
          "../../rpm/MadeProcess.rkt"
          "../../rpm/AnalysisProcess.rkt"
-         "../../rpm/DecisionProcess.rkt")
+         "../../rpm/DecisionProcess.rkt"
+         "../../rpm/EffectuationProcess.rkt")
 
 ; This file contains the specification of the process model for the clinical
 ; guideline for gestational diabetes mellitus (GDM).
@@ -1550,3 +1551,862 @@
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
 ;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+
+; effectuate-administer-insulin is a proxy process for administering insulin.
+(define-effectuation
+  effectuate-administer-insulin
+  #t
+  administer-insulin-action
+  (target-schedule
+   #:plan adjust-insulin-plan
+   #:instruction 'administer-insulin-action
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan start-insulin-plan
+   #:instruction 'administer-insulin-action
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+; effectuate-administer-insulin
+; (list (action-plan-generator
+;        get-adjust-insulin-plan
+;        (datetime 2019 12 7 0 0 0)
+;        (datetime 2019 12 7 24 0 0)
+;        1))
+; (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+;
+;(verify-effectuation
+; effectuate-administer-insulin
+; (list (action-plan-generator
+;        get-start-insulin-plan
+;        (datetime 2019 12 7 0 0 0)
+;        (datetime 2019 12 7 24 0 0)
+;        1))
+; (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-change-diet is responsible for effectuating the change
+; to the patient's diet (due to poor glycaemic control).
+(define-effectuation
+  effectuate-change-diet
+  #t
+  change-diet-action
+  (target-schedule
+   #:plan change-nutrition-plan
+   #:instruction 'change-diet-action
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-change-diet
+;   (list (action-plan-generator
+;          get-change-nutrition-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-change-dinner is responsible for effectuating the change to the
+; patient's carbohydrates intake at dinner (due to positive ketonuria).
+(define-effectuation
+  effectuate-change-dinner
+  #t
+  change-dinner-action
+  (target-schedule
+   #:plan increase-dinner-intake-plan
+   #:instruction 'change-dinner-action
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-change-dinner
+;   (list (action-plan-generator
+;          get-increase-dinner-intake-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-monitor-bg is responsible for effectuating any changes to the
+; monitoring of blood glucose.
+(define-effectuation
+  effectuate-monitor-bg
+  #f
+  monitor-bg-control
+  (target-schedule
+   #:plan bg-twice-weekly-plan
+   #:instruction 'monitor-blood-glucose
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-daily-plan
+   #:instruction 'monitor-blood-glucose
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-monitor-bg
+;   (list (action-plan-generator
+;          get-bg-twice-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-bg-daily-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-bg-nutrition-change is responsible for effectuating the decide-bg-
+; nutrition-change process.
+(define-effectuation
+  effectuate-bg-nutrition-change
+  #f
+  bg-nutrition-change-control
+  (target-schedule
+   #:plan bg-twice-weekly-plan
+   #:instruction 'decide-bg-nutrition-change
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan change-nutrition-plan
+   #:instruction 'decide-bg-nutrition-change
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan start-insulin-plan
+   #:instruction 'decide-bg-nutrition-change
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-daily-plan
+   #:instruction 'decide-bg-nutrition-change
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-bg-nutrition-change
+;   (list (action-plan-generator
+;          get-bg-twice-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-change-nutrition-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-start-insulin-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-bg-daily-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-bg-insulin-control is responsible for effectuating the 'decide-bg-
+; insulin process (including its variants).
+(define-effectuation
+  effectuate-bg-insulin-control
+  #f
+  bg-insulin-control
+  (target-schedule
+   #:plan bg-twice-weekly-plan
+   #:instruction 'decide-bg-insulin
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-twice-weekly-plan
+   #:instruction 'decide-bg-insulin-post-nutrition
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-twice-weekly-plan
+   #:instruction 'decide-bg-insulin-adjust
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan change-nutrition-plan
+   #:instruction 'decide-bg-insulin
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan change-nutrition-plan
+   #:instruction 'decide-bg-insulin-post-nutrition
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan start-insulin-plan
+   #:instruction 'decide-bg-insulin
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan start-insulin-plan
+   #:instruction 'decide-bg-insulin-post-nutrition
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan start-insulin-plan
+   #:instruction 'decide-bg-insulin-adjust
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-daily-plan
+   #:instruction 'decide-bg-insulin
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-daily-plan
+   #:instruction 'decide-bg-insulin-post-nutrition
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-daily-plan
+   #:instruction 'decide-bg-insulin-adjust
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-bg-insulin-control
+;   (list (action-plan-generator
+;          get-bg-twice-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-change-nutrition-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-start-insulin-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-bg-daily-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-bg-twice-weekly-control is responsible for effectuating the decide-
+; bg-twice-weekly process (and its variants).
+(define-effectuation
+  effectuate-bg-twice-weekly-control
+  #f
+  bg-twice-weekly-control
+  (target-schedule
+   #:plan bg-twice-weekly-plan
+   #:instruction 'decide-bg-twice-weekly
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-twice-weekly-plan
+   #:instruction 'decide-bg-twice-weekly-post-nutrition
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-twice-weekly-plan
+   #:instruction 'decide-bg-twice-weekly-post-insulin
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan change-nutrition-plan
+   #:instruction 'decide-bg-twice-weekly
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan change-nutrition-plan
+   #:instruction 'decide-bg-twice-weekly-post-nutrition
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan start-insulin-plan
+   #:instruction 'decide-bg-twice-weekly
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan start-insulin-plan
+   #:instruction 'decide-bg-twice-weekly-post-nutrition
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan start-insulin-plan
+   #:instruction 'decide-bg-twice-weekly-post-insulin
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-daily-plan
+   #:instruction 'decide-bg-twice-weekly
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-daily-plan
+   #:instruction 'decide-bg-twice-weekly-post-nutrition
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-daily-plan
+   #:instruction 'decide-bg-twice-weekly-post-insulin
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-bg-twice-weekly-control
+;   (list (action-plan-generator
+;          get-bg-twice-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-change-nutrition-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-start-insulin-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-bg-daily-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-bg-daily-control is responsible for effectuating the decide-bg-
+; daily process (and its variants).
+(define-effectuation
+  effectuate-bg-daily-control
+  #f
+  bg-daily-control
+  (target-schedule
+   #:plan bg-twice-weekly-plan
+   #:instruction 'decide-bg-daily
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-twice-weekly-plan
+   #:instruction 'decide-bg-daily-post-nutrition
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-twice-weekly-plan
+   #:instruction 'decide-bg-daily-post-insulin
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-daily-plan
+   #:instruction 'decide-bg-daily
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-daily-plan
+   #:instruction 'decide-bg-daily-post-nutrition
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-daily-plan
+   #:instruction 'decide-bg-daily-post-insulin
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-bg-daily-control
+;   (list (action-plan-generator
+;          get-bg-twice-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-bg-daily-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-monitor-uk-control is responsible for effectuating changes to the
+; monitoring of urinary ketones (uk).
+(define-effectuation
+  effectuate-monitor-uk-control
+  #f
+  monitor-uk-control
+  (target-schedule
+   #:plan uk-twice-weekly-plan
+   #:instruction 'monitor-urinary-ketones
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan uk-daily-plan
+   #:instruction 'monitor-urinary-ketones
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-monitor-uk-control
+;   (list (action-plan-generator
+;          get-uk-twice-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-uk-daily-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-uk-dinner-increase is responsible for effectuating the 'decide-uk-
+; dinner-increase process.
+(define-effectuation
+  effectuate-uk-dinner-increase
+  #f
+  uk-dinner-increase-control
+  (target-schedule
+   #:plan uk-twice-weekly-plan
+   #:instruction 'decide-uk-dinner-increase
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan uk-daily-plan
+   #:instruction 'decide-uk-dinner-increase
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan increase-dinner-intake-plan
+   #:instruction 'decide-uk-dinner-increase
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-uk-dinner-increase
+;   (list (action-plan-generator
+;          get-uk-twice-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-uk-daily-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-increase-dinner-intake-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-uk-twice-weekly-control is responsible for effectuating the
+; 'decide-uk-twice-weekly process and its variants.
+(define-effectuation
+  effectuate-uk-twice-weekly-control
+  #f
+  uk-twice-weekly-control
+  (target-schedule
+   #:plan uk-twice-weekly-plan
+   #:instruction 'decide-uk-twice-weekly
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan uk-twice-weekly-plan
+   #:instruction 'decide-uk-twice-weekly-post-dinner
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan uk-daily-plan
+   #:instruction 'decide-uk-twice-weekly
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan uk-daily-plan
+   #:instruction 'decide-uk-twice-weekly-post-dinner
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan increase-dinner-intake-plan
+   #:instruction 'decide-uk-twice-weekly
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan increase-dinner-intake-plan
+   #:instruction 'decide-uk-twice-weekly-post-dinner
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-uk-twice-weekly-control
+;   (list (action-plan-generator
+;          get-uk-twice-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-uk-daily-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-increase-dinner-intake-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-uk-daily-control is responsible for effectuating the 'decide-uk
+; daily process and its variants.
+(define-effectuation
+  effectuate-uk-daily-control
+  #f
+  uk-daily-control
+  (target-schedule
+   #:plan uk-twice-weekly-plan
+   #:instruction 'decide-uk-daily
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan uk-twice-weekly-plan
+   #:instruction 'decide-uk-daily-post-dinner
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan uk-daily-plan
+   #:instruction 'decide-uk-daily
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan uk-daily-plan
+   #:instruction 'decide-uk-daily-post-dinner
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan increase-dinner-intake-plan
+   #:instruction 'decide-uk-daily
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-uk-daily-control
+;   (list (action-plan-generator
+;          get-uk-twice-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-uk-daily-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-increase-dinner-intake-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-monitor-systolic-bp-control is responsible for effectuating changes
+; to the monitoring of systolic blood pressure (bp).
+(define-effectuation
+  effectuate-monitor-systolic-bp-control
+  #f
+  monitor-systolic-bp-control
+  (target-schedule
+   #:plan bp-once-weekly-plan
+   #:instruction 'monitor-systolic-blood-pressure
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bp-twice-weekly-plan
+   #:instruction 'monitor-systolic-blood-pressure
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan chronic-hypertension-plan
+   #:instruction 'monitor-systolic-blood-pressure
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan gestational-hypertension-plan
+   #:instruction 'monitor-systolic-blood-pressure
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan gestational-weekly-plan
+   #:instruction 'monitor-systolic-blood-pressure
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan gestational-hours-plan
+   #:instruction 'monitor-systolic-blood-pressure
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-monitor-systolic-bp-control
+;   (list (action-plan-generator
+;          get-bp-once-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-bp-twice-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-chronic-hypertension-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-gestational-hypertension-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-gestational-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-gestational-hours-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-monitor-diastolic-bp-control is responsible for effectuating changes
+; to the monitoring of diastolic blood pressure (bp).
+(define-effectuation
+  effectuate-monitor-diastolic-bp-control
+  #f
+  monitor-diastolic-bp-control
+  (target-schedule
+   #:plan bp-once-weekly-plan
+   #:instruction 'monitor-diastolic-blood-pressure
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bp-twice-weekly-plan
+   #:instruction 'monitor-diastolic-blood-pressure
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan chronic-hypertension-plan
+   #:instruction 'monitor-diastolic-blood-pressure
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan gestational-hypertension-plan
+   #:instruction 'monitor-diastolic-blood-pressure
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan gestational-weekly-plan
+   #:instruction 'monitor-diastolic-blood-pressure
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan gestational-hours-plan
+   #:instruction 'monitor-diastolic-blood-pressure
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-monitor-diastolic-bp-control
+;   (list (action-plan-generator
+;          get-bp-once-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-bp-twice-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-chronic-hypertension-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-gestational-hypertension-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-gestational-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-gestational-hours-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-bp-once-weekly-control is responsible for effectuating the
+; decide-bp-once-weekly process.
+(define-effectuation
+  effectuate-bp-once-weekly-control
+  #f
+  bp-once-weekly-control
+  (target-schedule
+   #:plan bp-once-weekly-plan
+   #:instruction 'decide-bp-once-weekly
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bp-twice-weekly-plan
+   #:instruction 'decide-bp-once-weekly
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan chronic-hypertension-plan
+   #:instruction 'decide-bp-once-weekly
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan gestational-hypertension-plan
+   #:instruction 'decide-bp-once-weekly
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-bp-once-weekly-control
+;   (list (action-plan-generator
+;          get-bp-once-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-bp-twice-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-chronic-hypertension-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-gestational-hypertension-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-bp-twice-weekly-control is responsible for effectuating the
+; decide-bp-twice-weekly process.
+(define-effectuation
+  effectuate-bp-twice-weekly-control
+  #f
+  bp-twice-weekly-control
+  (target-schedule
+   #:plan bp-once-weekly-plan
+   #:instruction 'decide-bp-twice-weekly
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bp-twice-weekly-plan
+   #:instruction 'decide-bp-twice-weekly
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan chronic-hypertension-plan
+   #:instruction 'decide-bp-twice-weekly
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan gestational-hypertension-plan
+   #:instruction 'decide-bp-twice-weekly
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-bp-twice-weekly-control
+;   (list (action-plan-generator
+;          get-bp-once-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-bp-twice-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-chronic-hypertension-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-gestational-hypertension-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-bp-chronic-control is responsible for effectuating the decide-bp-
+; chronic process.
+(define-effectuation
+  effectuate-bp-chronic-control
+  #f
+  bp-chronic-control
+  (target-schedule
+   #:plan chronic-hypertension-plan
+   #:instruction 'decide-bp-chronic
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-bp-chronic-control
+;   (list (action-plan-generator
+;          get-chronic-hypertension-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-bp-gestational-control is responsible for effectuating the decide-
+; bp-gestational process and its variants.
+(define-effectuation
+  effectuate-bp-gestational-control
+  #f
+  bp-gestational-control
+  (target-schedule
+   #:plan gestational-hypertension-plan
+   #:instruction 'decide-bp-gestational
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan gestational-hypertension-plan
+   #:instruction 'decide-bp-two-days-gestational
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan gestational-weekly-plan
+   #:instruction 'decide-bp-two-days-gestational
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-bp-gestational-control
+;   (list (action-plan-generator
+;          get-gestational-hypertension-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-gestational-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-bp-once-weekly-gestational-control is responsible for effectuating
+; the 'decide-bp-once-weekly-gestational process.
+(define-effectuation
+  effectuate-bp-once-weekly-gestational-control
+  #f
+  bp-once-weekly-gestational-control
+  (target-schedule
+   #:plan gestational-hypertension-plan
+   #:instruction 'decide-bp-once-weekly-gestational
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan gestational-weekly-plan
+   #:instruction 'decide-bp-once-weekly-gestational
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan gestational-hours-plan
+   #:instruction 'decide-bp-once-weekly-gestational
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-bp-once-weekly-gestational-control
+;   (list (action-plan-generator
+;          get-gestational-hypertension-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-gestational-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-gestational-hours-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
+
+; effectuate-bp-hourly-gestational-control is responsible for effectuating the
+; 'decide-bp-hourly-gestational process.
+(define-effectuation
+  effectuate-bp-hourly-gestational-control
+  #f
+  bp-hourly-gestational-control
+  (target-schedule
+   #:plan gestational-hypertension-plan
+   #:instruction 'decide-bp-hourly-gestational
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan gestational-weekly-plan
+   #:instruction 'decide-bp-hourly-gestational
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan gestational-hours-plan
+   #:instruction 'decide-bp-hourly-gestational
+   #:predicate (lambda (i-list) #t)))
+
+;(verify-effectuation
+;   effectuate-bp-hourly-gestational-control
+;   (list (action-plan-generator
+;          get-gestational-hypertension-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-gestational-weekly-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1)
+;         (action-plan-generator
+;          get-gestational-hours-plan
+;          (datetime 2019 12 7 0 0 0)
+;          (datetime 2019 12 7 24 0 0)
+;          1))
+;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
