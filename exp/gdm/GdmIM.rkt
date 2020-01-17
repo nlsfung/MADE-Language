@@ -97,73 +97,84 @@
 
 (define-action-instruction change-dinner-action culminating dimensioned 'g)
 
-; Twenty one different types of control instructions can be identified from 
+; 17 different types of control instructions can be identified from 
 ; the GDM workflows, namely for controlling:
-; 1) Blood glucose measurements.
-; 2) The workflow associated with monitoring BG for two days each week.
-; 3) The workflow associated with monitoring BG every day.
-; 4) The (sub-)workflow associated with changing nutritional prescription.
-; 5) The workflow associated with starting insulin therapy before changing
-;    nutritional prescription.
-; 6) The workflow associated with adjusting the insulin therapy.
-; 7) The workflow associated with starting insulin therapy after changing the
-;    nutritional prescription.
-; 8) Urinary ketone measurements.
-; 9) The workflow associated with monitoring urinary ketones twice weekly.
-; 10) The workflow associated with monitoring urinary ketones daily.
-; 11) The (sub-)workflow associated with increasing carbohydrates intake.
-; 12) The workflow associated with occurrences of ketonuria after increasing
-;     carbohydrates intake at dinner.
-; 13) Blood pressure measurements.
-; 14) The workflow associated with monitoring blood pressure once each week.
-; 15) The workflow associated with monitoring blood pressure twice each week.
-; 16) The workflow associated with chronic hypertension.
-; 17) The workflow associated with gestational hypertension (every 2 days).
-; 18) The workflow associated with measuring blood pressure again.
-; 19) The workflow associated with gestational hypertension (every week).
-; 20) The workflow associated with starting blood pressure treatment.
-; 21) The workflow associated with deciding to monitor BP every few hours.
-(define-control-instruction monitor-bg-control 'monitor-blood-glucose)
+; 1) Blood glucose (BG) measurements.
+; 2) The workflow associated with changing nutritional prescription.
+; 3) The workflow associated with starting or changing insulin therapy.
+; 4) The workflow associated with monitoring BG for two days each week.
+; 5) The workflow associated with monitoring BG every day.
+; 6) Urinary ketone measurements.
+; 7) The workflow associated with increasing dincarbohydrates intake at dinner.
+; 8) The workflow associated with monitoring urinary ketones twice weekly.
+; 9) The workflow associated with monitoring urinary ketones daily.
+; 10) Systolic blood pressure measurements.
+; 11) Diastolic blood pressure measurements.
+; 11) The workflow associated with monitoring blood pressure once each week.
+; 12) The workflow associated with monitoring blood pressure twice each week.
+; 13) The workflow associated with chronic hypertension.
+; 14) The workflow associated with gestational hypertension (every 2 days).
+; 15) The workflow associated with gestational hypertension (every week).
+; 16) The workflow associated with deciding to monitor BP every few hours.
+(define-control-instruction monitor-bg-control
+  'monitor-blood-glucose)
 
-(define-control-instruction bg-twice-weekly-workflow-control 'bg-twice-weekly-workflow)
+(define-control-instruction bg-nutrition-change-control
+  'decide-bg-nutrition-change)
 
-(define-control-instruction bg-daily-workflow 'bg-daily-workflow)
+(define-control-instruction bg-insulin-control
+  'decide-bg-insulin
+  'decide-bg-insulin-post-nutrition
+  'decide-bg-insulin-adjust)
 
-(define-control-instruction diet-workflow-control 'diet-workflow)
+(define-control-instruction bg-twice-weekly-control
+  'decide-bg-twice-weekly
+  'decide-bg-twice-weekly-post-insulin
+  'decide-bg-twice-weekly-post-nutrition)
 
-(define-control-instruction start-insulin-workflow-control 'start-insulin-workflow)
+(define-control-instruction bg-daily-control
+  'decide-bg-daily
+  'decide-bg-daily-post-insulin
+  'decide-bg-daily-post-nutrition)
 
-(define-control-instruction adjust-insulin-workflow-control 'adjust-insulin-workflow)
+(define-control-instruction monitor-uk-control
+  'monitor-urinary-ketones)
 
-(define-control-instruction post-diet-insulin-workflow-control 'post-diet-insulin-workflow)
+(define-control-instruction uk-dinner-increase-control
+  'decide-uk-dinner-increase)
 
-(define-control-instruction monitor-urinary-ketones-control 'monitor-urinary-ketones)
+(define-control-instruction uk-twice-weekly-control
+  'decide-uk-twice-weekly
+  'decide-uk-twice-weekly-post-dinner)
 
-(define-control-instruction ktn-twice-weekly-workflow-control 'ktn-twice-weekly-workflow)
+(define-control-instruction uk-daily-control
+  'decide-uk-daily
+  'decide-uk-daily-post-dinner)
 
-(define-control-instruction ktn-daily-workflow-control 'ktn-daily-workflow)
+(define-control-instruction monitor-systolic-bp-control
+  'monitor-systolic-blood-pressure)
 
-(define-control-instruction dinner-workflow-control 'dinner-workflow)
+(define-control-instruction monitor-diastolic-bp-control
+  'monitor-diastolic-blood-pressure)
 
-(define-control-instruction monitor-bp-control 'monitor-blood-pressure)
+(define-control-instruction bp-once-weekly-control
+  'decide-bp-once-weekly)
 
-(define-control-instruction bp-once-weekly-workflow 'bp-once-weekly-workflow)
+(define-control-instruction bp-twice-weekly-control
+  'decide-bp-twice-weekly)
 
-(define-control-instruction bp-twice-weekly-workflow 'bp-twice-weekly-workflow)
+(define-control-instruction bp-chronic-control
+  'decide-bp-chronic)
 
-(define-control-instruction normal-bp-workflow-control 'normal-bp-workflow)
+(define-control-instruction bp-gestational-control
+  'decide-bp-gestational
+  'decide-bp-two-days-gestational)
 
-(define-control-instruction chronic-bp-workflow-control 'chronic-bp-workflow)
+(define-control-instruction bp-once-weekly-gestational-control
+  'decide-bp-once-weekly-gestational)
 
-(define-control-instruction gestational-bp-two-days-workflow-control 'gestational-bp-two-days-workflow)
-
-(define-control-instruction bp-repeat-workflow-control 'bp-repeat-control-workflow)
-
-(define-control-instruction gestational-bp-weekly-workflow-control 'gestational-bp-weekly-workflow)
-
-(define-control-instruction gestational-bp-treatment-workflow-control 'gestational-bp-treatment-workflow)
-
-(define-control-instruction gestational-bp-hours-workflow-control 'gestational-bp-hours-workflow)
+(define-control-instruction bp-hourly-gestational-control
+  'decide-bp-hourly-gestational)
 
 ; The twenty three different instruction archetypes constitute 14 different
 ; types of action plans, namely for:
@@ -253,23 +264,27 @@
            'decide-uk-twice-weekly-post-dinner))
 
 (define-action-plan bp-once-weekly-plan
-  (control 'monitor-blood-pressure
+  (control 'monitor-systolic-blood-pressure
+           'monitor-diastolic-blood-pressure
            'decide-bp-once-weekly
            'decide-bp-twice-weekly))
 
 (define-action-plan bp-twice-weekly-plan
-  (control 'monitor-blood-pressure
+  (control 'monitor-systolic-blood-pressure
+           'monitor-diastolic-blood-pressure
            'decide-bp-once-weekly
            'decide-bp-twice-weekly))
 
 (define-action-plan chronic-hypertension-plan
-  (control 'monitor-blood-pressure
+  (control 'monitor-systolic-blood-pressure
+           'monitor-diastolic-blood-pressure
            'decide-bp-once-weekly
            'decide-bp-twice-weekly
            'decide-bp-chronic))
 
 (define-action-plan gestational-hypertension-plan
-  (control 'monitor-blood-pressure
+  (control 'monitor-systolic-blood-pressure
+           'monitor-diastolic-blood-pressure
            'decide-bp-once-weekly
            'decide-bp-twice-weekly
            'decide-bp-gestational
@@ -278,12 +293,14 @@
            'decide-bp-two-days-gestational))
 
 (define-action-plan gestational-weekly-plan
-  (control 'monitor-blood-pressure
+  (control 'monitor-systolic-blood-pressure
+           'monitor-diastolic-blood-pressure
            'decide-bp-once-weekly-gestational
            'decide-bp-hourly-gestational
            'decide-bp-two-days-gestational))
 
 (define-action-plan gestational-hours-plan
-  (control 'monitor-blood-pressure
+  (control 'monitor-systolic-blood-pressure
+           'monitor-diastolic-blood-pressure
            'decide-bp-once-weekly-gestational
            'decide-bp-hourly-gestational))
