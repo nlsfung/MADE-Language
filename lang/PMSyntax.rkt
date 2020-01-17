@@ -264,7 +264,6 @@
 
 ; define-effectuation creates a new Effectuation process.
 ; It requires the following inputs:
-; It requires the following inputs:
 ; 1) An identifier for the new process.
 ; 2) A boolean indicating whether the process is a proxy or not.
 ; 3) The output type of the process.

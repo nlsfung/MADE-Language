@@ -225,10 +225,10 @@
                                     (get-datetime start-dt end-dt))
                     (get-val))]
                [(start-dt-1 end-dt-1 start-dt-2 end-dt-2)
-                  (id (get-proxy)
-                      (datetime-range (get-datetime start-dt-1 end-dt-1)
-                                      (get-datetime start-dt-2 end-dt-2))
-                      (get-val))]))
+                (id (get-proxy)
+                    (datetime-range (get-datetime start-dt-1 end-dt-1)
+                                    (get-datetime start-dt-2 end-dt-2))
+                    (get-val))]))
 ;           (verify-getter get-id id)
            )))]
 
@@ -254,10 +254,22 @@
                        (eq? units (dimensioned-units (abstraction-value self)))
                        (invariant (abstraction-value self))))])
              (define get-id
-               (lambda () (id (get-proxy)
-                              (datetime-range (get-datetime) (get-datetime))
-                              (get-dimensioned units))))
-;             (verify-getter get-id id)
+               (case-lambda
+                 [()
+                  (id (get-proxy)
+                      (datetime-range (get-datetime) (get-datetime))
+                      (get-dimensioned units))]
+                 [(start-dt end-dt)
+                  (id (get-proxy)
+                      (datetime-range (get-datetime start-dt end-dt)
+                                      (get-datetime start-dt end-dt))
+                      (get-dimensioned units))]
+                 [(start-dt-1 end-dt-1 start-dt-2 end-dt-2)
+                  (id (get-proxy)
+                      (datetime-range (get-datetime start-dt-1 end-dt-1)
+                                      (get-datetime start-dt-2 end-dt-2))
+                      (get-dimensioned units))]))
+             (verify-getter get-id id)
              )))]))
 
 ; define-action-plan creates a new type of action plan. 
@@ -343,30 +355,79 @@
                                   (action-plan-instruction-set self))
                                  #f))))])
              (define get-id
-               (lambda ([pat-length 2]
-                        [units-list (list 'units)])
-                 (id (get-proxy)
-                     (get-datetime)
-                     (append (map (lambda (i)
-                                    (scheduled-control
-                                     i (get-schedule pat-length) (get-status)))
-                                  control-list)
-                             (for/list ([inst-type (in-list homogeneous-list)]
-                                        [get-inst (in-list get-homogeneous-list)])
-                               (let ([inst (get-inst)])
-                                 (scheduled-homogeneous-action
-                                  inst-type
-                                  (get-schedule pat-length)
-                                  (homogeneous-action-rate inst)
-                                  (homogeneous-action-duration inst))))
-                             (for/list ([inst-type (in-list culminating-list)]
-                                        [get-inst (in-list get-culminating-list)])
-                               (let ([inst (get-inst)])
-                                 (scheduled-culminating-action
-                                  inst-type
-                                  (get-schedule pat-length)
-                                  (culminating-action-goal-state inst))))))))
- ;            (verify-getter get-id id)
+               (case-lambda
+                 [()
+                  (let ([pat-length 2])
+                    (id (get-proxy)
+                        (get-datetime)
+                        (append (map (lambda (i)
+                                       (scheduled-control
+                                        i (get-schedule pat-length) (get-status)))
+                                     control-list)
+                                (for/list ([inst-type (in-list homogeneous-list)]
+                                           [get-inst (in-list get-homogeneous-list)])
+                                  (let ([inst (get-inst)])
+                                    (scheduled-homogeneous-action
+                                     inst-type
+                                     (get-schedule pat-length)
+                                     (homogeneous-action-rate inst)
+                                     (homogeneous-action-duration inst))))
+                                (for/list ([inst-type (in-list culminating-list)]
+                                           [get-inst (in-list get-culminating-list)])
+                                  (let ([inst (get-inst)])
+                                    (scheduled-culminating-action
+                                     inst-type
+                                     (get-schedule pat-length)
+                                     (culminating-action-goal-state inst)))))))]
+                 [(start-dt end-dt)
+                  (let ([pat-length 2])
+                    (id (get-proxy)
+                        (get-datetime start-dt end-dt)
+                        (append (map (lambda (i)
+                                       (scheduled-control
+                                        i (get-schedule start-dt end-dt pat-length) (get-status)))
+                                     control-list)
+                                (for/list ([inst-type (in-list homogeneous-list)]
+                                           [get-inst (in-list get-homogeneous-list)])
+                                  (let ([inst (get-inst)])
+                                    (scheduled-homogeneous-action
+                                     inst-type
+                                     (get-schedule start-dt end-dt pat-length)
+                                     (homogeneous-action-rate inst)
+                                     (homogeneous-action-duration inst))))
+                                (for/list ([inst-type (in-list culminating-list)]
+                                           [get-inst (in-list get-culminating-list)])
+                                  (let ([inst (get-inst)])
+                                    (scheduled-culminating-action
+                                     inst-type
+                                     (get-schedule start-dt end-dt pat-length)
+                                     (culminating-action-goal-state inst)))))))]
+                 [(start-dt end-dt target-ids)
+                  (let ([pat-length 2])
+                    (id (get-proxy)
+                        (get-datetime start-dt end-dt)
+                        (append (for/list ([i control-list]
+                                           #:when (member i target-ids))
+                                  (scheduled-control
+                                   i (get-schedule start-dt end-dt pat-length) (get-status)))
+                                (for/list ([inst-type (in-list homogeneous-list)]
+                                           [get-inst (in-list get-homogeneous-list)]
+                                           #:when (member inst-type target-ids))
+                                  (let ([inst (get-inst)])
+                                    (scheduled-homogeneous-action
+                                     inst-type
+                                     (get-schedule start-dt end-dt pat-length)
+                                     (homogeneous-action-rate inst)
+                                     (homogeneous-action-duration inst))))
+                                (for/list ([inst-type (in-list culminating-list)]
+                                           [get-inst (in-list get-culminating-list)]
+                                           #:when (member inst-type target-ids))
+                                  (let ([inst (get-inst)])
+                                    (scheduled-culminating-action
+                                     inst-type
+                                     (get-schedule start-dt end-dt pat-length)
+                                     (culminating-action-goal-state inst)))))))]))
+;             (verify-getter get-id id)
              )))]))
 
 ; define-action-instruction creates a new type of action instruction. 
@@ -418,10 +479,17 @@
                              (invariant (homogeneous-action-rate self)
                                         (homogeneous-action-duration self))))])
              (define get-id
-               (lambda () (id (get-proxy)
-                              (get-datetime)
-                              (get-dimensioned units)
-                              (get-duration))))
+               (case-lambda
+                 [()
+                  (id (get-proxy)
+                      (get-datetime)
+                      (get-dimensioned units)
+                      (get-duration))]
+                 [(start-dt end-dt)
+                  (id (get-proxy)
+                      (get-datetime start-dt end-dt)
+                      (get-dimensioned units)
+                      (get-duration))]))
 ;             (verify-getter get-id id)
              )))]))
 
@@ -459,7 +527,11 @@
                        (eq? (super-get-type (culminating-action-goal-state self)) type)
                        (invariant (culminating-action-goal-state self))))])
              (define get-id
-               (lambda () (id (get-proxy) (get-datetime) (get-val))))
+               (case-lambda
+                 [()
+                  (id (get-proxy) (get-datetime) (get-val))]
+                 [(start-dt end-dt)
+                  (id (get-proxy) (get-datetime start-dt end-dt) (get-val))]))
 ;             (verify-getter get-id id)
              )))]
 
@@ -485,14 +557,18 @@
                        (eq? units (dimensioned-units (culminating-action-goal-state self)))
                        (invariant (culminating-action-goal-state self))))])
              (define get-id
-               (lambda () (id (get-proxy) (get-datetime) (get-dimensioned units))))
+               (case-lambda
+                 [()
+                  (id (get-proxy) (get-datetime) (get-dimensioned units))]
+                 [(start-dt end-dt)
+                  (id (get-proxy) (get-datetime start-dt end-dt) (get-dimensioned units))]))
 ;             (verify-getter get-id id)
              )))]))
 
 ; define-control-instruction creates a new type of control instruction. 
 ; It requires the following inputs:
 ; 1) An identifier for the new control instruction datatype.
-; 2) An list of struct constructors specifying the accepted target processes.
+; 2) An list of symbols specifying the accepted target processes.
 (define (get-target-val) (define-symbolic* target-val integer?) target-val)
 (define (get-void-sched) (define-symbolic* void-sched boolean?) void-sched)
 (define (get-void-stat) (define-symbolic* void-stat boolean?) void-stat)
@@ -501,7 +577,7 @@
     [(define-control-instruction id target ...)
      (begin
        (raise-if-not-identifier #'id stx)
-       (raise-if-not-identifier #'(target ...) stx)
+       (raise-if-not-symbol #'(target ...) stx)
        (with-syntax ([get-id (build-getter-name #'id)])
          #'(begin
              (struct id control-instruction ()
@@ -520,11 +596,30 @@
                                                      (list target ...))
                                              #f))))])
              (define get-id
-               (lambda ([pat-length 2])
-                 (id (get-proxy)
-                     (list-ref (list target ...) (get-target-val))
-                     (get-datetime)
-                     (if (get-void-sched) (void) (get-schedule pat-length))
-                     (if (get-void-stat) (void) (get-status)))))
+               (case-lambda
+                 [()
+                  (id (get-proxy)
+                      (list-ref (list target ...) (get-target-val))
+                      (get-datetime)
+                      (if (get-void-sched) (void) (get-schedule 2))
+                      (if (get-void-stat) (void) (get-status)))]
+                 [(pat-length)
+                  (id (get-proxy)
+                      (list-ref (list target ...) (get-target-val))
+                      (get-datetime)
+                      (if (get-void-sched) (void) (get-schedule pat-length))
+                      (if (get-void-stat) (void) (get-status)))]
+                 [(start-dt end-dt)
+                  (id (get-proxy)
+                      (list-ref (list target ...) (get-target-val))
+                      (get-datetime start-dt end-dt)
+                      (if (get-void-sched) (void) (get-schedule start-dt end-dt 2))
+                      (if (get-void-stat) (void) (get-status)))]
+                 [(start-dt end-dt pat-length)
+                  (id (get-proxy)
+                      (list-ref (list target ...) (get-target-val))
+                      (get-datetime start-dt end-dt)
+                      (if (get-void-sched) (void) (get-schedule start-dt end-dt pat-length))
+                      (if (get-void-stat) (void) (get-status)))]))
 ;             (verify-getter get-id id)
              )))]))

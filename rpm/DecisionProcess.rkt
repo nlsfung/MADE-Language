@@ -346,7 +346,7 @@
         null
         (let ([data (getter start-datetime end-datetime)])
           (assert (valid? data))
-          (append (list (getter start-datetime end-datetime))
+          (append (list data)
                   (generate-count (- total 1))))))
   
   (define (generate-interval cur-dt)  
@@ -358,8 +358,7 @@
           (append (list data)
                   (generate-interval next-dt)))))
   
-  (let ([sample-data (getter)]
-        [d-list (cond [(integer? frequency) (generate-count frequency)]
+  (let ([d-list (cond [(integer? frequency) (generate-count frequency)]
                       [(duration? frequency) (generate-interval start-datetime)])])
     
     (assert (and (eq? (length d-list)

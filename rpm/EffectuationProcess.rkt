@@ -11,6 +11,10 @@
          effectuation-process-proxy-flag)
 (provide (struct-out effectuation-process)
          target-schedule)
+(provide verify-effectuation
+         (struct-out action-plan-generator)
+         generate-action-plan-list
+         execute-effectuation-body)
 
 ; This file contains the implementation of Effectuation processes.
 
@@ -158,6 +162,105 @@
                      (action-plan-instruction-set d))
               #f)])
     scheduled-inst))
+
+; verify-effectuation helps verify a Effectuation process. 
+; It accepts as input:
+; 1) The struct-constructor for the effectuation process.
+; 2) A list of action plan generators.
+; 3) The execution datetime (which can be symbolic).
+; The verifier outputs a model (if any) for each of the following conditions:
+; 1) The input action plans satisfy one target schedule.
+;    (A seperate model is produced for each target).
+(define (verify-effectuation proc-constructor plan-gen-list dt)
+  (define (display-solution d-list dt sol d-crit output)
+    (displayln (format "Model for target criterion: ~a" d-crit))
+    (if (eq? sol (unsat))
+        (displayln (unsat))
+        (begin
+          (displayln "Input data:")
+          (displayln (evaluate d-list sol))
+          (displayln "Current date-time:")
+          (displayln (evaluate dt sol))
+          (displayln "Output data:")
+          (displayln (evaluate output sol))))
+    (displayln ""))
+  
+  (let* ([c-state (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t)]
+         [proc (proc-constructor null c-state)]
+         [o-type (effectuation-process-output-type proc)]
+         [target-schedules (effectuation-process-target-schedules proc)]
+         [proxy-flag (effectuation-process-proxy-flag proc)]
+
+         [output-num (map (lambda (t-sched)
+                            (- (length target-schedules) (length (member t-sched target-schedules))))
+                          target-schedules)])
+
+    (for-each
+     (lambda (n)
+       (let* ([t-sched (list-ref target-schedules n)]
+              [inst-type (target-schedule-instruction-type t-sched)]
+              [d-list (foldl (lambda (generator result)
+                               (append result
+                                       (generate-action-plan-list
+                                        (action-plan-generator-getter generator)
+                                        (action-plan-generator-start-datetime generator)
+                                        (action-plan-generator-end-datetime generator)
+                                        (action-plan-generator-frequency generator)
+                                        (list inst-type))))
+                             null
+                             plan-gen-list)]
+              [output (execute-effectuation-body d-list dt (list t-sched) o-type proxy-flag)]
+              [sol (solve (assert (and (not (null? output))
+                                       (valid? (list-ref output 0)))))])
+         (display-solution d-list dt sol n output)
+         (clear-asserts!)))
+     output-num)))
+
+; Action plan generator contains the specification for generating a list of
+; symbolic action plans (for verification purposes). It comprises:
+; 1) An action plan getter.
+; 2) The earliest date-time for the action plans.
+; 3) The latest date-time for the action plans.
+; 4) A frequency which can either be:
+;    a) A duration indicating how often the action plans should be repeated.
+;    b) A positive integer indicating the number of action plans to generate.
+(struct action-plan-generator
+  (getter start-datetime end-datetime frequency)
+  #:transparent)
+
+; generate-action-plan generates a list of action plans. It accepts an extra
+; list of symbols indicating specific instruction types to include in the plan.
+; If set to #f, all instruction types will be included.
+(define (generate-action-plan-list getter start-datetime end-datetime frequency target-list)
+  (define (generate-count total)
+    (if (or (<= total 0) (dt>? start-datetime end-datetime))
+        null
+        (let ([data (if (not target-list)
+                        (getter start-datetime end-datetime)
+                        (getter start-datetime end-datetime target-list))])
+          (assert (valid? data))
+          (append (list data)
+                  (generate-count (- total 1))))))
+  
+  (define (generate-interval cur-dt)  
+    (if (dt>? cur-dt end-datetime)
+        null
+        (let ([data (if (not target-list)
+                        (getter cur-dt cur-dt)
+                        (getter cur-dt cur-dt target-list))]
+              [next-dt (dt+ cur-dt frequency)])
+          (assert (valid? data))
+          (append (list data)
+                  (generate-interval next-dt)))))
+  
+  (let ([d-list (cond [(integer? frequency) (generate-count frequency)]
+                      [(duration? frequency) (generate-interval start-datetime)])])
+    (assert (eq? (length d-list)
+                      (length (remove-duplicates
+                               (map (lambda (d)
+                                      (action-plan-valid-datetime d))
+                                    d-list)))))
+    d-list))
 
 ;; Symbolic constants for verifying generate data.
 ;(require "./AnalysisProcess.rkt")

@@ -289,7 +289,7 @@
         null
         (let ([data (getter start-datetime end-datetime)])
           (assert (valid? data))
-          (append (list (getter start-datetime end-datetime))
+          (append (list data)
                   (generate-count (- total 1))))))
   
   (define (generate-interval cur-dt)  

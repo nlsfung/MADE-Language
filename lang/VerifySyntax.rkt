@@ -59,6 +59,10 @@
 ; Accepts as argument the number of datetime values in the starting pattern.
 (define-syntax (get-schedule stx)
   (syntax-case stx ()
+    [(get-schedule start-dt end-dt max)
+     #'(schedule
+        (for/list ([n (- max 1)]) (get-datetime start-dt end-dt))
+        (get-interval))]
     [(get-schedule max)
      #'(schedule
         (for/list ([n (- max 1)]) (get-datetime))
