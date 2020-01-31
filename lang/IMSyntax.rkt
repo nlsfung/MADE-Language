@@ -57,9 +57,9 @@
              (define get-id
                (case-lambda
                  [()
-                  (id (get-proxy) (get-datetime) (get-dimensioned units))]
+                  (id #f (get-datetime) (get-dimensioned units))]
                  [(start-dt end-dt)
-                  (id (get-proxy) (get-datetime start-dt end-dt) (get-dimensioned units))]))
+                  (id #f (get-datetime start-dt end-dt) (get-dimensioned units))]))
 ;             (verify-getter get-id id)
              )))]))
 
@@ -90,16 +90,16 @@
              (define get-id
                (case-lambda
                  [()
-                  (id (get-proxy)
+                  (id #f
                       (datetime-range (get-datetime) (get-datetime))
                       (get-bool))]
                  [(start-dt end-dt)
-                  (id (get-proxy)
+                  (id #f
                       (datetime-range (get-datetime start-dt end-dt)
                                       (get-datetime start-dt end-dt))
                       (get-bool))]
                  [(start-dt-1 end-dt-1 start-dt-2 end-dt-2)
-                  (id (get-proxy)
+                  (id #f
                       (datetime-range (get-datetime start-dt-1 end-dt-1)
                                       (get-datetime start-dt-2 end-dt-2))
                       (get-bool))]))
@@ -139,9 +139,9 @@
              (define get-id
                (case-lambda
                  [()
-                  (id (get-proxy) (get-datetime) (get-val))]
+                  (id #f (get-datetime) (get-val))]
                  [(start-dt end-dt)
-                  (id (get-proxy) (get-datetime start-dt end-dt) (get-val))]))
+                  (id #f (get-datetime start-dt end-dt) (get-val))]))
 ;             (verify-getter get-id id)
              )))]
 
@@ -169,9 +169,9 @@
              (define get-id
                (case-lambda
                  [()
-                  (id (get-proxy) (get-datetime) (get-dimensioned units))]
+                  (id #f (get-datetime) (get-dimensioned units))]
                  [(start-dt end-dt)
-                  (id (get-proxy) (get-datetime start-dt end-dt) (get-dimensioned units))]))
+                  (id #f (get-datetime start-dt end-dt) (get-dimensioned units))]))
 ;             (verify-getter get-id id)
              )))]))
 
@@ -216,16 +216,16 @@
            (define get-id
              (case-lambda
                [()
-                (id (get-proxy)
+                (id #f
                     (datetime-range (get-datetime) (get-datetime))
                     (get-val))]
                [(start-dt end-dt)
-                (id (get-proxy)
+                (id #f
                     (datetime-range (get-datetime start-dt end-dt)
                                     (get-datetime start-dt end-dt))
                     (get-val))]
                [(start-dt-1 end-dt-1 start-dt-2 end-dt-2)
-                (id (get-proxy)
+                (id #f
                     (datetime-range (get-datetime start-dt-1 end-dt-1)
                                     (get-datetime start-dt-2 end-dt-2))
                     (get-val))]))
@@ -256,16 +256,16 @@
              (define get-id
                (case-lambda
                  [()
-                  (id (get-proxy)
+                  (id #f
                       (datetime-range (get-datetime) (get-datetime))
                       (get-dimensioned units))]
                  [(start-dt end-dt)
-                  (id (get-proxy)
+                  (id #f
                       (datetime-range (get-datetime start-dt end-dt)
                                       (get-datetime start-dt end-dt))
                       (get-dimensioned units))]
                  [(start-dt-1 end-dt-1 start-dt-2 end-dt-2)
-                  (id (get-proxy)
+                  (id #f
                       (datetime-range (get-datetime start-dt-1 end-dt-1)
                                       (get-datetime start-dt-2 end-dt-2))
                       (get-dimensioned units))]))
@@ -358,7 +358,7 @@
                (case-lambda
                  [()
                   (let ([pat-length 2])
-                    (id (get-proxy)
+                    (id #f
                         (get-datetime)
                         (append (map (lambda (i)
                                        (scheduled-control
@@ -381,7 +381,7 @@
                                      (culminating-action-goal-state inst)))))))]
                  [(start-dt end-dt)
                   (let ([pat-length 2])
-                    (id (get-proxy)
+                    (id #f
                         (get-datetime start-dt end-dt)
                         (append (map (lambda (i)
                                        (scheduled-control
@@ -404,7 +404,7 @@
                                      (culminating-action-goal-state inst)))))))]
                  [(start-dt end-dt target-ids)
                   (let ([pat-length 2])
-                    (id (get-proxy)
+                    (id #f
                         (get-datetime start-dt end-dt)
                         (append (for/list ([i control-list]
                                            #:when (member i target-ids))
@@ -481,12 +481,12 @@
              (define get-id
                (case-lambda
                  [()
-                  (id (get-proxy)
+                  (id #f
                       (get-datetime)
                       (get-dimensioned units)
                       (get-duration))]
                  [(start-dt end-dt)
-                  (id (get-proxy)
+                  (id #f
                       (get-datetime start-dt end-dt)
                       (get-dimensioned units)
                       (get-duration))]))
@@ -529,9 +529,9 @@
              (define get-id
                (case-lambda
                  [()
-                  (id (get-proxy) (get-datetime) (get-val))]
+                  (id #f (get-datetime) (get-val))]
                  [(start-dt end-dt)
-                  (id (get-proxy) (get-datetime start-dt end-dt) (get-val))]))
+                  (id #f (get-datetime start-dt end-dt) (get-val))]))
 ;             (verify-getter get-id id)
              )))]
 
@@ -559,9 +559,9 @@
              (define get-id
                (case-lambda
                  [()
-                  (id (get-proxy) (get-datetime) (get-dimensioned units))]
+                  (id #f (get-datetime) (get-dimensioned units))]
                  [(start-dt end-dt)
-                  (id (get-proxy) (get-datetime start-dt end-dt) (get-dimensioned units))]))
+                  (id #f (get-datetime start-dt end-dt) (get-dimensioned units))]))
 ;             (verify-getter get-id id)
              )))]))
 
@@ -598,25 +598,25 @@
              (define get-id
                (case-lambda
                  [()
-                  (id (get-proxy)
+                  (id #f
                       (list-ref (list target ...) (get-target-val))
                       (get-datetime)
                       (if (get-void-sched) (void) (get-schedule 2))
                       (if (get-void-stat) (void) (get-status)))]
                  [(pat-length)
-                  (id (get-proxy)
+                  (id #f
                       (list-ref (list target ...) (get-target-val))
                       (get-datetime)
                       (if (get-void-sched) (void) (get-schedule pat-length))
                       (if (get-void-stat) (void) (get-status)))]
                  [(start-dt end-dt)
-                  (id (get-proxy)
+                  (id #f
                       (list-ref (list target ...) (get-target-val))
                       (get-datetime start-dt end-dt)
                       (if (get-void-sched) (void) (get-schedule start-dt end-dt 2))
                       (if (get-void-stat) (void) (get-status)))]
                  [(start-dt end-dt pat-length)
-                  (id (get-proxy)
+                  (id #f
                       (list-ref (list target ...) (get-target-val))
                       (get-datetime start-dt end-dt)
                       (if (get-void-sched) (void) (get-schedule start-dt end-dt pat-length))
