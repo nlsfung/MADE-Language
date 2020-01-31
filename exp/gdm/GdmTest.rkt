@@ -15,7 +15,7 @@
 
 ; This file contains the MADE networks associated with the GDM guideline.
 
-; The bg-network comprises all the MADE processes involved in the bg workflow.
+; The bg-network comprises all the MADE processes involved in the blood glucose (bg) workflow.
 (define bg-network
   (made-network
    null
@@ -32,6 +32,8 @@
          (decide-bg-daily-post-nutrition null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #f) #f))
          (decide-bg-insulin-post-nutrition null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #f) #f)))
    (list (effectuate-monitor-bg null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (effectuate-administer-insulin null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (effectuate-change-diet null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
          (effectuate-bg-nutrition-change null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
          (effectuate-bg-insulin-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
          (effectuate-bg-insulin-post-nutrition-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
@@ -43,56 +45,104 @@
          (effectuate-bg-daily-post-nutrition-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
          (effectuate-bg-daily-post-insulin-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t)))))
 
-; Test data stream for the blood glucose (bg) workflow.
-(define bg-data-stream
-  (list
-   (stream-item
-    (datetime 2019 12 1 7 0 0)
-    (list
-     (meal-event #f (datetime-range (datetime 2019 12 1 7 0 0) (datetime 2019 12 1 7 0 0)) (bool #t))
-     (carbohydrate-intake #f (datetime 2019 12 1 7 0 0) (carbohydrate-intake-value-space '-/+))))
-   (stream-item
-    (datetime 2019 12 1 8 0 0)
-    (list
-     (blood-glucose #f (datetime 2019 12 1 8 0 0) (dimensioned 145 'mg/dL))))
-   (stream-item
-    (datetime 2019 12 2 7 0 0)
-    (list
-     (meal-event #f (datetime-range (datetime 2019 12 2 7 0 0) (datetime 2019 12 2 7 0 0)) (bool #t))
-     (carbohydrate-intake #f (datetime 2019 12 2 7 0 0) (carbohydrate-intake-value-space '-/+))))
-   (stream-item
-    (datetime 2019 12 2 8 0 0)
-    (list
-     (blood-glucose #f (datetime 2019 12 2 8 0 0) (dimensioned 145 'mg/dL))))
-   (stream-item (datetime 2019 12 3 8 0 0) '())
-   (stream-item (datetime 2019 12 4 8 0 0) '())
-   (stream-item (datetime 2019 12 5 8 0 0) '())
-   (stream-item (datetime 2019 12 6 8 0 0) '())
-   (stream-item (datetime 2019 12 7 8 0 0) '())
-   (stream-item (datetime 2019 12 8 8 0 0) '())
-   (stream-item (datetime 2019 12 9 8 0 0) '())
-   (stream-item (datetime 2019 12 10 8 0 0) '())
-   (stream-item
-    (datetime 2019 12 11 7 0 0)
-    (list
-     (meal-event #f (datetime-range (datetime 2019 12 11 7 0 0) (datetime 2019 12 11 7 0 0)) (bool #t))
-     (carbohydrate-intake #f (datetime 2019 12 11 7 0 0) (carbohydrate-intake-value-space '-/+))))
-   (stream-item
-    (datetime 2019 12 11 8 0 0)
-    (list
-     (blood-glucose #f (datetime 2019 12 11 8 0 0) (dimensioned 145 'mg/dL))))
-   (stream-item
-    (datetime 2019 12 12 7 0 0)
-    (list
-     (meal-event #f (datetime-range (datetime 2019 12 12 7 0 0) (datetime 2019 12 12 7 0 0)) (bool #t))
-     (carbohydrate-intake #f (datetime 2019 12 12 7 0 0) (carbohydrate-intake-value-space '-/+))))
-   (stream-item
-    (datetime 2019 12 12 8 0 0)
-    (list
-     (blood-glucose #f (datetime 2019 12 12 8 0 0) (dimensioned 145 'mg/dL))))
-   (stream-item (datetime 2019 12 13 8 0 0) '())
-   (stream-item (datetime 2019 12 14 8 0 0) '())
-   (stream-item (datetime 2019 12 15 8 0 0) '())
-   (stream-item (datetime 2019 12 16 8 0 0) '())
-   (stream-item (datetime 2019 12 17 8 0 0) '())
-   (stream-item (datetime 2019 12 18 8 0 0) '())))
+;; Test data stream for the blood glucose (bg) workflow.
+;(define bg-data-stream
+;  (list
+;   (stream-item
+;    (datetime 2019 12 1 7 0 0)
+;    (list
+;     (meal-event #f (datetime-range (datetime 2019 12 1 7 0 0) (datetime 2019 12 1 7 0 0)) (bool #t))
+;     (carbohydrate-intake #f (datetime 2019 12 1 7 0 0) (carbohydrate-intake-value-space '-/+))))
+;   (stream-item
+;    (datetime 2019 12 1 8 0 0)
+;    (list
+;     (blood-glucose #f (datetime 2019 12 1 8 0 0) (dimensioned 145 'mg/dL))))
+;   (stream-item
+;    (datetime 2019 12 2 7 0 0)
+;    (list
+;     (meal-event #f (datetime-range (datetime 2019 12 2 7 0 0) (datetime 2019 12 2 7 0 0)) (bool #t))
+;     (carbohydrate-intake #f (datetime 2019 12 2 7 0 0) (carbohydrate-intake-value-space '-/+))))
+;   (stream-item
+;    (datetime 2019 12 2 8 0 0)
+;    (list
+;     (blood-glucose #f (datetime 2019 12 2 8 0 0) (dimensioned 145 'mg/dL))))
+;   (stream-item (datetime 2019 12 3 8 0 0) '())
+;   (stream-item (datetime 2019 12 4 8 0 0) '())
+;   (stream-item (datetime 2019 12 5 8 0 0) '())
+;   (stream-item (datetime 2019 12 6 8 0 0) '())
+;   (stream-item (datetime 2019 12 7 8 0 0) '())
+;   (stream-item (datetime 2019 12 8 8 0 0) '())
+;   (stream-item (datetime 2019 12 9 8 0 0) '())
+;   (stream-item (datetime 2019 12 10 8 0 0) '())
+;   (stream-item
+;    (datetime 2019 12 11 7 0 0)
+;    (list
+;     (meal-event #f (datetime-range (datetime 2019 12 11 7 0 0) (datetime 2019 12 11 7 0 0)) (bool #t))
+;     (carbohydrate-intake #f (datetime 2019 12 11 7 0 0) (carbohydrate-intake-value-space '-/+))))
+;   (stream-item
+;    (datetime 2019 12 11 8 0 0)
+;    (list
+;     (blood-glucose #f (datetime 2019 12 11 8 0 0) (dimensioned 145 'mg/dL))))
+;   (stream-item
+;    (datetime 2019 12 12 7 0 0)
+;    (list
+;     (meal-event #f (datetime-range (datetime 2019 12 12 7 0 0) (datetime 2019 12 12 7 0 0)) (bool #t))
+;     (carbohydrate-intake #f (datetime 2019 12 12 7 0 0) (carbohydrate-intake-value-space '-/+))))
+;   (stream-item
+;    (datetime 2019 12 12 8 0 0)
+;    (list
+;     (blood-glucose #f (datetime 2019 12 12 8 0 0) (dimensioned 145 'mg/dL))))
+;   (stream-item (datetime 2019 12 13 8 0 0) '())
+;   (stream-item (datetime 2019 12 14 8 0 0) '())
+;   (stream-item (datetime 2019 12 15 8 0 0) '())
+;   (stream-item (datetime 2019 12 16 8 0 0) '())
+;   (stream-item (datetime 2019 12 17 8 0 0) '())
+;   (stream-item (datetime 2019 12 18 8 0 0) '())))
+
+; The ktn-network comprises all the MADE processes involved in the ketonuria (ktn) workflow.
+(define ktn-network
+  (made-network
+   null
+   (list (analyse-urinary-ketone null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (analyse-carbohydrates-intake null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t)))
+   (list (decide-uk-twice-weekly null (control-state (schedule (list (datetime 2019 12 14 0 0 0)) #t) #t))
+         (decide-uk-daily null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #f) #f))
+         (decide-uk-dinner-increase null (control-state (schedule (list (datetime 2019 12 7 0 0 0)) #t) #t))
+         (decide-uk-twice-weekly-post-dinner null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #f) #f))
+         (decide-uk-daily-post-dinner null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #f) #f)))
+   (list (effectuate-change-dinner null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (effectuate-monitor-uk-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (effectuate-uk-dinner-increase null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (effectuate-uk-twice-weekly-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (effectuate-uk-twice-weekly-post-dinner-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (effectuate-uk-daily-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (effectuate-uk-daily-post-dinner-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t)))))
+
+;; Test data for the ketonuria workflow.
+;(define ktn-data-stream
+;  (list
+;   (stream-item
+;    (datetime 2019 12 1 8 0 0)
+;    (list
+;     (urinary-ketone #f (datetime 2019 12 1 8 0 0) (urinary-ketone-value-space '+))
+;     (carbohydrate-intake #f (datetime 2019 12 1 8 0 0) (carbohydrate-intake-value-space '-/+))))
+;   (stream-item
+;    (datetime 2019 12 2 8 0 0)
+;    (list
+;     (urinary-ketone #f (datetime 2019 12 2 8 0 0) (urinary-ketone-value-space '+))
+;     (carbohydrate-intake #f (datetime 2019 12 2 8 0 0) (carbohydrate-intake-value-space '-/+))))
+;   (stream-item
+;    (datetime 2019 12 3 8 0 0)
+;    (list
+;     (urinary-ketone #f (datetime 2019 12 3 8 0 0) (urinary-ketone-value-space '+))
+;     (carbohydrate-intake #f (datetime 2019 12 2 3 0 0) (carbohydrate-intake-value-space '-/+))))
+;   (stream-item (datetime 2019 12 7 8 0 0) '())
+;   (stream-item (datetime 2019 12 9 19 0 0) '())
+;   (stream-item (datetime 2019 12 10 8 0 0) '())
+;   (stream-item
+;    (datetime 2019 12 20 8 0 0)
+;    (list
+;     (urinary-ketone #f (datetime 2019 12 20 8 0 0) (urinary-ketone-value-space '--))))
+;   (stream-item (datetime 2019 12 21 8 0 0) '())
+;   (stream-item (datetime 2019 12 22 8 0 0) '())
+;   (stream-item (datetime 2019 12 23 8 0 0) '())))

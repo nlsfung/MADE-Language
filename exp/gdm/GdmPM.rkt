@@ -202,22 +202,24 @@
 (define-analysis analyse-carbohydrates-intake #f carbohydrates-compliance
   ((duration 7 0 0 0)
    (lambda (d-list)
-     (if (>= (rosette-count
-              (lambda (d) (enum<? (observed-property-value d)
-                                  (carbohydrate-intake-value-space '-/+)))
-              d-list)
-             1)
-         (carbohydrates-value-space 'insufficient)
-         (void))))
+     (let* ([carb-list (filter (lambda (d) (carbohydrate-intake? d)) d-list)])
+       (if (>= (rosette-count
+                (lambda (d) (enum<? (observed-property-value d)
+                                    (carbohydrate-intake-value-space '-/+)))
+                carb-list)
+               1)
+           (carbohydrates-value-space 'insufficient)
+           (void)))))
   ((duration 7 0 0 0)
    (lambda (d-list)
-     (if (>= (rosette-count
-              (lambda (d) (not (eq? (observed-property-value d)
-                                    (carbohydrate-intake-value-space '-/+))))
-              d-list)
-             2)
-         (carbohydrates-value-space 'non-compliant)
-         (void)))))
+     (let* ([carb-list (filter (lambda (d) (carbohydrate-intake? d)) d-list)])
+       (if (>= (rosette-count
+                (lambda (d) (not (eq? (observed-property-value d)
+                                      (carbohydrate-intake-value-space '-/+))))
+                carb-list)
+               2)
+           (carbohydrates-value-space 'non-compliant)
+           (void))))))
 
 ;(verify-analysis
 ;   analyse-carbohydrates-intake
@@ -697,7 +699,7 @@
 ; its set to an arbitrary value of -1.
 (define-decision
   decide-bg-nutrition-change
-  #f
+  #t
   change-nutrition-plan
   (#:instructions
    (control-template 'decide-bg-twice-weekly #f)
@@ -1056,7 +1058,7 @@
    (control-template 'decide-uk-twice-weekly-post-dinner
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
+                      #:offset (duration 14 0 0 0)
                       #:pattern (duration 0 0 0 0)
                       #:interval #t)
                      #t)
