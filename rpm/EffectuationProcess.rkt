@@ -171,9 +171,12 @@
 ; The verifier outputs a model (if any) for each of the following conditions:
 ; 1) The input action plans satisfy one target schedule.
 ;    (A seperate model is produced for each target).
+; 2) The input action plans satisfy two targets with different types or targets.
 (define (verify-effectuation proc-constructor plan-gen-list dt)
-  (define (display-solution d-list dt sol d-crit output)
-    (displayln (format "Model for target criterion: ~a" d-crit))
+  (define (display-solution d-list dt sol d-crit-1 d-crit-2 output-1 output-2)
+    (if (eq? d-crit-1 d-crit-2)
+        (displayln (format "Model for target criterion: ~a" d-crit-1))
+        (displayln (format "Model for target criteria: ~a and ~a" d-crit-1 d-crit-2)))
     (if (eq? sol (unsat))
         (displayln (unsat))
         (begin
@@ -182,7 +185,9 @@
           (displayln "Current date-time:")
           (displayln (evaluate dt sol))
           (displayln "Output data:")
-          (displayln (evaluate output sol))))
+          (if (<= d-crit-1 d-crit-2)
+              (displayln (evaluate output-1 sol))
+              (displayln (evaluate output-2 sol)))))
     (displayln ""))
   
   (let* ([c-state (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t)]
@@ -190,30 +195,45 @@
          [o-type (effectuation-process-output-type proc)]
          [target-schedules (effectuation-process-target-schedules proc)]
          [proxy-flag (effectuation-process-proxy-flag proc)]
-
          [output-num (map (lambda (t-sched)
                             (- (length target-schedules) (length (member t-sched target-schedules))))
                           target-schedules)])
 
     (for-each
      (lambda (n)
-       (let* ([t-sched (list-ref target-schedules n)]
-              [inst-type (target-schedule-instruction-type t-sched)]
-              [d-list (foldl (lambda (generator result)
-                               (append result
-                                       (generate-action-plan-list
-                                        (action-plan-generator-getter generator)
-                                        (action-plan-generator-start-datetime generator)
-                                        (action-plan-generator-end-datetime generator)
-                                        (action-plan-generator-frequency generator)
-                                        (list inst-type))))
-                             null
-                             plan-gen-list)]
-              [output (execute-effectuation-body d-list dt (list t-sched) o-type proxy-flag)]
-              [sol (solve (assert (and (not (null? output))
-                                       (valid? (list-ref output 0)))))])
-         (display-solution d-list dt sol n output)
-         (clear-asserts!)))
+       (for-each
+        (lambda (m)
+          (let* ([t-scheds (list (list-ref target-schedules n) (list-ref target-schedules m))]
+                 [inst-types (map (lambda (t) (target-schedule-instruction-type t))
+                                  t-scheds)]
+                 [d-list (foldl (lambda (generator result)
+                                  (append result
+                                          (generate-action-plan-list
+                                           (action-plan-generator-getter generator)
+                                           (action-plan-generator-start-datetime generator)
+                                           (action-plan-generator-end-datetime generator)
+                                           (action-plan-generator-frequency generator)
+                                           inst-types)))
+                                null
+                                plan-gen-list)]
+                 [outputs (map (lambda (t)
+                                 (execute-effectuation-body
+                                  d-list dt (list t) o-type proxy-flag))
+                               t-scheds)]
+                 [output-0 (list-ref outputs 0)]
+                 [output-1 (list-ref outputs 1)]
+                 [sol (if (= n m)
+                          (solve (assert (and (not (null? output-0))
+                                              (valid? (list-ref output-0 0)))))
+                          (solve (assert (and (not (null? output-0))
+                                              (valid? (list-ref output-0 0))
+                                              (not (null? output-1))
+                                              (valid? (list-ref output-1 0))
+                                              (not (eq? (list-ref inst-types 0)
+                                                        (list-ref inst-types 1)))))))])
+            (display-solution d-list dt sol n m output-0 output-1)
+            (clear-asserts!)))
+        (member n output-num)))
      output-num)))
 
 ; Action plan generator contains the specification for generating a list of

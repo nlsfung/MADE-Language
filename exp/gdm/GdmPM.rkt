@@ -12,6 +12,8 @@
          "../../rpm/DecisionProcess.rkt"
          "../../rpm/EffectuationProcess.rkt")
 
+(provide (all-defined-out))
+
 ; This file contains the specification of the process model for the clinical
 ; guideline for gestational diabetes mellitus (GDM).
 
@@ -166,20 +168,22 @@
 (define-analysis analyse-urinary-ketone #f ketonuria
   ((duration 7 0 0 0)
    (lambda (d-list)
-     (if (andmap (lambda (d) (enum<? (observed-property-value d)
-                                     (urinary-ketone-value-space '-/+)))
-                 d-list)
-         (ketonuria-value-space 'negative)
-         (void))))
+     (let* ([uk-list (filter (lambda (d) (urinary-ketone? d)) d-list)])
+       (if (andmap (lambda (d) (enum<? (observed-property-value d)
+                                       (urinary-ketone-value-space '-/+)))
+                   uk-list)
+           (ketonuria-value-space 'negative)
+           (void)))))
   ((duration 7 0 0 0)
    (lambda (d-list)
-     (if (> (rosette-count
-             (lambda (d) (enum>? (observed-property-value d)
-                                 (urinary-ketone-value-space '-/+)))
-             d-list)
-            2)
-         (ketonuria-value-space 'positive)
-         (void)))))
+     (let* ([uk-list (filter (lambda (d) (urinary-ketone? d)) d-list)])
+       (if (> (rosette-count
+               (lambda (d) (enum>? (observed-property-value d)
+                                   (urinary-ketone-value-space '-/+)))
+               uk-list)
+              2)
+           (ketonuria-value-space 'positive)
+           (void))))))
 
 ;(verify-analysis
 ;   analyse-urinary-ketone
@@ -693,7 +697,7 @@
 ; its set to an arbitrary value of -1.
 (define-decision
   decide-bg-nutrition-change
-  #t
+  #f
   change-nutrition-plan
   (#:instructions
    (control-template 'decide-bg-twice-weekly #f)
@@ -1711,40 +1715,50 @@
    #:instruction 'decide-bg-insulin
    #:predicate (lambda (i-list) #t))
   (target-schedule
-   #:plan bg-twice-weekly-plan
-   #:instruction 'decide-bg-insulin-post-nutrition
-   #:predicate (lambda (i-list) #t))
-  (target-schedule
-   #:plan bg-twice-weekly-plan
-   #:instruction 'decide-bg-insulin-adjust
+   #:plan start-insulin-plan
+   #:instruction 'decide-bg-insulin
    #:predicate (lambda (i-list) #t))
   (target-schedule
    #:plan change-nutrition-plan
    #:instruction 'decide-bg-insulin
    #:predicate (lambda (i-list) #t))
   (target-schedule
+   #:plan bg-daily-plan
+   #:instruction 'decide-bg-insulin
+   #:predicate (lambda (i-list) #t)))
+
+(define-effectuation
+  effectuate-bg-insulin-post-nutrition-control
+  #f
+  bg-insulin-control
+  (target-schedule
+   #:plan bg-twice-weekly-plan
+   #:instruction 'decide-bg-insulin-post-nutrition
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
    #:plan change-nutrition-plan
    #:instruction 'decide-bg-insulin-post-nutrition
    #:predicate (lambda (i-list) #t))
   (target-schedule
    #:plan start-insulin-plan
-   #:instruction 'decide-bg-insulin
+   #:instruction 'decide-bg-insulin-post-nutrition
    #:predicate (lambda (i-list) #t))
   (target-schedule
-   #:plan start-insulin-plan
+   #:plan bg-daily-plan
    #:instruction 'decide-bg-insulin-post-nutrition
+   #:predicate (lambda (i-list) #t)))
+
+(define-effectuation
+  effectuate-bg-insulin-adjust-control
+  #f
+  bg-insulin-control  
+  (target-schedule
+   #:plan bg-twice-weekly-plan
+   #:instruction 'decide-bg-insulin-adjust
    #:predicate (lambda (i-list) #t))
   (target-schedule
    #:plan start-insulin-plan
    #:instruction 'decide-bg-insulin-adjust
-   #:predicate (lambda (i-list) #t))
-  (target-schedule
-   #:plan bg-daily-plan
-   #:instruction 'decide-bg-insulin
-   #:predicate (lambda (i-list) #t))
-  (target-schedule
-   #:plan bg-daily-plan
-   #:instruction 'decide-bg-insulin-post-nutrition
    #:predicate (lambda (i-list) #t))
   (target-schedule
    #:plan bg-daily-plan
@@ -1786,40 +1800,50 @@
    #:instruction 'decide-bg-twice-weekly
    #:predicate (lambda (i-list) #t))
   (target-schedule
+   #:plan change-nutrition-plan
+   #:instruction 'decide-bg-twice-weekly
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan start-insulin-plan
+   #:instruction 'decide-bg-twice-weekly
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-daily-plan
+   #:instruction 'decide-bg-twice-weekly
+   #:predicate (lambda (i-list) #t)))
+
+(define-effectuation
+  effectuate-bg-twice-weekly-post-nutrition-control
+  #f
+  bg-twice-weekly-control
+  (target-schedule
    #:plan bg-twice-weekly-plan
    #:instruction 'decide-bg-twice-weekly-post-nutrition
    #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan change-nutrition-plan
+   #:instruction 'decide-bg-twice-weekly-post-nutrition
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan start-insulin-plan
+   #:instruction 'decide-bg-twice-weekly-post-nutrition
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-daily-plan
+   #:instruction 'decide-bg-twice-weekly-post-nutrition
+   #:predicate (lambda (i-list) #t)))
+
+(define-effectuation
+  effectuate-bg-twice-weekly-post-insulin-control
+  #f
+  bg-twice-weekly-control
   (target-schedule
    #:plan bg-twice-weekly-plan
    #:instruction 'decide-bg-twice-weekly-post-insulin
    #:predicate (lambda (i-list) #t))
   (target-schedule
-   #:plan change-nutrition-plan
-   #:instruction 'decide-bg-twice-weekly
-   #:predicate (lambda (i-list) #t))
-  (target-schedule
-   #:plan change-nutrition-plan
-   #:instruction 'decide-bg-twice-weekly-post-nutrition
-   #:predicate (lambda (i-list) #t))
-  (target-schedule
-   #:plan start-insulin-plan
-   #:instruction 'decide-bg-twice-weekly
-   #:predicate (lambda (i-list) #t))
-  (target-schedule
-   #:plan start-insulin-plan
-   #:instruction 'decide-bg-twice-weekly-post-nutrition
-   #:predicate (lambda (i-list) #t))
-  (target-schedule
    #:plan start-insulin-plan
    #:instruction 'decide-bg-twice-weekly-post-insulin
-   #:predicate (lambda (i-list) #t))
-  (target-schedule
-   #:plan bg-daily-plan
-   #:instruction 'decide-bg-twice-weekly
-   #:predicate (lambda (i-list) #t))
-  (target-schedule
-   #:plan bg-daily-plan
-   #:instruction 'decide-bg-twice-weekly-post-nutrition
    #:predicate (lambda (i-list) #t))
   (target-schedule
    #:plan bg-daily-plan
@@ -1861,20 +1885,30 @@
    #:instruction 'decide-bg-daily
    #:predicate (lambda (i-list) #t))
   (target-schedule
+   #:plan bg-daily-plan
+   #:instruction 'decide-bg-daily
+   #:predicate (lambda (i-list) #t)))
+
+(define-effectuation
+  effectuate-bg-daily-post-nutrition-control
+  #f
+  bg-daily-control
+  (target-schedule
    #:plan bg-twice-weekly-plan
    #:instruction 'decide-bg-daily-post-nutrition
    #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan bg-daily-plan
+   #:instruction 'decide-bg-daily-post-nutrition
+   #:predicate (lambda (i-list) #t)))
+
+(define-effectuation
+  effectuate-bg-daily-post-insulin-control
+  #f
+  bg-daily-control  
   (target-schedule
    #:plan bg-twice-weekly-plan
    #:instruction 'decide-bg-daily-post-insulin
-   #:predicate (lambda (i-list) #t))
-  (target-schedule
-   #:plan bg-daily-plan
-   #:instruction 'decide-bg-daily
-   #:predicate (lambda (i-list) #t))
-  (target-schedule
-   #:plan bg-daily-plan
-   #:instruction 'decide-bg-daily-post-nutrition
    #:predicate (lambda (i-list) #t))
   (target-schedule
    #:plan bg-daily-plan
@@ -1973,20 +2007,25 @@
    #:instruction 'decide-uk-twice-weekly
    #:predicate (lambda (i-list) #t))
   (target-schedule
+   #:plan uk-daily-plan
+   #:instruction 'decide-uk-twice-weekly
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan increase-dinner-intake-plan
+   #:instruction 'decide-uk-twice-weekly
+   #:predicate (lambda (i-list) #t)))
+
+(define-effectuation
+  effectuate-uk-twice-weekly-post-dinner-control
+  #f
+  uk-twice-weekly-control
+  (target-schedule
    #:plan uk-twice-weekly-plan
    #:instruction 'decide-uk-twice-weekly-post-dinner
    #:predicate (lambda (i-list) #t))
   (target-schedule
    #:plan uk-daily-plan
-   #:instruction 'decide-uk-twice-weekly
-   #:predicate (lambda (i-list) #t))
-  (target-schedule
-   #:plan uk-daily-plan
    #:instruction 'decide-uk-twice-weekly-post-dinner
-   #:predicate (lambda (i-list) #t))
-  (target-schedule
-   #:plan increase-dinner-intake-plan
-   #:instruction 'decide-uk-twice-weekly
    #:predicate (lambda (i-list) #t))
   (target-schedule
    #:plan increase-dinner-intake-plan
@@ -2023,20 +2062,25 @@
    #:instruction 'decide-uk-daily
    #:predicate (lambda (i-list) #t))
   (target-schedule
+   #:plan uk-daily-plan
+   #:instruction 'decide-uk-daily
+   #:predicate (lambda (i-list) #t))
+  (target-schedule
+   #:plan increase-dinner-intake-plan
+   #:instruction 'decide-uk-daily
+   #:predicate (lambda (i-list) #t)))
+
+(define-effectuation
+  effectuate-uk-daily-post-dinner-control
+  #f
+  uk-daily-control
+  (target-schedule
    #:plan uk-twice-weekly-plan
    #:instruction 'decide-uk-daily-post-dinner
    #:predicate (lambda (i-list) #t))
   (target-schedule
    #:plan uk-daily-plan
-   #:instruction 'decide-uk-daily
-   #:predicate (lambda (i-list) #t))
-  (target-schedule
-   #:plan uk-daily-plan
    #:instruction 'decide-uk-daily-post-dinner
-   #:predicate (lambda (i-list) #t))
-  (target-schedule
-   #:plan increase-dinner-intake-plan
-   #:instruction 'decide-uk-daily
    #:predicate (lambda (i-list) #t)))
 
 ;(verify-effectuation
@@ -2311,7 +2355,12 @@
   (target-schedule
    #:plan gestational-hypertension-plan
    #:instruction 'decide-bp-gestational
-   #:predicate (lambda (i-list) #t))
+   #:predicate (lambda (i-list) #t)))
+
+(define-effectuation
+  effectuate-bp-two-days-gestational-control
+  #f
+  bp-gestational-control
   (target-schedule
    #:plan gestational-hypertension-plan
    #:instruction 'decide-bp-two-days-gestational
