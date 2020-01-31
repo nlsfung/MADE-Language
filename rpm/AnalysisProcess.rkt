@@ -106,7 +106,9 @@
   ; 4) Generate the output abstraction, if any.
   (let* ([filtered-data (sort (filter-expired-data d-list (dt- dt t-window) dt)
                               observed-after?)]
-         [output-value (ab-func filtered-data)]
+         [output-value (if (null? filtered-data)
+                           (void)
+                           (ab-func filtered-data))]
 
          [latest-significant-data
           (if (void? output-value)
