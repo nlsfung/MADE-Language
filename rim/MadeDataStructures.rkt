@@ -7,11 +7,13 @@
 (provide
  (struct-out made-data)
  (struct-out measurement)
+ (struct-out observation)
  (struct-out observed-property)
  (struct-out observed-event)
  (struct-out datetime-range)
  (struct-out abstraction)
  (struct-out control-instruction)
+ (struct-out action-instruction)
  (struct-out culminating-action)
  (struct-out homogeneous-action)
  (struct-out action-plan)
