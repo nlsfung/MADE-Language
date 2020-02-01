@@ -146,3 +146,48 @@
 ;   (stream-item (datetime 2019 12 21 8 0 0) '())
 ;   (stream-item (datetime 2019 12 22 8 0 0) '())
 ;   (stream-item (datetime 2019 12 23 8 0 0) '())))
+
+; The bp-network comprises all the MADE processes involved in the blood pressure (bp) workflow.
+(define bp-network
+  (made-network
+   null
+   (list (analyse-blood-pressure null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t)))
+   (list (decide-bp-once-weekly null (control-state (schedule (list (datetime 2019 12 14 0 0 0)) #t) #t))
+         (decide-bp-twice-weekly null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #f) #f))
+         (decide-bp-chronic null (control-state (schedule (list (datetime 2019 12 1 6 0 0)) #t) #t))
+         (decide-bp-gestational null (control-state (schedule (list (datetime 2019 12 1 6 0 0)) #t) #t))
+         (decide-bp-once-weekly-gestational null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #f) #f))
+         (decide-bp-two-days-gestational null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #f) #f))
+         (decide-bp-hourly-gestational null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #f) #f)))
+   (list (effectuate-monitor-systolic-bp-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (effectuate-monitor-diastolic-bp-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (effectuate-bp-once-weekly-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (effectuate-bp-twice-weekly-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (effectuate-bp-chronic-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (effectuate-bp-gestational-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (effectuate-bp-two-days-gestational-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (effectuate-bp-once-weekly-gestational-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t))
+         (effectuate-bp-hourly-gestational-control null (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t)))))
+
+;; Test data stream for the blood pressure (bp) workflow.
+;(define bp-data-stream
+;  (list
+;   (stream-item
+;    (datetime 2019 12 1 8 0 0)
+;    (list
+;     (systolic-blood-pressure #f (datetime 2019 12 1 8 0 0) (dimensioned 130 'mmHg))))
+;   (stream-item
+;    (datetime 2019 12 2 8 0 0)
+;    (list
+;     (diastolic-blood-pressure #f (datetime 2019 12 2 8 0 0) (dimensioned 85 'mmHg))))
+;   (stream-item (datetime 2019 12 14 8 0 0) '())
+;   (stream-item
+;    (datetime 2019 12 15 8 0 0)
+;    (list
+;     (systolic-blood-pressure #f (datetime 2019 12 15 8 0 0) (dimensioned 145 'mmHg))))
+;   (stream-item
+;    (datetime 2019 12 15 13 0 0)
+;    (list
+;     (diastolic-blood-pressure #f (datetime 2019 12 15 13 0 0) (dimensioned 96 'mmHg))))
+;   (stream-item (datetime 2019 12 15 14 0 0) '())))
+
