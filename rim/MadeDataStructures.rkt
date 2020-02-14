@@ -19,7 +19,8 @@
  (struct-out action-plan)
  (struct-out scheduled-control)
  (struct-out scheduled-homogeneous-action)
- (struct-out scheduled-culminating-action))
+ (struct-out scheduled-culminating-action)
+ gen:transaction transaction-datetime)
 
 ; This file contains the implementation of the 6 main datatypes in the MADE RIM,
 ; viz. measurement, observation, abstraction, action plan, action instruction
@@ -34,6 +35,9 @@
 ;    on the clinical requirements only.
 ; 4) An function (required for abstractions) is added to retrieve the specific
 ;    structure of MADE data (e.g. blood glucose).
+(define-generics transaction
+  [transaction-datetime transaction])
+
 (struct made-data (proxy-flag)
   #:transparent
   #:methods gen:typed
@@ -42,6 +46,9 @@
 
 (struct measurement made-data (valid-datetime value)
   #:transparent
+  #:methods gen:transaction
+  [(define (transaction-datetime self) (measurement-valid-datetime self))]
+  
   #:methods gen:typed
   [(define/generic super-valid? valid?)
    (define (get-type self) measurement)
@@ -58,6 +65,9 @@
 (struct observation made-data () #:transparent)
 (struct observed-property observation (valid-datetime value)
   #:transparent
+  #:methods gen:transaction
+  [(define (transaction-datetime self) (observed-property-valid-datetime self))]
+  
   #:methods gen:typed
   [(define/generic super-valid? valid?)
    (define (get-type self) observed-property)
@@ -67,8 +77,13 @@
           (super-valid? (observed-property-valid-datetime self))
           (super-valid? (observed-property-value self))
           (super-valid? (made-data (made-data-proxy-flag self)))))])
+
 (struct observed-event observation (valid-datetime-range value)
   #:transparent
+  #:methods gen:transaction
+  [(define (transaction-datetime self)
+     (datetime-range-start (observed-event-valid-datetime-range self)))]
+  
   #:methods gen:typed
   [(define/generic super-valid? valid?)
    (define (get-type self) observed-event)
@@ -96,6 +111,10 @@
 ; Abstraction is implemented similarly to observation.
 (struct abstraction made-data (valid-datetime-range value)
   #:transparent
+  #:methods gen:transaction
+  [(define (transaction-datetime self)
+     (datetime-range-start (abstraction-valid-datetime-range self)))]
+  
   #:methods gen:typed
   [(define/generic super-valid? valid?)
    (define (get-type self) abstraction)
@@ -113,6 +132,9 @@
 
 (struct homogeneous-action action-instruction (start-datetime rate duration)
   #:transparent
+  #:methods gen:transaction
+  [(define (transaction-datetime self) (homogeneous-action-start-datetime self))]
+  
   #:methods gen:typed
   [(define/generic super-valid? valid?)
    (define (get-type self) homogeneous-action)
@@ -127,6 +149,9 @@
 
 (struct culminating-action action-instruction (start-datetime goal-state)
   #:transparent
+  #:methods gen:transaction
+  [(define (transaction-datetime self) (culminating-action-start-datetime self))]
+  
   #:methods gen:typed
   [(define/generic super-valid? valid?)
    (define (get-type self) culminating-action)
@@ -143,6 +168,9 @@
 ; For simplicity, the target process is identified with its constructor procedure.
 (struct control-instruction made-data (target-process valid-datetime schedule status)
   #:transparent
+  #:methods gen:transaction
+  [(define (transaction-datetime self) (control-instruction-valid-datetime self))]
+  
   #:methods gen:typed
   [(define/generic super-valid? valid?)
    (define (get-type self) control-instruction)
@@ -165,6 +193,9 @@
 ; schedule control and action instructions.
 (struct action-plan made-data (valid-datetime instruction-set)
   #:transparent
+  #:methods gen:transaction
+  [(define (transaction-datetime self) (action-plan-valid-datetime self))]
+  
   #:methods gen:typed
   [(define/generic super-valid? valid?)
    (define (get-type self) action-plan)
