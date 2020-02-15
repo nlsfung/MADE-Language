@@ -23,7 +23,7 @@
 (define-generics made-proc
   [proxy? made-proc]
   [execute made-proc in-data datetime]
-  [update-data-state made-proc in-data]
+  [update-data-state made-proc in-data datetime]
   [generate-data made-proc in-data datetime]
   [update-control-state made-proc in-data datetime]
   [valid-spec? made-proc]
@@ -31,8 +31,8 @@
   #:fallbacks
   [(define (execute made-proc in-data datetime)
      (gen-proc-execute made-proc in-data datetime))
-   (define (update-data-state made-proc in-data)
-     (gen-proc-update-data-state made-proc in-data))
+   (define (update-data-state made-proc in-data datetime)
+     (gen-proc-update-data-state made-proc in-data datetime))
    (define (update-control-state made-proc in-data datetime)
      (gen-proc-update-control-state made-proc in-data datetime))])
 
@@ -75,7 +75,7 @@
   ; 2) Update its data state given the input and output data.
   ; 3) Update its control state given the input and output data and current date-time.
   (let* ([proc-output (generate-data made-proc in-data datetime)]
-         [updated-proc (update-data-state made-proc (append in-data proc-output))]
+         [updated-proc (update-data-state made-proc (append in-data proc-output) datetime)]
          [new-proc (update-control-state updated-proc
                                          (append in-data proc-output)
                                          datetime)])
@@ -83,7 +83,7 @@
     ; Output the updated process and the generated data
     (list new-proc proc-output)))  
 
-(define (gen-proc-update-data-state made-proc in-data)
+(define (gen-proc-update-data-state made-proc in-data datetime)
   ; Updating the data state involves adding the input data into the data state,
   ; ignoring any duplicates.
   ((get-type made-proc) (remove-duplicates (append (made-process-data-state made-proc) in-data))
