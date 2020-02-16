@@ -14,11 +14,13 @@
 (provide (struct-out decision-process)
          gen:plan-temp plan-instantiate
          gen:inst-template instantiate
-         relative-schedule
-         plan-template
-         control-template
-         homogeneous-action-template
-         culminating-action-template)
+         gen:rel-sched sched-instantiate
+         (struct-out relative-schedule)
+         (struct-out plan-template)
+         (struct-out control-template)
+         (struct-out homogeneous-action-template)
+         (struct-out culminating-action-template)
+         filter-abstractions)
 (provide verify-decision
          (struct-out abstraction-generator)
          generate-abstraction-list
@@ -78,7 +80,7 @@
   ; 1) Filter out all data that are not valid at the input date-time.
   ; 2) Check if any decision criterion (if any) returns true given the data.
   ; 3) Instantiate from the plan template the corresponding action plan.
-  (let* ([filtered-data (filter-expired-data d-list dt)]
+  (let* ([filtered-data (filter-abstractions d-list dt)]
          [selected-crit (findf (lambda (c) (c filtered-data)) d-crit)])
     (if selected-crit
         (list (plan-instantiate p-temp dt proxy-flag))
@@ -87,7 +89,7 @@
 ; Helper function for filtering out abstractions that are:
 ; 1) Not valid at the input datetime.
 ; 2) Overriden by another abstraction.
-(define (filter-expired-data d-list dt)
+(define (filter-abstractions d-list dt)
   (let* ([filtered-data
           (filter
            (lambda (d)
@@ -106,8 +108,8 @@
          [type-list (remove-duplicates
                      (map (lambda (d) (get-type d)) sorted-data))])
     
-    (map (lambda (t) (findf (lambda (d) (eq? (get-type d) t)) sorted-data))
-         type-list)))
+    (filter-map (lambda (t) (findf (lambda (d) (eq? (get-type d) t)) sorted-data))
+                type-list)))
 
 ; A plan template comprises a plan type and a set of three different types of
 ; instruction templates, one for control instructions, homogeneous action
