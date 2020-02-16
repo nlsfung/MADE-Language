@@ -8,7 +8,8 @@
 (provide gen:monitoring
          monitoring-process-output-specification
          monitoring-process-output-type
-         monitoring-process-proxy-flag)
+         monitoring-process-proxy-flag
+         filter-measurements)
 (provide (struct-out monitoring-process)
          (struct-out property-specification)
          (struct-out event-specification)
@@ -130,7 +131,7 @@
   ; 1) Filter out irrelevant data, and sort the remaining data.
   ; 2) Execute the property function.
   ; 3) Instantiate the property.
-  (let* ([filtered-data (sort (filter-expired-data d-list (dt- dt t-window) dt)
+  (let* ([filtered-data (sort (filter-measurements d-list (dt- dt t-window) dt)
                               dt<? #:key measurement-valid-datetime)]
          [property-value (p-func filtered-data)])
     (if (void? property-value)
@@ -156,19 +157,19 @@
                                     d-list)
                             dt<? #:key measurement-valid-datetime)]
          
-         [start-event? (start-pred (filter-expired-data sorted-data (dt- dt start-win) dt))]
-         [end-event? (end-pred (filter-expired-data sorted-data (dt- dt end-win) dt))]
+         [start-event? (start-pred (filter-measurements sorted-data (dt- dt start-win) dt))]
+         [end-event? (end-pred (filter-measurements sorted-data (dt- dt end-win) dt))]
          [opposing-event (cond [start-event?
                                 (findf (lambda (d)
                                          (let* ([ref-dt (measurement-valid-datetime d)])
-                                           (end-pred (filter-expired-data sorted-data
+                                           (end-pred (filter-measurements sorted-data
                                                                           (dt- ref-dt end-win)
                                                                           ref-dt))))
                                        (reverse sorted-data))]
                                [end-event?
                                 (findf (lambda (d)
                                          (let* ([ref-dt (measurement-valid-datetime d)])
-                                           (start-pred (filter-expired-data sorted-data
+                                           (start-pred (filter-measurements sorted-data
                                                                             (dt- ref-dt start-win)
                                                                             ref-dt))))
                                        (reverse sorted-data))]
@@ -176,11 +177,11 @@
     (if opposing-event
         (list (o-type proxy-flag
                       (datetime-range (measurement-valid-datetime opposing-event) dt)
-                      end-event?))
+                      (not start-event?)))
         null)))
     
 ; Helper function for filtering out data that lies outside a given range.
-(define (filter-expired-data d-state dt-start dt-end)
+(define (filter-measurements d-state dt-start dt-end)
   (filter (lambda (d)
             (and (measurement? d)
                  (dt-between? (measurement-valid-datetime d)
@@ -215,7 +216,7 @@
                         null
                         measurement-gen-list)]
 
-         [filtered-data (sort (filter-expired-data d-list (dt- dt t-window) dt)
+         [filtered-data (sort (filter-measurements d-list (dt- dt t-window) dt)
                               dt<? #:key measurement-valid-datetime)]
          [property-value (p-func filtered-data)]
          [output (o-type proxy-flag dt property-value)]
@@ -268,11 +269,11 @@
 
          [start-win (event-trigger-time-window start-trigger)]
          [start-pred (event-trigger-trigger-predicate start-trigger)]
-         [start-event? (start-pred (filter-expired-data d-list (dt- dt start-win) dt))]
+         [start-event? (start-pred (filter-measurements d-list (dt- dt start-win) dt))]
 
          [end-win (event-trigger-time-window end-trigger)]
          [end-pred (event-trigger-trigger-predicate end-trigger)]
-         [end-event? (end-pred (filter-expired-data d-list (dt- dt end-win) dt))]
+         [end-event? (end-pred (filter-measurements d-list (dt- dt end-win) dt))]
 
          [start-sol (solve (assert start-event?))]
          [end-sol (solve (assert end-event?))]

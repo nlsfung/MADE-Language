@@ -36,11 +36,17 @@
             0
             (filter (lambda (d) (body-acceleration? d)) d-list)))
 
-(define activity-spec (property-specification (gen-window) sum))
+(define property-window (gen-window))
+(define activity-spec (property-specification property-window sum))
+
+(define event-start-win (gen-window))
+(define event-end-win (gen-window))
+(define event-start-pred (lambda (d-list) (> (sum d-list) 25)))
+(define event-end-pred (lambda (d-list) (< (sum d-list) 5)))
 (define exercise-spec
   (event-specification
-   (event-trigger (gen-window) (lambda (d-list) (> (sum d-list) 25)))
-   (event-trigger (gen-window) (lambda (d-list) (< (sum d-list) 5)))))
+   (event-trigger event-start-win event-start-pred)
+   (event-trigger event-end-win event-end-pred)))
 
 (define d-state
   (list (gen-body-acc) (gen-body-acc) (gen-body-acc) (gen-body-acc)))
@@ -88,62 +94,91 @@
 (define output-1 (generate-data m-proc-1 null cur-dt))
 (define output-2 (generate-data m-proc-2 null cur-dt))
 
-; Verify implementation of execute property body.
-(define (verify-property-body)
-  (verify (assert
-           (implies (is-proc-executed? c-state cur-dt)
-                    (and (not (null? output-1))
-                         (activity-level? (list-ref output-1 0))
-                         (<= (observed-property-value (list-ref output-1 0))
-                             (sum d-state)))))))
+; Verify implementation of generate-data for the Monitoring of observed properties.
+(define (filter-ext dSet dt-start dt-end)
+  (filter-measurements
+   (remove-duplicates
+    (filter (lambda (d)
+              (not (made-data-proxy-flag d)))
+            dSet))
+   dt-start
+   dt-end))
 
-; Verify implementation of execute event body.
-(define over-acc-meas (filter (lambda (d) (and (> (measurement-value d) 25))) d-state))
-(define start-win (event-trigger-time-window (event-specification-start-trigger exercise-spec)))
-(define end-win (event-trigger-time-window (event-specification-end-trigger exercise-spec)))
-(define (verify-event-body)
-  (verify (assert
-           (implies (and (dur=? start-win (duration 0 0 0 0))
-                         (dur=? end-win (duration 0 0 0 0))
-                         (= 4 (length (remove-duplicates
-                                       (map (lambda (d) (measurement-valid-datetime d))
-                                            d-state)))))
-                    (and (implies (and (not (null? output-2))
-                                       (exercise-event? (list-ref output-2 0))
-                                       (not (observed-event-value (list-ref output-2 0))))
-                                  (findf (lambda (d) (dt=? (measurement-valid-datetime d)
-                                                           cur-dt))
-                                         over-acc-meas))
-                         (implies (and (not (null? output-2))
-                                       (exercise-event? (list-ref output-2 0))
-                                       (observed-event-value (list-ref output-2 0)))
-                                  (findf (lambda (d) (dt<? (measurement-valid-datetime d)
-                                                           cur-dt))
-                                         over-acc-meas)))))))
-
-; Verify the implementation of the proxy flags.
-(define (verify-data-proxy)
+(define (verify-generate-property)
   (verify
    (assert
-    (implies (and (is-proc-executed? c-state cur-dt)
-                  (= 4 (length (filter (lambda (d) (made-data-proxy-flag d)) d-state))))
-             (and (not (null? output-1))
-                  (activity-level? (list-ref output-1 0))
-                  (= 0 (observed-property-value (list-ref output-1 0)))
-                  (null? output-2))))))
+    (implies (is-proc-executed? c-state cur-dt)
+             (eq? output-1
+                  (list (activity-level
+                         sample-process-1-proxy
+                         cur-dt
+                         (sum (filter-ext 
+                               d-state
+                               (dt- cur-dt property-window)
+                               cur-dt)))))))))
 
-(define (verify-proc-proxy-1)
-  (verify #:assume
-          (assert (not (null? output-1)))
-          #:guarantee
-          (assert
-           (implies (proxy? m-proc-1)
-                    (made-data-proxy-flag (list-ref output-1 0))))))
+; Verify implementation of generate-data for the Monitoring of observed events.
+(define (get-event-start-dt d)
+  (datetime-range-start (observed-event-valid-datetime-range d)))
+(define (get-event-end-dt d)
+  (datetime-range-end (observed-event-valid-datetime-range d)))
 
-(define (verify-proc-proxy-2)
-  (verify #:assume
-          (assert (not (null? output-2)))
-          #:guarantee
-          (assert
-           (implies (proxy? m-proc-2)
-                    (made-data-proxy-flag (list-ref output-2 0))))))
+(define (verify-generate-event-id)
+  (verify
+   (assert
+    (implies (not (null? output-2))
+             (and (exercise-event? (list-ref output-2 0))
+                  (eq? sample-process-2-proxy
+                       (made-data-proxy-flag (list-ref output-2 0))))))))
+
+(define (verify-generate-false-event)
+  (verify
+   (assert
+    (implies (and (not (null? output-2))
+                  (not (observed-event-value (list-ref output-2 0))))
+             (and (eq? (get-event-end-dt (list-ref output-2 0))
+                       cur-dt)
+                  (event-start-pred
+                   (filter-ext d-state (dt- cur-dt event-start-win) cur-dt))
+                  (event-end-pred
+                   (filter-ext d-state
+                               (dt- (get-event-start-dt (list-ref output-2 0))
+                                    event-end-win)
+                               (get-event-start-dt (list-ref output-2 0))))
+                  (andmap (lambda (dt-mid)
+                            (implies (dt>? dt-mid
+                                           (get-event-start-dt (list-ref output-2 0)))
+                                     (not (event-end-pred
+                                           (filter-ext d-state
+                                                       (dt- dt-mid event-end-win)
+                                                       dt-mid)))))
+                          (map (lambda (d) (measurement-valid-datetime d))
+                               (filter-ext d-state
+                                           (get-event-start-dt (list-ref output-2 0))
+                                           (get-event-end-dt (list-ref output-2 0))))))))))
+
+(define (verify-generate-true-event)
+  (verify
+   (assert
+    (implies (and (not (null? output-2))
+                  (observed-event-value (list-ref output-2 0)))
+             (and (eq? (get-event-end-dt (list-ref output-2 0))
+                       cur-dt)
+                  (event-end-pred
+                   (filter-ext d-state (dt- cur-dt event-end-win) cur-dt))
+                  (event-start-pred
+                   (filter-ext d-state
+                               (dt- (get-event-start-dt (list-ref output-2 0))
+                                    event-start-win)
+                               (get-event-start-dt (list-ref output-2 0))))
+                  (andmap (lambda (dt-mid)
+                            (implies (dt>? dt-mid
+                                           (get-event-start-dt (list-ref output-2 0)))
+                                     (not (event-start-pred
+                                           (filter-ext d-state
+                                                       (dt- dt-mid event-start-win)
+                                                       dt-mid)))))
+                          (map (lambda (d) (measurement-valid-datetime d))
+                               (filter-ext d-state
+                                           (get-event-start-dt (list-ref output-2 0))
+                                           (get-event-end-dt (list-ref output-2 0))))))))))
