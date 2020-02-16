@@ -82,57 +82,85 @@
 
 (define output (generate-data room-temp-proc null cur-dt))
 
-;; Verify the implementation of the control state.
-;(define (verify-is-executed)
-;  (verify (assert (implies (or (not (eq? sched-dt cur-dt))
-;                               (not proc-status))
-;                           (null? output)))))
-;
-;; Verify the implementation of the time window.
-;(define (verify-time-window)
-;  (verify (assert (implies (< win-length 2) (null? output)))))
-;
-;; Verify the implementation of the abstraction functions.
-;(define (verify-ab-funcs)
-;  (verify
-;   (assert
-;    (implies (eq? (length d-state)
-;                  (length (filter
-;                           (lambda (d)
-;                             (and (< (observed-property-value d) 14)
-;                                  (> (observed-property-value d) 2)))
-;                           d-state)))
-;             (null? output)))))
-;
-;; Verify the implementation of the proxy flags.
-;(define (verify-data-proxy)
-;  (verify
-;   (assert
-;    (implies (<= 3 (length (filter (lambda (d) (made-data-proxy-flag d)) d-state)))
-;             (null? output)))))
-;
-;(define (verify-proc-proxy)
-;  (verify #:assume
-;          (assert (and (not (null? output))
-;                       (room-temperature-grade? (list-ref output 0))))
-;          #:guarantee
-;          (assert
-;           (implies (proxy? room-temp-proc)
-;                    (made-data-proxy-flag (list-ref output 0))))))
-;
-;; Verify the implementation of determining abstraction validity range.
-;(define new-dt (datetime 7 9 12 (gen-dt-part) 0 0))
-;(assert (normalized? new-dt))
-;(define new-output (execute-analysis-body d-state new-dt out-type ab-spec #f))
-;(define (verify-valid-range)
-;  (verify (assert
-;           (implies (and (not (null? output))
-;                         (room-temperature-grade? (list-ref output 0))
-;                         (dt>? new-dt (datetime-range-start
-;                                       (abstraction-valid-datetime-range (list-ref output 0))))
-;                         (dt<? new-dt (datetime-range-end
-;                                       (abstraction-valid-datetime-range (list-ref output 0)))))
-;                    (and (not (null? new-output))
-;                         (room-temperature-grade? (list-ref new-output 0))
-;                         (eq? (abstraction-value (list-ref new-output 0))
-;                              (abstraction-value (list-ref output 0))))))))
+; Verify implementation of generate-data for Analysis processes.
+(define dt-mid
+  (let ([hour (gen-dt-part)]
+        [day (gen-dt-part)])
+    (assert (and (>= hour 0) (< hour 24)))
+    (assert (and (>= day 1) (< day 31)))
+    (datetime 7 9 day hour 0 0)))
+
+(define (filter-ext dSet dt-start dt-end)
+  (filter-observations
+   (remove-duplicates
+    (filter (lambda (d)
+              (not (made-data-proxy-flag d)))
+            dSet))
+   dt-start
+   dt-end))
+
+(define (verify-ab-pair-necessity)
+  (verify
+   (assert
+    (implies (not (null? output))
+             (ormap (lambda (ab-pair)
+                      (not (void?
+                            ((abstraction-pair-abstraction-function ab-pair)
+                             (filter-ext
+                              d-state
+                              (dt- cur-dt (abstraction-pair-time-window ab-pair))
+                              cur-dt)))))
+                    ab-spec)))))
+
+(define (verify-ab-pair-sufficiency)
+  (verify
+   (assert
+    (implies (and (null? output)
+                  (is-proc-executed? c-state cur-dt))
+             (andmap (lambda (ab-pair)
+                       (void?
+                        ((abstraction-pair-abstraction-function ab-pair)
+                         (filter-ext
+                          d-state
+                          (dt- cur-dt (abstraction-pair-time-window ab-pair))
+                          cur-dt))))
+                     ab-spec)))))
+
+(define (verify-abstraction-id)
+  (verify
+   (assert
+    (implies (not (null? output))
+             (and (room-temperature-grade? (list-ref output 0))
+                  (eq? proc-proxy
+                       (made-data-proxy-flag (list-ref output 0))))))))
+
+(define (verify-abstraction-value)
+  (verify
+   (assert
+    (implies (not (null? output))
+             (and (eq? (datetime-range-start
+                        (abstraction-valid-datetime-range
+                         (list-ref output 0)))
+                       cur-dt)
+                  (implies (and (dt>=? dt-mid
+                                       (datetime-range-start
+                                        (abstraction-valid-datetime-range
+                                         (list-ref output 0))))
+                                (dt<=? dt-mid
+                                       (datetime-range-end
+                                        (abstraction-valid-datetime-range
+                                         (list-ref output 0)))))
+                           (and (implies (eq? (abstraction-value (list-ref output 0))
+                                              'low)
+                                         (not (void?
+                                               (grade-temp-low
+                                                (filter-ext d-state
+                                                            (dt- dt-mid (duration 0 win-length 0 0))
+                                                            dt-mid)))))
+                                (implies (eq? (abstraction-value (list-ref output 0))
+                                              'high)
+                                         (not (void?
+                                               (grade-temp-high
+                                                (filter-ext d-state
+                                                            (dt- dt-mid (duration 0 win-length 0 0))
+                                                            dt-mid))))))))))))

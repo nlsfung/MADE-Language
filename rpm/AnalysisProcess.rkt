@@ -11,11 +11,13 @@
          analysis-process-output-specification
          analysis-process-proxy-flag)
 (provide (struct-out analysis-process)
-         (struct-out abstraction-pair))
+         (struct-out abstraction-pair)
+         filter-observations)
 (provide verify-analysis
          (struct-out observation-generator)
          generate-observation-list
-         execute-abstraction-pair)
+         execute-abstraction-pair
+         execute-analysis-body)
 
 ; This file contains the implementation of Analysis processes.
 
@@ -104,7 +106,7 @@
   ; 2) Feed the filtered data into the input abstraction function.
   ; 3) If a (non-void) output value is produced, determine its valid datetime range.
   ; 4) Generate the output abstraction, if any.
-  (let* ([filtered-data (sort (filter-expired-data d-list (dt- dt t-window) dt)
+  (let* ([filtered-data (sort (filter-observations d-list (dt- dt t-window) dt)
                               observed-after?)]
          [output-value (if (null? filtered-data)
                            (void)
@@ -152,7 +154,7 @@
                 (observed-event-valid-datetime-range ob2))])))
 
 ; Helper function for filtering out data that lies outside a given range.
-(define (filter-expired-data d-list dt-start dt-end)
+(define (filter-observations d-list dt-start dt-end)
   (filter (lambda (d)
             (or (and (observed-property? d)
                      (dt-between? (observed-property-valid-datetime d)
