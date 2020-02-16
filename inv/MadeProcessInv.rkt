@@ -132,3 +132,8 @@
                                 (is-proc-executed? c-state-2 cur-dt))
                            (eq? (generate-data proc in-data cur-dt)
                                 (generate-data (sample-process d-state c-state-2) in-data cur-dt))))))
+
+(define (verify-proc-executed-impl)
+  (verify (assert (implies (or (not (on-schedule? proc-sched cur-dt))
+                               (not proc-status))
+                           (null? d-set-out)))))
