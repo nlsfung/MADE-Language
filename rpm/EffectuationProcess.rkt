@@ -10,7 +10,8 @@
          effectuation-process-output-type
          effectuation-process-proxy-flag)
 (provide (struct-out effectuation-process)
-         target-schedule)
+         (struct-out target-schedule)
+         filter-plans)
 (provide verify-effectuation
          (struct-out action-plan-generator)
          generate-action-plan-list
@@ -83,7 +84,7 @@
   ; 1) Filter out expired action plans
   ; 2) Identify a scheduled instruction (if any) to instantiate.
   ; 3) Instantiate it as an instruction of the output type. 
-  (let* ([filtered-data (filter-expired-data d-list dt)]
+  (let* ([filtered-data (filter-plans d-list dt)]
          [scheduled-inst
           (ormap (lambda (d)
                    (ormap (lambda (t-sched)
@@ -116,7 +117,7 @@
 ; 1) Removing all data that are not action plans.
 ; 2) Identifying all types of action plans.
 ; 3) Finding for each plan type the most up-to-date plan (if any).
-(define (filter-expired-data d-list dt)
+(define (filter-plans d-list dt)
   (let* ([plan-list (filter (lambda (d) (action-plan? d)) d-list)]
          [type-list (remove-duplicates
                      (map (lambda (d) (get-type d)) plan-list))]

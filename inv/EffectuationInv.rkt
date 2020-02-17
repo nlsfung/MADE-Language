@@ -75,12 +75,10 @@
            (duration 0 2 0 0)))))
 
 (define d-state
-  (let* ([fever-one (list (gen-fever-treatment-one) (gen-fever-treatment-one))]
+  (let* ([fever-one (list (gen-fever-treatment-one))]
          [fever-two (list (gen-fever-treatment-two) (gen-fever-treatment-two))]
-         [exercise-one (list (gen-exercise-regimen-one) (gen-exercise-regimen-one))])
-    (assert (not (eq? (list-ref fever-one 0) (list-ref fever-one 1))))
+         [exercise-one (list (gen-exercise-regimen-one))])
     (assert (not (eq? (list-ref fever-two 0) (list-ref fever-two 1))))
-    (assert (not (eq? (list-ref exercise-one 0) (list-ref exercise-one 1))))
     (append fever-one fever-two exercise-one)))
   
 (define sched-dt (gen-datetime))
@@ -92,16 +90,24 @@
   (define-symbolic* inst-pred boolean?)
   (lambda (i) inst-pred))
 
+(define-symbolic target-branch integer?)
+(assert (and (>= target-branch 0) (< target-branch 3)))
+(define target-inst (cond [(eq? target-branch 0) treadmill-exercise]
+                          [(eq? target-branch 1) ibuprofen]
+                          [(eq? target-branch 2) analyze-heart-rate]))
+(define target-output (cond [(eq? target-branch 0) treadmill-exercise]
+                          [(eq? target-branch 1) ibuprofen]
+                          [(eq? target-branch 2) control-analyze-heart-rate]))
 (define proc-proxy (gen-proxy))
 (define proc-target-schedules
-  (list (target-schedule fever-treatment treadmill-exercise (gen-inst-pred))
-        (target-schedule exercise-regimen treadmill-exercise (gen-inst-pred))))
+  (list (target-schedule fever-treatment target-inst (gen-inst-pred))
+        (target-schedule exercise-regimen target-inst (gen-inst-pred))))
 
 (struct sample-process effectuation-process ()
   #:transparent
   #:methods gen:effectuation
   [(define (effectuation-process-target-schedules self) proc-target-schedules)
-   (define (effectuation-process-output-type self) treadmill-exercise)
+   (define (effectuation-process-output-type self) target-output)
    (define (effectuation-process-proxy-flag self) proc-proxy)]
 
   #:methods gen:typed
@@ -116,98 +122,186 @@
 
 (define output (generate-data e-proc null cur-dt))
 
-;; Verify implementation of extract instruction.
-;(define-symbolic x y integer?)
-;(define d (list-ref d-state x))
-;(define t-sched (list-ref (effectuation-process-target-schedules e-proc) y))
-;(define inst (extract-instruction d cur-dt t-sched))
-;(define (verify-extract-instruction)
-;  (verify
-;   (assert
-;    (let* ([plan-match?
-;            (eq? (target-schedule-plan-type t-sched) (get-type d))]
-;           [inst-matches
-;            (filter (lambda (i)
-;                      (cond [(scheduled-control? i)
-;                             (and (eq? (target-schedule-instruction-type t-sched)
-;                                       (scheduled-control-target-process i))
-;                                  ((target-schedule-instruction-predicate t-sched) i))]
-;                            [(scheduled-homogeneous-action? i)
-;                             (and (eq? (target-schedule-instruction-type t-sched)
-;                                       (scheduled-homogeneous-action-action-type i))
-;                                  ((target-schedule-instruction-predicate t-sched) i))]
-;                            [(scheduled-culminating-action? i)
-;                             (and (eq? (target-schedule-instruction-type t-sched)
-;                                       (scheduled-culminating-action-action-type i))
-;                                  ((target-schedule-instruction-predicate t-sched) i))]))
-;                    (action-plan-instruction-set d))]
-;           [sched-matches
-;            (filter (lambda (i)
-;                      (cond [(scheduled-control? i)
-;                             (dt=? (action-plan-valid-datetime d) cur-dt)]
-;                            [(scheduled-homogeneous-action? i)
-;                             (on-schedule? (scheduled-homogeneous-action-schedule i) cur-dt)]
-;                            [(scheduled-culminating-action? i)
-;                             (on-schedule? (scheduled-culminating-action-schedule i) cur-dt)]))
-;                    (action-plan-instruction-set d))])
-;      (implies (not inst)
-;               (or (not plan-match?)
-;                   (eq? (length inst-matches)
-;                        (length (remove* sched-matches inst-matches)))))))))
-;
-;; Verify the implementation of the proxy flags.
-;(define (verify-data-proxy)
-;  (verify
-;   (assert
-;    (implies (= 6 (length (filter (lambda (d) (made-data-proxy-flag d)) d-state)))
-;             (null? output)))))
-;
-;(define (verify-proc-proxy)
-;  (verify #:assume
-;          (assert (not (null? output)))
-;          #:guarantee
-;          (assert
-;           (implies (proxy? e-proc)
-;                    (made-data-proxy-flag (list-ref output 0))))))
-;
-;; Verify implementation of execute effectuation body.
-;(define-symbolic v integer?)
-;(define d-2 (list-ref d-state v))
-;(define cur-dt-2 (gen-datetime))
-;(define output-2 (execute-effectuation-body
-;                  (list d-2)
-;                  cur-dt-2
-;                  (effectuation-process-target-schedules e-proc)
-;                  (effectuation-process-output-type e-proc)
-;                  (effectuation-process-proxy-flag e-proc)))
-;
-;(define (verify-effectuation-body)
-;  (verify
-;   #:assume
-;   (assert (and (= 6 (length (filter
-;                              (lambda (d) (not (made-data-proxy-flag d)))
-;                              d-state)))
-;                (= 6 (length (remove-duplicates
-;                              (map (lambda (d) (action-plan-valid-datetime d))
-;                                   d-state))))))
-;
-;   #:guarantee   
-;   (assert (implies (and (not (null? output))
-;                         (not (null? output-2))
-;                         (not (eq? output output-2)))
-;                    (or (not (dt=? cur-dt cur-dt-2))
-;                        (dt>? (action-plan-valid-datetime d-2) cur-dt)
-;                        (findf (lambda (d)
-;                                 (or (and (eq? (get-type d) (get-type d-2))
-;                                          (dt>? (action-plan-valid-datetime d)
-;                                                (action-plan-valid-datetime d-2)))
-;                                     (and (eq? output
-;                                           (execute-effectuation-body
-;                                            (list d)
-;                                            cur-dt
-;                                            (effectuation-process-target-schedules e-proc)
-;                                            (effectuation-process-output-type e-proc)
-;                                            (effectuation-process-proxy-flag e-proc)))
-;                                          (> (length (member d d-state))
-;                                             (length (member d-2 d-state))))))
-;                               d-state))))))
+; Verify implementation of generate-data for Effectuation processes.
+(define (filter-ext dSet dt)
+  (filter-plans
+   (remove-duplicates
+    (filter (lambda (d)
+              (not (made-data-proxy-flag d)))
+            dSet))
+   dt))
+
+(define (verify-target-necessity)
+  (verify
+   (assert
+    (implies (not (null? output))
+             (ormap (lambda (target)
+                      (ormap (lambda (plan)
+                               (ormap (lambda (sched-inst)
+                                        (cond [(scheduled-control? sched-inst)
+                                               (and (eq? (target-schedule-plan-type target)
+                                                         (get-type plan))
+                                                    (eq? (action-plan-valid-datetime plan) cur-dt)
+                                                    (eq? (target-schedule-instruction-type target)
+                                                         (scheduled-control-target-process sched-inst))
+                                                    ((target-schedule-instruction-predicate target) sched-inst))]
+
+                                              [(scheduled-homogeneous-action? sched-inst)
+                                               (and (eq? (target-schedule-plan-type target)
+                                                         (get-type plan))
+                                                    (eq? (target-schedule-instruction-type target)
+                                                         (scheduled-homogeneous-action-action-type sched-inst))
+                                                    (on-schedule? (scheduled-homogeneous-action-schedule sched-inst)
+                                                                  cur-dt)
+                                                    ((target-schedule-instruction-predicate target) sched-inst))]
+
+                                              [(scheduled-culminating-action? sched-inst)
+                                               (and (eq? (target-schedule-plan-type target)
+                                                         (get-type plan))
+                                                    (eq? (target-schedule-instruction-type target)
+                                                         (scheduled-culminating-action-action-type sched-inst))
+                                                    (on-schedule? (scheduled-culminating-action-schedule sched-inst)
+                                                                  cur-dt)
+                                                    ((target-schedule-instruction-predicate target) sched-inst))]))
+                                      (action-plan-instruction-set plan)))
+                             (filter-ext d-state cur-dt)))
+                    (effectuation-process-target-schedules e-proc))))))
+
+(define (verify-target-sufficiency)
+  (verify
+   (assert
+    (implies (and (null? output)
+                  (is-proc-executed? c-state cur-dt))
+             (not (ormap (lambda (target)
+                           (ormap (lambda (plan)
+                                    (ormap (lambda (sched-inst)
+                                             (cond [(scheduled-control? sched-inst)
+                                                    (and (eq? (target-schedule-plan-type target)
+                                                              (get-type plan))
+                                                         (eq? (action-plan-valid-datetime plan) cur-dt)
+                                                         (eq? (target-schedule-instruction-type target)
+                                                              (scheduled-control-target-process sched-inst))
+                                                         ((target-schedule-instruction-predicate target) sched-inst))]
+
+                                                   [(scheduled-homogeneous-action? sched-inst)
+                                                    (and (eq? (target-schedule-plan-type target)
+                                                              (get-type plan))
+                                                         (eq? (target-schedule-instruction-type target)
+                                                              (scheduled-homogeneous-action-action-type sched-inst))
+                                                         (on-schedule? (scheduled-homogeneous-action-schedule sched-inst)
+                                                                       cur-dt)
+                                                         ((target-schedule-instruction-predicate target) sched-inst))]
+
+                                                   [(scheduled-culminating-action? sched-inst)
+                                                    (and (eq? (target-schedule-plan-type target)
+                                                              (get-type plan))
+                                                         (eq? (target-schedule-instruction-type target)
+                                                              (scheduled-culminating-action-action-type sched-inst))
+                                                         (on-schedule? (scheduled-culminating-action-schedule sched-inst)
+                                                                       cur-dt)
+                                                         ((target-schedule-instruction-predicate target) sched-inst))]))
+                                           (action-plan-instruction-set plan)))
+                                  (filter-ext d-state cur-dt)))
+                  (effectuation-process-target-schedules e-proc)))))))
+
+(define (verify-control)
+  (verify
+   (assert
+    (implies (and (not (null? output))
+                  (control-instruction? (list-ref output 0)))
+             (and (control-analyze-heart-rate? (list-ref output 0))
+                  (eq? (made-data-proxy-flag (list-ref output 0))
+                       proc-proxy)
+                  (eq? (control-instruction-valid-datetime (list-ref output 0))
+                       cur-dt)                  
+                  (ormap (lambda (target)
+                           (ormap (lambda (plan)
+                                    (ormap (lambda (sched-inst)
+                                             (and (scheduled-control? sched-inst)
+                                                  (and (eq? (target-schedule-plan-type target)
+                                                            (get-type plan))
+                                                       (eq? (action-plan-valid-datetime plan) cur-dt)
+                                                       (eq? (target-schedule-instruction-type target)
+                                                            (scheduled-control-target-process sched-inst))
+                                                       ((target-schedule-instruction-predicate target) sched-inst)
+                                                       (eq? (control-instruction-schedule (list-ref output 0))
+                                                            (scheduled-control-schedule sched-inst))
+                                                       (eq? (control-instruction-status (list-ref output 0))
+                                                            (scheduled-control-status sched-inst)))))
+                                           (action-plan-instruction-set plan)))
+                                  (filter-ext d-state cur-dt)))
+                         (effectuation-process-target-schedules e-proc)))))))
+
+(define (verify-homogeneous-action)
+  (verify
+   (assert
+    (implies (and (not (null? output))
+                  (homogeneous-action? (list-ref output 0)))
+             (and (treadmill-exercise? (list-ref output 0))
+                  (eq? (made-data-proxy-flag (list-ref output 0))
+                       proc-proxy)
+                  (eq? (homogeneous-action-start-datetime (list-ref output 0))
+                       cur-dt)                  
+                  (ormap (lambda (target)
+                           (ormap (lambda (plan)
+                                    (ormap (lambda (sched-inst)
+                                             (and (scheduled-homogeneous-action? sched-inst)
+                                                  (and (eq? (target-schedule-plan-type target)
+                                                            (get-type plan))
+                                                       (eq? (target-schedule-instruction-type target)
+                                                            (scheduled-homogeneous-action-action-type sched-inst))
+                                                       (on-schedule? (scheduled-homogeneous-action-schedule sched-inst)
+                                                                     cur-dt)
+                                                       ((target-schedule-instruction-predicate target) sched-inst)
+                                                       (eq? (homogeneous-action-rate (list-ref output 0))
+                                                            (scheduled-homogeneous-action-rate sched-inst))
+                                                       (eq? (homogeneous-action-duration (list-ref output 0))
+                                                            (scheduled-homogeneous-action-duration sched-inst)))))
+                                           (action-plan-instruction-set plan)))
+                                  (filter-ext d-state cur-dt)))
+                         (effectuation-process-target-schedules e-proc)))))))
+
+(define (verify-culminating-action)
+  (verify
+   (assert
+    (implies (and (not (null? output))
+                  (culminating-action? (list-ref output 0)))
+             (and (ibuprofen? (list-ref output 0))
+                  (eq? (made-data-proxy-flag (list-ref output 0))
+                       proc-proxy)
+                  (eq? (culminating-action-start-datetime (list-ref output 0))
+                       cur-dt)                  
+                  (ormap (lambda (target)
+                           (ormap (lambda (plan)
+                                    (ormap (lambda (sched-inst)
+                                             (and (scheduled-culminating-action? sched-inst)
+                                                  (and (eq? (target-schedule-plan-type target)
+                                                            (get-type plan))
+                                                       (eq? (target-schedule-instruction-type target)
+                                                            (scheduled-culminating-action-action-type sched-inst))
+                                                       (on-schedule? (scheduled-culminating-action-schedule sched-inst)
+                                                                     cur-dt)
+                                                       ((target-schedule-instruction-predicate target) sched-inst)
+                                                       (eq? (culminating-action-goal-state (list-ref output 0))
+                                                            (scheduled-culminating-action-goal-state sched-inst)))))
+                                           (action-plan-instruction-set plan)))
+                                  (filter-ext d-state cur-dt)))
+                         (effectuation-process-target-schedules e-proc)))))))
+
+; Verify implementation of filter-plans
+(define (verify-filter-plans)
+  (verify
+   (assert
+    (andmap (lambda (p1)
+              (and (dt<=? (action-plan-valid-datetime p1) cur-dt)
+                   (andmap (lambda (p2)
+                             (or (dt<=? (action-plan-valid-datetime p2)
+                                        (action-plan-valid-datetime p1))
+                                 (dt>? (action-plan-valid-datetime p2)
+                                        cur-dt)))
+                           (filter (lambda (d)
+                                     (and (action-plan? d)
+                                          (not (made-data-proxy-flag d))
+                                          (eq? (get-type d) (get-type p1))))
+                                   d-state))))
+            (filter-ext d-state cur-dt)))))
