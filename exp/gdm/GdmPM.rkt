@@ -208,7 +208,7 @@
                                     (carbohydrate-intake-value-space '-/+)))
                 carb-list)
                1)
-           (carbohydrates-value-space 'insufficient)
+           (carbohydrates-compliance-value-space 'insufficient)
            (void)))))
   ((duration 7 0 0 0)
    (lambda (d-list)
@@ -218,7 +218,7 @@
                                       (carbohydrate-intake-value-space '-/+))))
                 carb-list)
                2)
-           (carbohydrates-value-space 'non-compliant)
+           (carbohydrates-compliance-value-space 'non-compliant)
            (void))))))
 
 ;(verify-analysis
@@ -1080,7 +1080,7 @@
       (not (findf
             (lambda (d) (and (carbohydrates-compliance? d)
                              (eq? (abstraction-value d)
-                                  (carbohydrates-value-space 'insufficient))))
+                                  (carbohydrates-compliance-value-space 'insufficient))))
             d-list))))))
 
 ;(verify-decision

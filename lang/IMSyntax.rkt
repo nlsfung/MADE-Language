@@ -3,6 +3,10 @@
 (require (only-in rosette
                   symbol?
                   syntax->datum
+                  datum->syntax
+                  string->symbol
+                  symbol->string
+                  string-append
                   eval-syntax
                   check-duplicates
                   raise-argument-error
@@ -72,7 +76,7 @@
 ; 4) An optional invariant on the observation value (for observed properties).
 (define-syntax (define-observation stx)
   (syntax-case stx ()
-    [(define-observation id 'event)
+    [(define-observation id #:event)
      (begin
        (raise-if-not-identifier #'id stx)
        (with-syntax ([get-id (build-getter-name #'id)])
@@ -109,11 +113,29 @@
     [(define-observation id type)
      (cond [(eq? (syntax->datum #'type) 'dimensioned)
             (raise-syntax-error #f "units missing." stx #'type)]
+           [(eq? (syntax->datum #'type) 'nominal)
+            (raise-syntax-error #f "list of values missing." stx #'type)]
+           [(eq? (syntax->datum #'type) 'enumerated)
+            (raise-syntax-error #f "list of values missing." stx #'type)]
            [else #'(define-observation id type (lambda (d) #t))])]
 
     [(define-observation id dimensioned units)
      (eq? 'dimensioned (syntax->datum #'dimensioned))
      #'(define-observation id dimensioned units (lambda (d) #t))]
+
+    [(define-observation id nominal value-1 ...)
+     (eq? 'nominal (syntax->datum #'nominal))
+     (with-syntax ([id-val-space (build-value-space-name #'id)])
+       #'(begin
+           (define-nominal id-val-space value-1 ...)
+           (define-observation id id-val-space (lambda (d) #t))))]
+
+    [(define-observation id enumerated value-1 ...)
+     (eq? 'enumerated (syntax->datum #'enumerated))
+     (with-syntax ([id-val-space (build-value-space-name #'id)])
+       #'(begin
+           (define-enumerated id-val-space value-1 ...)
+           (define-observation id id-val-space (lambda (d) #t))))]
      
     [(define-observation id type (... invariant))
      (begin
@@ -175,6 +197,14 @@
 ;             (verify-getter get-id id)
              )))]))
 
+; Helper function for creating the names of nominal or enumerated data types.
+(define-for-syntax (build-value-space-name id)
+  (datum->syntax id
+                 (string->symbol
+                  (string-append (symbol->string (syntax->datum id))
+                                 "-value-space"))
+                 id))
+
 ; define-abstraction creates a new type of abstraction. 
 ; It requires the following inputs:
 ; 1) An identifier for the new abstraction datatype.
@@ -186,11 +216,29 @@
     [(define-abstraction id type)
      (cond [(eq? (syntax->datum #'type) 'dimensioned)
             (raise-syntax-error #f "units missing." stx #'type)]
+           [(eq? (syntax->datum #'type) 'nominal)
+            (raise-syntax-error #f "list of values missing." stx #'type)]
+           [(eq? (syntax->datum #'type) 'enumerated)
+            (raise-syntax-error #f "list of values missing." stx #'type)]
            [else #'(define-abstraction id type (lambda (d) #t))])]
 
     [(define-abstraction id dimensioned units)
      (eq? 'dimensioned (syntax->datum #'dimensioned))
-     #'(define-abstraction id dimensioned units (lambda (d) #t))]     
+     #'(define-abstraction id dimensioned units (lambda (d) #t))]
+
+    [(define-abstraction id nominal value-1 ...)
+     (eq? 'nominal (syntax->datum #'nominal))
+     (with-syntax ([id-val-space (build-value-space-name #'id)])
+       #'(begin
+           (define-nominal id-val-space value-1 ...)
+           (define-abstraction id id-val-space (lambda (d) #t))))]
+
+    [(define-abstraction id enumerated value-1 ...)
+     (eq? 'enumerated (syntax->datum #'enumerated))
+     (with-syntax ([id-val-space (build-value-space-name #'id)])
+       #'(begin
+           (define-enumerated id-val-space value-1 ...)
+           (define-abstraction id id-val-space (lambda (d) #t))))]
 
     [(define-abstraction id type (... invariant))
      (begin
@@ -443,13 +491,10 @@
 ;    c) An optional invariant on the goal state.
 (define-syntax (define-action-instruction stx)
   (syntax-case stx ()
-    [(define-action-instruction id action-type rest ...)
-     (cond [(eq? (syntax->datum #'action-type) 'homogeneous)
-            #'(define-homogeneous-action id rest ...)]
-           [(eq? (syntax->datum #'action-type) 'culminating)
-            #'(define-culminating-action id rest ...)]
-           [else (raise-syntax-error #f "'homogeneous or 'culminating expected."
-                                     stx #'action-type)])]))
+    [(define-action-instruction id #:homogeneous rest ...)
+      #'(define-homogeneous-action id rest ...)]
+    [(define-action-instruction id #:culminating rest ...)
+     #'(define-culminating-action id rest ...)]))
 
 ; Helper function for creating new homogeneous action instruction types.
 (define-syntax (define-homogeneous-action stx)
@@ -499,11 +544,29 @@
     [(_ id type)
      (cond [(eq? (syntax->datum #'type) 'dimensioned)
             (raise-syntax-error #f "units missing." stx #'type)]
+           [(eq? (syntax->datum #'type) 'nominal)
+            (raise-syntax-error #f "list of values missing." stx #'type)]
+           [(eq? (syntax->datum #'type) 'enumerated)
+            (raise-syntax-error #f "list of values missing." stx #'type)]
            [else #'(define-culminating-action id type (lambda (d) #t))])]
 
     [(_ id dimensioned units)
      (eq? (syntax->datum #'dimensioned) 'dimensioned)
      #'(define-culminating-action id dimensioned units (lambda (d) #t))]
+
+    [(_ id nominal value-1 ...)
+     (eq? 'nominal (syntax->datum #'nominal))
+     (with-syntax ([id-val-space (build-value-space-name #'id)])
+       #'(begin
+           (define-nominal id-val-space value-1 ...)
+           (define-culminating-action id id-val-space (lambda (d) #t))))]
+
+    [(_ id enumerated value-1 ...)
+     (eq? 'enumerated (syntax->datum #'enumerated))
+     (with-syntax ([id-val-space (build-value-space-name #'id)])
+       #'(begin
+           (define-enumerated id-val-space value-1 ...)
+           (define-culminating-action id id-val-space (lambda (d) #t))))]
 
     [(_ id type (... invariant))
      (begin

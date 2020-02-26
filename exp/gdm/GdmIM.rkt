@@ -34,13 +34,11 @@
 ;    determine the gestational age of the patient)
 (define-observation blood-glucose dimensioned 'mg/dL)
 
-(define-enumerated urinary-ketone-value-space '-- '- '-/+ '+ '++)
-(define-observation urinary-ketone urinary-ketone-value-space)
+(define-observation urinary-ketone enumerated '-- '- '-/+ '+ '++)
 
-(define-observation meal-event 'event)
+(define-observation meal-event #:event)
 
-(define-enumerated carbohydrate-intake-value-space '-- '- '-/+ '+ '++)
-(define-observation carbohydrate-intake carbohydrate-intake-value-space)
+(define-observation carbohydrate-intake enumerated '-- '- '-/+ '+ '++)
 
 (define-observation exercise-intensity proportion)
 
@@ -48,7 +46,7 @@
 
 (define-observation diastolic-blood-pressure dimensioned 'mmHg)
 
-(define-observation conception-event 'event)
+(define-observation conception-event #:event)
 
 ; Nine different types of abstractions can be identified from the GDM 
 ; workflows, namely for capturing:
@@ -60,16 +58,12 @@
 ; 6) Degree of hypertension.
 ; 7) Target organ damage.
 ; 8) Proteinuria.
-(define-nominal glycemic-control-value-space
-  'good 'poor 'meal-compliant-poor 'meal-incompliant-poor
-  'non-related-poor 'very-poor)
-(define-abstraction glycemic-control glycemic-control-value-space)
+(define-abstraction glycemic-control nominal 'good 'poor 'meal-compliant-poor
+  'meal-incompliant-poor 'non-related-poor 'very-poor)
 
-(define-enumerated ketonuria-value-space 'negative 'positive)
-(define-abstraction ketonuria ketonuria-value-space)
+(define-abstraction ketonuria enumerated 'negative 'positive)
 
-(define-enumerated carbohydrates-value-space 'insufficient 'non-compliant)
-(define-abstraction carbohydrates-compliance carbohydrates-value-space)
+(define-abstraction carbohydrates-compliance enumerated 'insufficient 'non-compliant)
 
 (define-abstraction exercise-compliance-resting bool)
 
@@ -91,11 +85,11 @@
 ;    to be measured in grams (of carbohydrates).
 ; 3) Increases in carbohydrates intake at dinner (Note: It is assumed that
 ;    this instruction can occur in conjunction with instruction 2).
-(define-action-instruction administer-insulin-action culminating dimensioned 'IU)
+(define-action-instruction administer-insulin-action #:culminating dimensioned 'IU)
 
-(define-action-instruction change-diet-action culminating dimensioned 'g)
+(define-action-instruction change-diet-action #:culminating dimensioned 'g)
 
-(define-action-instruction change-dinner-action culminating dimensioned 'g)
+(define-action-instruction change-dinner-action #:culminating dimensioned 'g)
 
 ; 17 different types of control instructions can be identified from 
 ; the GDM workflows, namely for controlling:
