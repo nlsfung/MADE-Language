@@ -14,7 +14,8 @@
          get-count
          get-proportion
          get-datetime
-         verify-getter)
+         verify-getter
+         verify-archetype)
 
 ; This file contains the syntax of functions for verifying concrete MADE models.
 
@@ -120,3 +121,20 @@
           (displayln (evaluate example-1 solution))
           (displayln "")))
     (clear-asserts!)))
+
+; verify-archetype checks whether the specification of the input archetype is
+; satisfiable or not.
+(define-syntax (verify-archetype stx)
+  (syntax-case stx ()
+    [(verify-archetype id)
+     (begin
+       (raise-if-not-identifier #'id stx)
+       (with-syntax ([get-id (build-getter-name #'id)])
+         #'(let* ([example (get-id)]
+                  [solution (solve (assert (valid? example)))])
+             (displayln (format "Example ~a: " id))
+             (if (eq? solution (unsat))
+                 (displayln (unsat))
+                 (displayln (evaluate example solution)))
+             (displayln "")
+             (clear-asserts!))))]))
