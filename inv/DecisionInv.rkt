@@ -55,11 +55,10 @@
 
 (define (gen-round) (define-symbolic* rounding integer?) rounding)
 (define r-fact (duration (gen-round) 0 0 0))
-(define offset (duration (gen-round) 0 0 0))
 (define r-patt (duration (gen-round) 0 0 0))
 
 (define ibuprofen-rel-sched
-  (relative-schedule r-fact offset (list r-patt) #f))
+  (relative-schedule r-fact (list r-patt) #f))
 (define ibuprofen-template
   (culminating-action-template
    'ibuprofen
@@ -71,7 +70,6 @@
    'treadmill-exercise
    (relative-schedule
     (duration 1 0 0 0)
-    (duration 0 0 0 0)
     (list (duration 0 13 0 0)
           (duration 0 21 0 0))
     (duration 2 0 0 0))
@@ -81,7 +79,7 @@
 (define analyze-heart-rate-template
   (control-template
    'analyze-heart-rate
-   (relative-schedule (duration 0 0 0 0) (duration 0 0 0 0) null #f)
+   (relative-schedule (duration 0 0 0 0) null #f)
    #f))
 
 (define fever-treatment-template
@@ -100,7 +98,7 @@
 (define (decision-criterion-two d-list)
   (findf (lambda (d) (and (avg-body-temp? d)
                           (> (abstraction-value d) 40)))
-           d-list))
+         d-list))
 
 (define d-state
   (let* ([headaches (list (gen-headache-level) (gen-headache-level))]
@@ -190,8 +188,7 @@
                                (schedule-pattern
                                 (sched-instantiate ibuprofen-rel-sched cur-dt))
                                0)])
-             (implies (and (dur=? offset (duration 0 0 0 0))
-                           (dur=? r-patt (duration 0 0 0 0)))
+             (implies (dur=? r-patt (duration 0 0 0 0))
                       (and (implies (ormap (lambda (n) (dur=? r-fact (duration n 0 0 0)))
                                            (list 0 1 2 3 4 5 6 7 8 9 10))
                                     (or (dt>? sched-patt cur-dt)
@@ -216,8 +213,6 @@
                                 (sched-instantiate ibuprofen-rel-sched cur-dt))
                                0)])
              (implies (dur=? r-fact (duration 0 0 0 0))
-                      (implies (and (ormap (lambda (n) (dur=? offset (duration n 0 0 0)))
-                                           (list 0 1 2 3 4 5 6 7 8 9 10))
-                                    (ormap (lambda (n) (dur=? r-patt (duration n 0 0 0)))
-                                           (list 0 1 2 3 4 5 6 7 8 9 10)))
-                               (dt=? sched-patt (dt+ cur-dt (dur+ offset r-patt)))))))))
+                      (implies (ormap (lambda (n) (dur=? r-patt (duration n 0 0 0)))
+                                      (list 0 1 2 3 4 5 6 7 8 9 10))
+                               (dt=? sched-patt (dt+ cur-dt r-patt))))))))

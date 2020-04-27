@@ -237,32 +237,28 @@
 ; Helper function for parsing the syntax for relative schedules.
 (define-syntax (define-relative-schedule stx)
   (syntax-case stx ()
-    [(_ (rel-sched #:rounding (... rounding) #:offset (... offset)
-                   #:pattern (... pattern) ... #:interval bool-val))
+    [(_ (rel-sched #:rounding (... rounding) #:pattern (... pattern) ... #:interval bool-val))
      (boolean? (syntax->datum #'bool-val))
      (begin
        (raise-if-not-duration #'rounding stx)
-       (raise-if-not-duration #'offset stx)
        (if (not (null? (syntax->datum #'(pattern ...))))
            (raise-if-not-duration #'(pattern ...) stx)
            void)
        (raise-if-not-boolean #'bool-val stx)
        (if (not (eq? (syntax->datum #'rel-sched) 'relative-schedule))
            (raise-syntax-error #f "relative scheduled expected." stx #'rel-sched)
-           #'(relative-schedule rounding offset (list pattern ...) bool-val)))]
+           #'(relative-schedule rounding (list pattern ...) bool-val)))]
     
-    [(_ (rel-sched #:rounding (... rounding) #:offset (... offset)
-                   #:pattern (... pattern) ... #:interval (... interval)))
+    [(_ (rel-sched #:rounding (... rounding) #:pattern (... pattern) ... #:interval (... interval)))
      (begin
        (raise-if-not-duration #'rounding stx)
-       (raise-if-not-duration #'offset stx)
        (if (not (null? (syntax->datum #'(pattern ...))))
            (raise-if-not-duration #'(pattern ...) stx)
            void)
        (raise-if-not-duration #'interval stx)
        (if (not (eq? (syntax->datum #'rel-sched) 'relative-schedule))
            (raise-syntax-error #f "relative scheduled expected." stx #'rel-sched)
-           #'(relative-schedule rounding offset (list pattern ...) interval)))]))
+           #'(relative-schedule rounding (list pattern ...) interval)))]))
 
 ; define-effectuation creates a new Effectuation process.
 ; It requires the following inputs:

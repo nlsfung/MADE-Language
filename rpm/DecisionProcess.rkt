@@ -8,6 +8,7 @@
 (require "../rim/MadeDataStructures.rkt")
 
 (provide gen:decision
+         decision?
          decision-process-plan-template
          decision-process-decision-criteria
          decision-process-proxy-flag)
@@ -206,10 +207,10 @@
       (sched-instantiate (culminating-action-template-relative-schedule self) dt)
       (culminating-action-template-goal-state self)))])
 
-; A relative schedule contains a rounding factor, an offset, a relative starting
-; pattern, and a repeat interval (all of which are expressed as durations).
+; A relative schedule contains a rounding factor, a relative starting pattern,
+; and a repeat interval (all of which are expressed as durations).
 (define-generics rel-sched [sched-instantiate rel-sched dt])
-(struct relative-schedule (rounding-factor offset relative-pattern interval)
+(struct relative-schedule (rounding-factor relative-pattern interval)
   #:transparent
   #:methods gen:typed
   [(define/generic super-valid? valid?)
@@ -217,8 +218,6 @@
    (define (valid? self)
      (and (duration? (relative-schedule-rounding-factor self))
           (super-valid? (relative-schedule-rounding-factor self))
-          (duration? (relative-schedule-offset self))
-          (super-valid? (relative-schedule-offset self))
           (list? (relative-schedule-relative-pattern self))
           (andmap (lambda (p) (and (duration? p)
                                    (super-valid? p)))
@@ -235,9 +234,8 @@
      ; 3) Added the offset datetime to the relative pattern.
      ; 4) instantiate a schedule from the interval and resulting pattern.
      (let* ([rounded-dur (get-round-amount dt (relative-schedule-rounding-factor self))]
-            [offset-dur (relative-schedule-offset self)]
             [pattern-dt (map (lambda (dur)
-                               (dt+ dt (dur+ dur (dur+ offset-dur rounded-dur))))
+                               (dt+ dt (dur+ dur rounded-dur)))
                              (relative-schedule-relative-pattern self))])
        (schedule pattern-dt (relative-schedule-interval self))))])
 
@@ -307,7 +305,7 @@
 
          [c-state (control-state (schedule (list (datetime 1 1 1 0 0 0)) #t) #t)]
          [proc (proc-constructor null c-state)]
-         [p-temp (decision-process-plan-template proc)]
+         [p-temp (decision-process-plan-template proc)]         
          [decision-criteria (decision-process-decision-criteria proc)]
          [proxy-flag (decision-process-proxy-flag proc)]
 

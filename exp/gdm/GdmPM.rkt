@@ -95,24 +95,24 @@
         bg-list)))
    (lambda (d-list) (glycemic-control-value-space 'poor))))
 
-(verify-analysis
-   analyse-blood-glucose
-   (list (observation-generator
-          get-blood-glucose
-          (datetime 2019 12 2 7 0 0)
-          (datetime 2019 12 3 24 0 0)
-          (duration 0 12 0 0))
-         (observation-generator
-          get-meal-event
-          (datetime 2019 12 2 6 0 0)
-          (datetime 2019 12 3 24 0 0)
-          (duration 0 12 0 0))
-         (observation-generator
-          get-carbohydrate-intake
-          (datetime 2019 12 2 6 0 0)
-          (datetime 2019 12 3 24 0 0)
-          (duration 0 12 0 0)))
-   (get-datetime (datetime 2019 12 3 19 0 0) (datetime 2019 12 3 19 0 0)))
+;(verify-analysis
+;   analyse-blood-glucose
+;   (list (observation-generator
+;          get-blood-glucose
+;          (datetime 2019 12 2 7 0 0)
+;          (datetime 2019 12 3 24 0 0)
+;          (duration 0 12 0 0))
+;         (observation-generator
+;          get-meal-event
+;          (datetime 2019 12 2 6 0 0)
+;          (datetime 2019 12 3 24 0 0)
+;          (duration 0 12 0 0))
+;         (observation-generator
+;          get-carbohydrate-intake
+;          (datetime 2019 12 2 6 0 0)
+;          (datetime 2019 12 3 24 0 0)
+;          (duration 0 12 0 0)))
+;   (get-datetime (datetime 2019 12 3 19 0 0) (datetime 2019 12 3 19 0 0)))
 
 ; Helper function for determining if a BG measurement is post- or pre-prandial.
 ; Returns the associated meal event if measurement is post-prandial.
@@ -177,14 +177,14 @@
           2)))
    (lambda (d-list) (ketonuria-value-space 'positive))))
 
-(verify-analysis
-   analyse-urinary-ketone
-   (list (observation-generator
-          get-urinary-ketone
-          (datetime 2019 12 1 0 0 0)
-          (datetime 2019 12 31 24 0 0)
-          5))
-   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 31 24 0 0)))
+;(verify-analysis
+;   analyse-urinary-ketone
+;   (list (observation-generator
+;          get-urinary-ketone
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 31 24 0 0)
+;          5))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 31 24 0 0)))
 
 ; analyse-carbohydrates-intake (ACI) analyses carbohydrates intake (CI) of
 ; patient to determine his or her degree of compliance to the pre-determined
@@ -211,14 +211,14 @@
            2)))
    (lambda (d-list) (carbohydrates-compliance-value-space 'non-compliant))))
 
-(verify-analysis
-   analyse-carbohydrates-intake
-   (list (observation-generator
-          get-carbohydrate-intake
-          (datetime 2019 12 1 0 0 0)
-          (datetime 2019 12 31 24 0 0)
-          5))
-   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 31 24 0 0)))
+;(verify-analysis
+;   analyse-carbohydrates-intake
+;   (list (observation-generator
+;          get-carbohydrate-intake
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 31 24 0 0)
+;          5))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 31 24 0 0)))
 
 ; analyse-blood-pressure (ABP) analyses blood pressure (BP) measurements,
 ; both systolic and diastolic, to determine the patient's degree of high
@@ -283,19 +283,19 @@
             d-list))
    (lambda (d-list) (hypertension-value-space 'high))))
 
-(verify-analysis
-   analyse-blood-pressure
-   (list (observation-generator
-          get-systolic-blood-pressure
-          (datetime 2019 12 1 0 0 0)
-          (datetime 2019 12 15 24 0 0)
-          2)
-         (observation-generator
-          get-diastolic-blood-pressure
-          (datetime 2019 12 1 0 0 0)
-          (datetime 2019 12 15 24 0 0)
-          2))
-   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+;(verify-analysis
+;   analyse-blood-pressure
+;   (list (observation-generator
+;          get-systolic-blood-pressure
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2)
+;         (observation-generator
+;          get-diastolic-blood-pressure
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
 
 ; decide-bg-twice-weekly (DBg2Wk) relates to the decision to adjust blood
 ; glucose monitoring to two days each week instead of daily. The decision
@@ -315,7 +315,6 @@
    (control-template 'monitor-blood-glucose
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
                       #:pattern
                       (duration 0 7 0 0) (duration 0 9 0 0)
                       (duration 0 14 0 0) (duration 0 20 0 0)
@@ -329,8 +328,7 @@
    (control-template 'decide-bg-daily
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t))
   (#:criteria
@@ -368,7 +366,6 @@
    (control-template 'monitor-blood-glucose
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
                       #:pattern
                       (duration 0 7 0 0) (duration 0 9 0 0)
                       (duration 0 14 0 0) (duration 0 20 0 0)
@@ -377,22 +374,19 @@
    (control-template 'decide-bg-nutrition-change
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-bg-insulin
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-bg-twice-weekly
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-bg-daily #f))
@@ -444,21 +438,18 @@
    (control-template 'decide-bg-twice-weekly-post-insulin
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-bg-insulin-adjust
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (culminating-action-template 'administer-insulin-action
                                 (relative-schedule
                                  #:rounding (duration 1 0 0 0)
-                                 #:offset (duration 0 0 0 0)
                                  #:pattern
                                  (duration 0 7 0 0) (duration 0 9 0 0)
                                  (duration 0 14 0 0) (duration 0 20 0 0)
@@ -525,7 +516,6 @@
    (control-template 'monitor-blood-glucose
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
                       #:pattern
                       (duration 0 7 0 0) (duration 0 9 0 0)
                       (duration 0 14 0 0) (duration 0 20 0 0)
@@ -538,8 +528,7 @@
    (control-template 'decide-bg-daily-post-insulin
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t))
   (#:criteria
@@ -577,7 +566,6 @@
    (control-template 'monitor-blood-glucose
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
                       #:pattern
                       (duration 0 7 0 0) (duration 0 9 0 0)
                       (duration 0 14 0 0) (duration 0 20 0 0)
@@ -586,15 +574,13 @@
    (control-template 'decide-bg-insulin-adjust
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-bg-twice-weekly-post-insulin
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-bg-daily-post-insulin #f))
@@ -636,7 +622,6 @@
    (culminating-action-template 'administer-insulin-action
                                 (relative-schedule
                                  #:rounding (duration 1 0 0 0)
-                                 #:offset (duration 0 0 0 0)
                                  #:pattern
                                  (duration 0 7 0 0) (duration 0 9 0 0)
                                  (duration 0 14 0 0) (duration 0 20 0 0)
@@ -693,21 +678,18 @@
    (control-template 'decide-bg-twice-weekly-post-nutrition
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-bg-insulin-post-nutrition
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (culminating-action-template 'change-diet-action
                                 (relative-schedule
                                  #:rounding (duration 1 0 0 0)
-                                 #:offset (duration 0 0 0 0)
                                  #:pattern
                                  (duration 0 7 0 0) (duration 0 9 0 0)
                                  (duration 0 14 0 0) (duration 0 20 0 0)
@@ -758,7 +740,6 @@
    (control-template 'monitor-blood-glucose
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
                       #:pattern
                       (duration 0 7 0 0) (duration 0 9 0 0)
                       (duration 0 14 0 0) (duration 0 20 0 0)
@@ -771,8 +752,7 @@
    (control-template 'decide-bg-daily-post-nutrition
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t))
   (#:criteria
@@ -810,7 +790,6 @@
    (control-template 'monitor-blood-glucose
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
                       #:pattern
                       (duration 0 7 0 0) (duration 0 9 0 0)
                       (duration 0 14 0 0) (duration 0 20 0 0)
@@ -819,15 +798,13 @@
    (control-template 'decide-bg-insulin-post-nutrition
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-bg-twice-weekly-post-nutrition
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-bg-daily-post-nutrition #f))
@@ -877,21 +854,18 @@
    (control-template 'decide-bg-twice-weekly-post-insulin
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-bg-insulin-adjust
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (culminating-action-template 'administer-insulin-action
                                 (relative-schedule
                                  #:rounding (duration 1 0 0 0)
-                                 #:offset (duration 0 0 0 0)
                                  #:pattern
                                  (duration 0 7 0 0) (duration 0 9 0 0)
                                  (duration 0 14 0 0) (duration 0 20 0 0)
@@ -938,7 +912,6 @@
    (control-template 'monitor-urinary-ketones
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
                       #:pattern (duration 0 7 0 0) (duration 3 7 0 0)
                       #:interval (duration 7 0 0 0))
                      #t)
@@ -947,8 +920,7 @@
    (control-template 'decide-uk-daily
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t))
   (#:criteria
@@ -985,22 +957,19 @@
    (control-template 'monitor-urinary-ketones
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
                       #:pattern (duration 0 7 0 0)
                       #:interval (duration 1 0 0 0))
                      #t)
    (control-template 'decide-uk-dinner-increase
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-uk-twice-weekly
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-uk-daily #f))
@@ -1043,14 +1012,12 @@
    (control-template 'decide-uk-twice-weekly-post-dinner
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 14 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 14 0 0 0)
                       #:interval #t)
                      #t)
    (culminating-action-template 'change-dinner-action
                                 (relative-schedule
                                  #:rounding (duration 1 0 0 0)
-                                 #:offset (duration 0 0 0 0)
                                  #:pattern (duration 0 19 0 0)
                                  #:interval (duration 1 0 0 0))
                                 (dimensioned 10 'g)))
@@ -1099,7 +1066,6 @@
    (control-template 'monitor-urinary-ketones
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
                       #:pattern (duration 0 7 0 0) (duration 3 7 0 0)
                       #:interval (duration 7 0 0 0))
                      #t)
@@ -1107,8 +1073,7 @@
    (control-template 'decide-uk-daily-post-dinner
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t))
   (#:criteria
@@ -1145,15 +1110,13 @@
    (control-template 'monitor-urinary-ketones
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
                       #:pattern (duration 0 7 0 0)
                       #:interval (duration 1 0 0 0))
                      #t)
    (control-template 'decide-uk-twice-weekly-post-dinner
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-uk-daily-post-dinner #f))
@@ -1187,10 +1150,15 @@
   #f
   bp-once-weekly-plan
   (#:instructions
-   (control-template 'monitor-blood-pressure
+   (control-template 'monitor-systolic-blood-pressure
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
+                      #:pattern (duration 0 7 0 0) (duration 0 11 0 0)
+                      #:interval (duration 7 0 0 0))
+                     #t)
+   (control-template 'monitor-diastolic-blood-pressure
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
                       #:pattern (duration 0 7 0 0) (duration 0 11 0 0)
                       #:interval (duration 7 0 0 0))
                      #t)
@@ -1198,8 +1166,7 @@
    (control-template 'decide-bp-twice-weekly
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t))
   (#:criteria
@@ -1210,14 +1177,14 @@
                             (hypertension-value-space 'normal))))
       d-list))))
 
-;(verify-decision
-;   decide-bp-once-weekly
-;   (list (abstraction-generator
-;          get-hypertension
-;          (datetime 2019 12 1 0 0 0)
-;          (datetime 2019 12 15 24 0 0)
-;          2))
-;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+(verify-decision
+   decide-bp-once-weekly
+   (list (abstraction-generator
+          get-hypertension
+          (datetime 2019 12 1 0 0 0)
+          (datetime 2019 12 15 24 0 0)
+          2))
+   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
 
 ; decide-bp-twice-weekly (DBp2Wk) relates to the decision to adjust blood
 ; pressure monitoring to twice a week instead of once a week. The decision
@@ -1232,10 +1199,17 @@
   #f
   bp-twice-weekly-plan
   (#:instructions
-   (control-template 'monitor-blood-pressure
+   (control-template 'monitor-systolic-blood-pressure
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
+                      #:pattern
+                      (duration 0 7 0 0) (duration 0 11 0 0)
+                      (duration 3 7 0 0) (duration 3 11 0 0)
+                      #:interval (duration 7 0 0 0))
+                     #t)
+   (control-template 'monitor-diastolic-blood-pressure
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
                       #:pattern
                       (duration 0 7 0 0) (duration 0 11 0 0)
                       (duration 3 7 0 0) (duration 3 11 0 0)
@@ -1244,8 +1218,7 @@
    (control-template 'decide-bp-once-weekly
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-bp-twice-weekly #f))
@@ -1257,14 +1230,14 @@
                             (hypertension-value-space 'high))))
       d-list))))
 
-;(verify-decision
-;   decide-bp-twice-weekly
-;   (list (abstraction-generator
-;          get-hypertension
-;          (datetime 2019 12 1 0 0 0)
-;          (datetime 2019 12 15 24 0 0)
-;          2))
-;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+(verify-decision
+   decide-bp-twice-weekly
+   (list (abstraction-generator
+          get-hypertension
+          (datetime 2019 12 1 0 0 0)
+          (datetime 2019 12 15 24 0 0)
+          2))
+   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
 
 ; decide-bp-chronic (DBpChronic) is a proxy process for starting the chronic
 ; blood pressure monitoring plan. The decision criteria involves the following
@@ -1280,10 +1253,15 @@
   #t
   chronic-hypertension-plan
   (#:instructions
-   (control-template 'monitor-blood-pressure
+   (control-template 'monitor-systolic-blood-pressure
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
+                      #:pattern (duration 0 7 0 0)
+                      #:interval (duration 2 0 0 0))
+                     #t)
+   (control-template 'monitor-diastolic-blood-pressure
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
                       #:pattern (duration 0 7 0 0)
                       #:interval (duration 2 0 0 0))
                      #t)
@@ -1298,14 +1276,14 @@
                             (hypertension-value-space 'sustained-high))))
       d-list))))
 
-;(verify-decision
-;   decide-bp-chronic
-;   (list (abstraction-generator
-;          get-hypertension
-;          (datetime 2019 12 1 0 0 0)
-;          (datetime 2019 12 15 24 0 0)
-;          2))
-;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+(verify-decision
+   decide-bp-chronic
+   (list (abstraction-generator
+          get-hypertension
+          (datetime 2019 12 1 0 0 0)
+          (datetime 2019 12 15 24 0 0)
+          2))
+   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
 
 ; decide-bp-gestational (DBpGestational) is a proxy process for starting the
 ; gestational blood pressure monitoring plan. The decision criteria involves
@@ -1323,10 +1301,15 @@
   #t
   gestational-hypertension-plan
   (#:instructions
-   (control-template 'monitor-blood-pressure
+   (control-template 'monitor-systolic-blood-pressure
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
+                      #:pattern (duration 0 7 0 0)
+                      #:interval (duration 2 0 0 0))
+                     #t)
+   (control-template 'monitor-diastolic-blood-pressure
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
                       #:pattern (duration 0 7 0 0)
                       #:interval (duration 2 0 0 0))
                      #t)
@@ -1336,15 +1319,13 @@
    (control-template 'decide-bp-once-weekly-gestational
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-bp-hourly-gestational
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t))
   (#:criteria
@@ -1355,14 +1336,14 @@
                             (hypertension-value-space 'sustained-high))))
       d-list))))
 
-;(verify-decision
-;   decide-bp-gestational
-;   (list (abstraction-generator
-;          get-hypertension
-;          (datetime 2019 12 1 0 0 0)
-;          (datetime 2019 12 15 24 0 0)
-;          2))
-;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+(verify-decision
+   decide-bp-gestational
+   (list (abstraction-generator
+          get-hypertension
+          (datetime 2019 12 1 0 0 0)
+          (datetime 2019 12 15 24 0 0)
+          2))
+   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
 
 ; decide-bp-once-weekly-gestational (DBp1WkGestational) relates to the decision
 ; to adjust blood pressure monitoring to once a week instead of every two days
@@ -1380,10 +1361,15 @@
   #f
   gestational-weekly-plan
   (#:instructions
-   (control-template 'monitor-blood-pressure
+   (control-template 'monitor-systolic-blood-pressure
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
+                      #:pattern (duration 0 7 0 0)
+                      #:interval (duration 7 0 0 0))
+                     #t)
+   (control-template 'monitor-diastolic-blood-pressure
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
                       #:pattern (duration 0 7 0 0)
                       #:interval (duration 7 0 0 0))
                      #t)
@@ -1392,8 +1378,7 @@
    (control-template 'decide-bp-two-days-gestational
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t))
   (#:criteria
@@ -1410,19 +1395,19 @@
                             (eq? (abstraction-value d) (bool #f))))
            d-list)))))
 
-;(verify-decision
-;   decide-bp-once-weekly-gestational
-;   (list (abstraction-generator
-;          get-hypertension
-;          (datetime 2019 12 1 0 0 0)
-;          (datetime 2019 12 15 24 0 0)
-;          2)
-;         (abstraction-generator
-;          get-proteinuria
-;          (datetime 2019 12 1 0 0 0)
-;          (datetime 2019 12 15 24 0 0)
-;          2))
-;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+(verify-decision
+   decide-bp-once-weekly-gestational
+   (list (abstraction-generator
+          get-hypertension
+          (datetime 2019 12 1 0 0 0)
+          (datetime 2019 12 15 24 0 0)
+          2)
+         (abstraction-generator
+          get-proteinuria
+          (datetime 2019 12 1 0 0 0)
+          (datetime 2019 12 15 24 0 0)
+          2))
+   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
 
 ; decide-bp-two-days-gestational (DBp2DaysGest) relates to decision to adjust
 ; blood pressure monitoring to every two days instead of once a week (in the
@@ -1440,25 +1425,28 @@
   #f
   gestational-hypertension-plan
   (#:instructions
-   (control-template 'monitor-blood-pressure
+   (control-template 'monitor-systolic-blood-pressure
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
+                      #:pattern (duration 0 7 0 0)
+                      #:interval (duration 2 0 0 0))
+                     #t)
+   (control-template 'monitor-diastolic-blood-pressure
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
                       #:pattern (duration 0 7 0 0)
                       #:interval (duration 2 0 0 0))
                      #t)
    (control-template 'decide-bp-once-weekly-gestational
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-bp-hourly-gestational
                      (relative-schedule
                       #:rounding (duration 0 0 0 0)
-                      #:offset (duration 7 0 0 0)
-                      #:pattern (duration 0 0 0 0)
+                      #:pattern (duration 7 0 0 0)
                       #:interval #t)
                      #t)
    (control-template 'decide-bp-two-days-gestational #f))
@@ -1477,19 +1465,19 @@
                        (eq? (abstraction-value d) (bool #t))))
       d-list))))
 
-;(verify-decision
-;   decide-bp-two-days-gestational
-;   (list (abstraction-generator
-;          get-hypertension
-;          (datetime 2019 12 1 0 0 0)
-;          (datetime 2019 12 15 24 0 0)
-;          2)
-;         (abstraction-generator
-;          get-proteinuria
-;          (datetime 2019 12 1 0 0 0)
-;          (datetime 2019 12 15 24 0 0)
-;          2))
-;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+(verify-decision
+   decide-bp-two-days-gestational
+   (list (abstraction-generator
+          get-hypertension
+          (datetime 2019 12 1 0 0 0)
+          (datetime 2019 12 15 24 0 0)
+          2)
+         (abstraction-generator
+          get-proteinuria
+          (datetime 2019 12 1 0 0 0)
+          (datetime 2019 12 15 24 0 0)
+          2))
+   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
 
 ; decide-bp-hourly-gestational (DBpHoursGest) is a proxy process for deciding
 ; to adjust blood pressure monitoring to every few hours (e.g. 4) instead of
@@ -1506,10 +1494,15 @@
   #t
   gestational-hours-plan
   (#:instructions
-   (control-template 'monitor-blood-pressure
+   (control-template 'monitor-systolic-blood-pressure
                      (relative-schedule
                       #:rounding (duration 1 0 0 0)
-                      #:offset (duration 0 0 0 0)
+                      #:pattern (duration 0 7 0 0)
+                      #:interval (duration 0 4 0 0))
+                     #t)
+   (control-template 'monitor-diastolic-blood-pressure
+                     (relative-schedule
+                      #:rounding (duration 1 0 0 0)
                       #:pattern (duration 0 7 0 0)
                       #:interval (duration 0 4 0 0))
                      #t)
@@ -1529,19 +1522,19 @@
                             (eq? (abstraction-value d) (bool #t))))
            d-list)))))
 
-;(verify-decision
-;   decide-bp-hourly-gestational
-;   (list (abstraction-generator
-;          get-hypertension
-;          (datetime 2019 12 1 0 0 0)
-;          (datetime 2019 12 15 24 0 0)
-;          2)
-;         (abstraction-generator
-;          get-proteinuria
-;          (datetime 2019 12 1 0 0 0)
-;          (datetime 2019 12 15 24 0 0)
-;          2))
-;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+(verify-decision
+   decide-bp-hourly-gestational
+   (list (abstraction-generator
+          get-hypertension
+          (datetime 2019 12 1 0 0 0)
+          (datetime 2019 12 15 24 0 0)
+          2)
+         (abstraction-generator
+          get-proteinuria
+          (datetime 2019 12 1 0 0 0)
+          (datetime 2019 12 15 24 0 0)
+          2))
+   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
 
 ; effectuate-administer-insulin is a proxy process for administering insulin.
 (define-effectuation
