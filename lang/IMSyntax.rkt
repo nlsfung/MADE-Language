@@ -73,7 +73,10 @@
 ; 2) A struct constructor specifying the type of the observation value.
 ;    The symbol 'event indicates that the data type is an observed event.
 ; 3) A symbol indicating the units if the observation contains a dimensioned value.
-; 4) An optional invariant on the observation value (for observed properties).
+; 4) A list of possible values if the observation contains a nominal or enumerated value.
+;    The list must be ordered for enumerated values.
+; 5) An optional invariant on the observation value (for observed properties that are
+;    neither nominal or enumerated).
 (define-syntax (define-observation stx)
   (syntax-case stx ()
     [(define-observation id #:event)
@@ -210,7 +213,9 @@
 ; 1) An identifier for the new abstraction datatype.
 ; 2) A struct constructor specifying the type of the abstraction value.
 ; 3) A symbol indicating the units if the abstraction contains a dimensioned value.
-; 4) An optional invariant on the abstraction value.
+; 4) A list of possible values if the abstraction value is nominal or enumerated.
+;    The list must be ordered for enumerated values.
+; 5) An optional invariant on the abstraction value (if it is neither nominal nor enumerated).
 (define-syntax (define-abstraction stx)
   (syntax-case stx ()
     [(define-abstraction id type)
@@ -488,7 +493,9 @@
 ; 4) For culminating action instructions:
 ;    a) A struct constructor specifying the type of the goal state.
 ;    b) A symbol indicating the units if the goal state is dimensioned.
-;    c) An optional invariant on the goal state.
+;    c) A list of possible values if the goal state is either nominal or enumerated.
+;       The list must be ordered for enumerated values.
+;    c) An optional invariant on the goal state (if it is neither nominal or enumerated).
 (define-syntax (define-action-instruction stx)
   (syntax-case stx ()
     [(define-action-instruction id #:homogeneous rest ...)
