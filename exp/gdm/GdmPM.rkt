@@ -32,12 +32,11 @@
    (lambda (d-list)
      (let* ([bg-list (filter (lambda (d) (blood-glucose? d)) d-list)]
             [meal-list (filter (lambda (d) (meal-event? d)) d-list)])
-     (if (andmap
-          (lambda (bg)
-            (not (abnormal-bg? (post-prandial-bg? bg meal-list) bg)))
-          bg-list)
-         (glycemic-control-value-space 'good)
-         (void)))))
+       (andmap
+        (lambda (bg)
+          (not (abnormal-bg? (post-prandial-bg? bg meal-list) bg)))
+        bg-list)))
+   (lambda (d-list) (glycemic-control-value-space 'good)))
   ((duration 7 0 0 0)
    (lambda (d-list)
      (let* ([meal-list (filter (lambda (d) (meal-event? d)) d-list)]
@@ -46,9 +45,8 @@
              (filter (lambda (d) (and (blood-glucose? d)
                                       (very-abnormal-bg? (post-prandial-bg? d meal-list) d)))
                      d-list)])
-       (if (>= (length very-abnormal-bg-list) 2)
-           (glycemic-control-value-space 'very-poor)
-           (void)))))
+       (>= (length very-abnormal-bg-list) 2)))
+   (lambda (d-list) (glycemic-control-value-space 'very-poor)))
   ((duration 7 0 0 0)
    (lambda (d-list)
      (let* ([meal-list (filter (lambda (d) (meal-event? d)) d-list)]
@@ -61,9 +59,8 @@
              (remove-duplicates
               (map (lambda (d) (datetime-hour (observed-property-valid-datetime d)))
                    abnormal-bg-list))])
-       (if (>= (length abnormal-bg-dt) 2)
-           (glycemic-control-value-space 'non-related-poor)
-           (void)))))
+       (>= (length abnormal-bg-dt) 2)))
+   (lambda (d-list) (glycemic-control-value-space 'non-related-poor)))
   ((duration 7 0 0 0)
    (lambda (d-list)
      (let* ([meal-list (filter (lambda (d) (meal-event? d)) d-list)]
@@ -72,11 +69,10 @@
              (filter (lambda (d) (and (blood-glucose? d)
                                       (abnormal-bg? (post-prandial-bg? d meal-list) d)))
                      d-list)])
-       (if (and (>= (length abnormal-bg-list) 2)
-                (andmap (lambda (bg) (compliant-bg? bg carb-list))
-                        abnormal-bg-list))
-           (glycemic-control-value-space 'meal-compliant-poor)
-           (void)))))
+       (and (>= (length abnormal-bg-list) 2)
+            (andmap (lambda (bg) (compliant-bg? bg carb-list))
+                    abnormal-bg-list))))
+   (lambda (d-list) (glycemic-control-value-space 'meal-compliant-poor)))
   ((duration 7 0 0 0)
    (lambda (d-list)
      (let* ([meal-list (filter (lambda (d) (meal-event? d)) d-list)]
@@ -85,40 +81,38 @@
              (filter (lambda (d) (and (blood-glucose? d)
                                       (abnormal-bg? (post-prandial-bg? d meal-list) d)))
                      d-list)])
-       (if (and (>= (length abnormal-bg-list) 2)
-                (andmap (lambda (bg) (not (compliant-bg? bg carb-list)))
-                        abnormal-bg-list))
-           (glycemic-control-value-space 'meal-incompliant-poor)
-           (void)))))
+       (and (>= (length abnormal-bg-list) 2)
+            (andmap (lambda (bg) (not (compliant-bg? bg carb-list)))
+                    abnormal-bg-list))))
+   (lambda (d-list) (glycemic-control-value-space 'meal-incompliant-poor)))
   ((duration 0 1 0 0)
    (lambda (d-list)
      (let* ([bg-list (filter (lambda (d) (blood-glucose? d)) d-list)]
             [meal-list (filter (lambda (d) (meal-event? d)) d-list)])
-     (if (findf
-          (lambda (bg)
-            (abnormal-bg? (post-prandial-bg? bg meal-list) bg))
-          bg-list)
-         (glycemic-control-value-space 'poor)
-         (void))))))
+       (findf
+        (lambda (bg)
+          (abnormal-bg? (post-prandial-bg? bg meal-list) bg))
+        bg-list)))
+   (lambda (d-list) (glycemic-control-value-space 'poor))))
 
-;(verify-analysis
-;   analyse-blood-glucose
-;   (list (observation-generator
-;          get-blood-glucose
-;          (datetime 2019 12 2 7 0 0)
-;          (datetime 2019 12 3 24 0 0)
-;          (duration 0 12 0 0))
-;         (observation-generator
-;          get-meal-event
-;          (datetime 2019 12 2 6 0 0)
-;          (datetime 2019 12 3 24 0 0)
-;          (duration 0 12 0 0))
-;         (observation-generator
-;          get-carbohydrate-intake
-;          (datetime 2019 12 2 6 0 0)
-;          (datetime 2019 12 3 24 0 0)
-;          (duration 0 12 0 0)))
-;   (get-datetime (datetime 2019 12 3 19 0 0) (datetime 2019 12 3 19 0 0)))
+(verify-analysis
+   analyse-blood-glucose
+   (list (observation-generator
+          get-blood-glucose
+          (datetime 2019 12 2 7 0 0)
+          (datetime 2019 12 3 24 0 0)
+          (duration 0 12 0 0))
+         (observation-generator
+          get-meal-event
+          (datetime 2019 12 2 6 0 0)
+          (datetime 2019 12 3 24 0 0)
+          (duration 0 12 0 0))
+         (observation-generator
+          get-carbohydrate-intake
+          (datetime 2019 12 2 6 0 0)
+          (datetime 2019 12 3 24 0 0)
+          (duration 0 12 0 0)))
+   (get-datetime (datetime 2019 12 3 19 0 0) (datetime 2019 12 3 19 0 0)))
 
 ; Helper function for determining if a BG measurement is post- or pre-prandial.
 ; Returns the associated meal event if measurement is post-prandial.
@@ -169,30 +163,28 @@
   ((duration 7 0 0 0)
    (lambda (d-list)
      (let* ([uk-list (filter (lambda (d) (urinary-ketone? d)) d-list)])
-       (if (andmap (lambda (d) (enum<? (observed-property-value d)
-                                       (urinary-ketone-value-space '-/+)))
-                   uk-list)
-           (ketonuria-value-space 'negative)
-           (void)))))
+       (andmap (lambda (d) (enum<? (observed-property-value d)
+                                   (urinary-ketone-value-space '-/+)))
+               uk-list)))
+   (lambda (d-list) (ketonuria-value-space 'negative)))
   ((duration 7 0 0 0)
    (lambda (d-list)
      (let* ([uk-list (filter (lambda (d) (urinary-ketone? d)) d-list)])
-       (if (> (rosette-count
-               (lambda (d) (enum>? (observed-property-value d)
-                                   (urinary-ketone-value-space '-/+)))
-               uk-list)
-              2)
-           (ketonuria-value-space 'positive)
-           (void))))))
+       (> (rosette-count
+           (lambda (d) (enum>? (observed-property-value d)
+                               (urinary-ketone-value-space '-/+)))
+           uk-list)
+          2)))
+   (lambda (d-list) (ketonuria-value-space 'positive))))
 
-;(verify-analysis
-;   analyse-urinary-ketone
-;   (list (observation-generator
-;          get-urinary-ketone
-;          (datetime 2019 12 1 0 0 0)
-;          (datetime 2019 12 31 24 0 0)
-;          5))
-;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 31 24 0 0)))
+(verify-analysis
+   analyse-urinary-ketone
+   (list (observation-generator
+          get-urinary-ketone
+          (datetime 2019 12 1 0 0 0)
+          (datetime 2019 12 31 24 0 0)
+          5))
+   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 31 24 0 0)))
 
 ; analyse-carbohydrates-intake (ACI) analyses carbohydrates intake (CI) of
 ; patient to determine his or her degree of compliance to the pre-determined
@@ -203,32 +195,30 @@
   ((duration 7 0 0 0)
    (lambda (d-list)
      (let* ([carb-list (filter (lambda (d) (carbohydrate-intake? d)) d-list)])
-       (if (>= (rosette-count
-                (lambda (d) (enum<? (observed-property-value d)
-                                    (carbohydrate-intake-value-space '-/+)))
-                carb-list)
-               1)
-           (carbohydrates-compliance-value-space 'insufficient)
-           (void)))))
+       (>= (rosette-count
+            (lambda (d) (enum<? (observed-property-value d)
+                                (carbohydrate-intake-value-space '-/+)))
+            carb-list)
+           1)))
+   (lambda (d-list) (carbohydrates-compliance-value-space 'insufficient)))
   ((duration 7 0 0 0)
    (lambda (d-list)
      (let* ([carb-list (filter (lambda (d) (carbohydrate-intake? d)) d-list)])
-       (if (>= (rosette-count
-                (lambda (d) (not (eq? (observed-property-value d)
-                                      (carbohydrate-intake-value-space '-/+))))
-                carb-list)
-               2)
-           (carbohydrates-compliance-value-space 'non-compliant)
-           (void))))))
+       (>= (rosette-count
+            (lambda (d) (not (eq? (observed-property-value d)
+                                  (carbohydrate-intake-value-space '-/+))))
+            carb-list)
+           2)))
+   (lambda (d-list) (carbohydrates-compliance-value-space 'non-compliant))))
 
-;(verify-analysis
-;   analyse-carbohydrates-intake
-;   (list (observation-generator
-;          get-carbohydrate-intake
-;          (datetime 2019 12 1 0 0 0)
-;          (datetime 2019 12 31 24 0 0)
-;          5))
-;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 31 24 0 0)))
+(verify-analysis
+   analyse-carbohydrates-intake
+   (list (observation-generator
+          get-carbohydrate-intake
+          (datetime 2019 12 1 0 0 0)
+          (datetime 2019 12 31 24 0 0)
+          5))
+   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 31 24 0 0)))
 
 ; analyse-blood-pressure (ABP) analyses blood pressure (BP) measurements,
 ; both systolic and diastolic, to determine the patient's degree of high
@@ -241,76 +231,71 @@
 (define-analysis analyse-blood-pressure #f hypertension
   ((duration 14 0 0 0)
    (lambda (d-list)
-     (if (andmap
-          (lambda (d) (or (and (systolic-blood-pressure? d)
-                               (dim<? (observed-property-value d)
-                                      (dimensioned 140 'mmHg)))
-                          (and (diastolic-blood-pressure? d)
-                               (dim<? (observed-property-value d)
-                                      (dimensioned 90 'mmHg)))))
-          d-list)
-         (hypertension-value-space 'normal)
-         (void))))
+     (andmap
+      (lambda (d) (or (and (systolic-blood-pressure? d)
+                           (dim<? (observed-property-value d)
+                                  (dimensioned 140 'mmHg)))
+                      (and (diastolic-blood-pressure? d)
+                           (dim<? (observed-property-value d)
+                                  (dimensioned 90 'mmHg)))))
+      d-list))
+   (lambda (d-list) (hypertension-value-space 'normal)))
   ((duration 0 6 0 0)
    (lambda (d-list)
-     (if (>= (rosette-count
-              (lambda (d) (or (and (systolic-blood-pressure? d)
-                                   (dim>=? (observed-property-value d)
-                                           (dimensioned 140 'mmHg)))
-                              (and (diastolic-blood-pressure? d)
-                                   (dim>=? (observed-property-value d)
-                                           (dimensioned 90 'mmHg)))))
-              d-list)
-             2)
-         (hypertension-value-space 'sustained-high)
-         (void))))
+     (>= (rosette-count
+          (lambda (d) (or (and (systolic-blood-pressure? d)
+                               (dim>=? (observed-property-value d)
+                                       (dimensioned 140 'mmHg)))
+                          (and (diastolic-blood-pressure? d)
+                               (dim>=? (observed-property-value d)
+                                       (dimensioned 90 'mmHg)))))
+          d-list)
+         2))
+   (lambda (d-list) (hypertension-value-space 'sustained-high)))
   ((duration 0 0 0 0)
    (lambda (d-list)
-     (if (findf (lambda (d) (or (and (systolic-blood-pressure? d)
-                                     (dim>=? (observed-property-value d)
-                                             (dimensioned 160 'mmHg)))
-                                (and (diastolic-blood-pressure? d)
-                                     (dim>=? (observed-property-value d)
-                                             (dimensioned 110 'mmHg)))))
-                d-list)
-         (hypertension-value-space 'extremely-high)
-         (void))))
+     (findf (lambda (d) (or (and (systolic-blood-pressure? d)
+                                 (dim>=? (observed-property-value d)
+                                         (dimensioned 160 'mmHg)))
+                            (and (diastolic-blood-pressure? d)
+                                 (dim>=? (observed-property-value d)
+                                         (dimensioned 110 'mmHg)))))
+            d-list))
+   (lambda (d-list) (hypertension-value-space 'extremely-high)))
   ((duration 0 0 0 0)
    (lambda (d-list)
-     (if (findf (lambda (d) (or (and (systolic-blood-pressure? d)
-                                     (dim>=? (observed-property-value d)
-                                             (dimensioned 150 'mmHg)))
-                                (and (diastolic-blood-pressure? d)
-                                     (dim>=? (observed-property-value d)
-                                             (dimensioned 100 'mmHg)))))
-                d-list)
-         (hypertension-value-space 'very-high)
-         (void))))
+     (findf (lambda (d) (or (and (systolic-blood-pressure? d)
+                                 (dim>=? (observed-property-value d)
+                                         (dimensioned 150 'mmHg)))
+                            (and (diastolic-blood-pressure? d)
+                                 (dim>=? (observed-property-value d)
+                                         (dimensioned 100 'mmHg)))))
+            d-list))
+   (lambda (d-list) (hypertension-value-space 'very-high)))
   ((duration 0 0 0 0)
    (lambda (d-list)
-     (if (findf (lambda (d) (or (and (systolic-blood-pressure? d)
-                                     (dim>=? (observed-property-value d)
-                                             (dimensioned 140 'mmHg)))
-                                (and (diastolic-blood-pressure? d)
-                                     (dim>=? (observed-property-value d)
-                                             (dimensioned 90 'mmHg)))))
-                d-list)
-         (hypertension-value-space 'high)
-         (void)))))
+     (findf (lambda (d) (or (and (systolic-blood-pressure? d)
+                                 (dim>=? (observed-property-value d)
+                                         (dimensioned 140 'mmHg)))
+                            (and (diastolic-blood-pressure? d)
+                                 (dim>=? (observed-property-value d)
+                                         (dimensioned 90 'mmHg)))))
+            d-list))
+   (lambda (d-list) (hypertension-value-space 'high))))
 
-;(verify-analysis
-;   analyse-blood-pressure
-;   (list (observation-generator
-;          get-systolic-blood-pressure
-;          (datetime 2019 12 1 0 0 0)
-;          (datetime 2019 12 15 24 0 0)
-;          2)
-;         (observation-generator
-;          get-diastolic-blood-pressure
-;          (datetime 2019 12 1 0 0 0)
-;          (datetime 2019 12 15 24 0 0)
-;          2))
-;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+(verify-analysis
+   analyse-blood-pressure
+   (list (observation-generator
+          get-systolic-blood-pressure
+          (datetime 2019 12 1 0 0 0)
+          (datetime 2019 12 15 24 0 0)
+          2)
+         (observation-generator
+          get-diastolic-blood-pressure
+          (datetime 2019 12 1 0 0 0)
+          (datetime 2019 12 15 24 0 0)
+          2))
+   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
 
 ; decide-bg-twice-weekly (DBg2Wk) relates to the decision to adjust blood
 ; glucose monitoring to two days each week instead of daily. The decision

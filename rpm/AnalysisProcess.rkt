@@ -11,7 +11,7 @@
          analysis-process-output-specification
          analysis-process-proxy-flag)
 (provide (struct-out analysis-process)
-         (struct-out abstraction-pair)
+         (struct-out abstraction-triplet)
          filter-observations)
 (provide verify-analysis
          (struct-out observation-generator)
@@ -23,7 +23,7 @@
 
 ; Analysis process inherit from the generic MADE process, extending it with
 ; the output type identifier and the output specification, which in turn
-; comprises a set of abstraction pairs.
+; comprises a set of abstraction triplets.
 (define-generics analysis
   [analysis-process-output-type analysis]
   [analysis-process-output-specification analysis]
@@ -63,35 +63,47 @@
      (and (super-valid-spec? (made-process null (made-process-control-state self)))
           (procedure? (analysis-process-output-type self))
           (list? (analysis-process-output-specification self))
-          (andmap (lambda (p) (and (abstraction-pair? p)
+          (andmap (lambda (p) (and (abstraction-triplet? p)
                                    (valid? p)))
                   (analysis-process-output-specification self))))])
 
-; An abstraction pair consists of a time window as well as an abstraction function.
-(struct abstraction-pair (time-window abstraction-function)
+; An abstraction triplet consists of a time window, an abstraction predicate as
+; well as an abstraction function.
+(struct abstraction-triplet (time-window abstraction-predicate abstraction-function)
   #:transparent
   #:methods gen:typed
   [(define/generic super-valid? valid?)
-   (define (get-type self) abstraction-pair)
+   (define (get-type self) abstraction-triplet)
    (define (valid? self)
-     (and (duration? (abstraction-pair-time-window self))
-          (super-valid? (abstraction-pair-time-window self))
-          (procedure? (abstraction-pair-abstraction-function self))))])
+     (and (duration? (abstraction-triplet-time-window self))
+          (super-valid? (abstraction-triplet-time-window self))
+          (procedure? (abstraction-triplet-abstraction-predicate self))
+          (procedure? (abstraction-triplet-abstraction-function self))))])
+
+; Helper function for combining an abstraction predicate and an abstraction function.
+; Used to convert abstraction triplets into abstraction pairs.
+(define (combine-predicate-function pred func)
+  (lambda (dSet)
+    (if (pred dSet)
+        (func dSet)
+        (void))))
 
 ; Helper function for defining the main behaviour of analysis processes.
 (define (execute-analysis-body d-list dt out-type ab-spec proxy-flag)
   ; To generate output data, an Analysis process follows the following steps:
-  ; 1) Find an abstraction pair from which an abstraction can be generated.
+  ; 1) Find an abstraction triplet from which an abstraction can be generated.
   ; 2) If none can be found, return an empty list.
   ;    Otherwise, return the generated abstraction.
   (let* ([output-list
-          (map (lambda (ab-pair)
+          (map (lambda (ab-triplet)
                  (execute-abstraction-pair
                   d-list
                   dt
-                  (abstraction-pair-time-window ab-pair)
+                  (abstraction-triplet-time-window ab-triplet)
                   out-type
-                  (abstraction-pair-abstraction-function ab-pair)
+                  (combine-predicate-function
+                   (abstraction-triplet-abstraction-predicate ab-triplet)
+                   (abstraction-triplet-abstraction-function ab-triplet))
                   proxy-flag))
                ab-spec)]
          [output (findf (lambda (d) (not (void? d))) output-list)])
@@ -100,6 +112,8 @@
         null)))
 
 ; Helper function for executing an individual abstraction pair.
+; An abstraction pair is equivalent to an abstraction triplet except that the
+; abstraction predicate and abstraction function are combined.
 (define (execute-abstraction-pair d-list dt t-window out-type ab-func proxy-flag)
   ; To generate output data from an abstraction pair, the following steps are followed:
   ; 1) Filter out any data that falls outside the time window.
@@ -185,10 +199,10 @@
 ; 3) The input observations satisfy only one abstraction specification in each pair.
 ;    (Only relevant if a model can be found that satisfy both).
 (define (verify-analysis proc-constructor obs-gen-list dt)
-  (define (display-solution d-list dt sol ab-pair-1 ab-pair-2 output-1 output-2)
-    (if (eq? ab-pair-1 ab-pair-2)
-        (displayln (format "Model for abstraction pair: ~a" ab-pair-1))
-        (displayln (format "Model for abstraction pairs: ~a and ~a" ab-pair-1 ab-pair-2)))
+  (define (display-solution d-list dt sol ab-triplet-1 ab-triplet-2 output-1 output-2)
+    (if (eq? ab-triplet-1 ab-triplet-2)
+        (displayln (format "Model for abstraction triplet: ~a" ab-triplet-1))
+        (displayln (format "Model for abstraction triplets: ~a and ~a" ab-triplet-1 ab-triplet-2)))
     (if (eq? sol (unsat))
         (displayln (unsat))
         (begin
@@ -197,12 +211,12 @@
           (displayln "Current date-time:")
           (displayln (evaluate dt sol))
           (displayln "Output data:")
-          (cond [(string? ab-pair-1)
+          (cond [(string? ab-triplet-1)
                  (displayln (evaluate output-2 sol))]
-                [(string? ab-pair-2)
+                [(string? ab-triplet-2)
                  (displayln (evaluate output-1 sol))]
                 [else 
-                 (if (<= ab-pair-1 ab-pair-2)
+                 (if (<= ab-triplet-1 ab-triplet-2)
                      (displayln (evaluate output-1 sol))
                      (displayln (evaluate output-2 sol)))])))
     (displayln ""))
@@ -223,13 +237,15 @@
          [proxy-flag (analysis-process-proxy-flag proc)]
          [proc-spec (analysis-process-output-specification proc)]
 
-         [output-num (map (lambda (ab-pair)
-                            (- (length proc-spec) (length (member ab-pair proc-spec))))
+         [output-num (map (lambda (ab-triplet)
+                            (- (length proc-spec) (length (member ab-triplet proc-spec))))
                           proc-spec)]
          [output-list (map (lambda (n)
-                             (let* ([ab-pair (list-ref proc-spec n)]
-                                    [t-window (abstraction-pair-time-window ab-pair)]
-                                    [ab-func (abstraction-pair-abstraction-function ab-pair)])
+                             (let* ([ab-triplet (list-ref proc-spec n)]
+                                    [t-window (abstraction-triplet-time-window ab-triplet)]
+                                    [ab-func (combine-predicate-function
+                                              (abstraction-triplet-abstraction-predicate ab-triplet)
+                                              (abstraction-triplet-abstraction-function ab-triplet))])
                                (execute-abstraction-pair d-list dt t-window out-type ab-func proxy-flag)))
                            output-num)]
          [output-unsat? (map (lambda (n)

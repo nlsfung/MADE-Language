@@ -92,10 +92,10 @@
 ; 1) An identifier for the new process.
 ; 2) A boolean indicating whether the process is a proxy or not.
 ; 3) The output type of the process.
-; 4) A list of abstraction pairs.
+; 4) A list of abstraction triplets.
 (define-syntax (define-analysis stx)
   (syntax-case stx ()
-    [(define-analysis id proxy output-type ab-pair ...)
+    [(define-analysis id proxy output-type ab-triplet ...)
      (begin
        (raise-if-not-identifier #'id stx)
        (raise-if-not-boolean #'proxy stx)
@@ -106,7 +106,7 @@
            [(define (analysis-process-time-window self) duration)
             (define (analysis-process-output-type self) output-type)
             (define (analysis-process-output-specification self)
-              (define-analysis-specification ab-pair ...))
+              (define-analysis-specification ab-triplet ...))
             (define (analysis-process-proxy-flag self) proxy)]
 
            #:methods gen:typed
@@ -117,20 +117,22 @@
                    (super-valid? (made-process (made-process-data-state self)
                                                (made-process-control-state self)))))]))]))
 
-; define-analysis-specification creates a new list of abstraction pairs.
-; It requires a list of pairs as inputs, each containing:
+; define-analysis-specification creates a new list of abstraction triplets.
+; It requires a list of triplets as inputs, each containing:
 ; 1) A time window for the abstraction.
-; 2) A function for outputting the appropriate abstraction value.
+; 2) A function for checking if an abstraction should be generated.
+; 3) A function for outputting the appropriate abstraction value.
 (define-syntax (define-analysis-specification stx)
   (syntax-case stx ()
-    [(define-analysis-specification ((... duration) (... lambda)))
+    [(define-analysis-specification ((... duration) (... lambda-1) (... lambda-2)))
      (begin
        (raise-if-not-duration #'duration stx)
-       (raise-if-not-lambda #'lambda 1 stx)
-       #'(list (abstraction-pair duration lambda)))]
-    [(define-analysis-specification ((... duration) (... lambda)) ab-pair-2 ...)
+       (raise-if-not-lambda #'lambda-1 1 stx)
+       (raise-if-not-lambda #'lambda-2 1 stx)
+       #'(list (abstraction-triplet duration lambda-1 lambda-2)))]
+    [(define-analysis-specification ((... duration) (... lambda-1) (... lambda-2)) ab-pair-2 ...)
      (begin
-       #'(append (define-analysis-specification (duration lambda))
+       #'(append (define-analysis-specification (duration lambda-1 lambda-2))
                  (define-analysis-specification ab-pair-2 ...)))]))
 
 ; define-decision creates a new Decision process.

@@ -20,20 +20,20 @@
   (room-temperature (gen-temp-proxy) (gen-datetime) (gen-temp-value)))
 
 (struct room-temperature-grade abstraction () #:transparent)
-(define (grade-temp-low d-list)
-  (if (>= (length (filter (lambda (d)
-                            (and (room-temperature? d)
-                                 (< (observed-property-value d) 5)))
-                         d-list)) 3)
-      'low
-      (void)))
-(define (grade-temp-high d-list)
-  (if (>= (length (filter (lambda (d)
-                            (and (room-temperature? d)
-                                 (> (observed-property-value d) 10)))
-                         d-list)) 4)
-      'high
-      (void)))
+
+(define (grade-temp-low-pred d-list)
+  (>= (length (filter (lambda (d)
+                        (and (room-temperature? d)
+                             (< (observed-property-value d) 5)))
+                      d-list)) 3))
+(define (grade-temp-low-func d-list) 'low)
+
+(define (grade-temp-high-pred d-list)
+  (>= (length (filter (lambda (d)
+                        (and (room-temperature? d)
+                             (> (observed-property-value d) 10)))
+                      d-list)) 4))
+(define (grade-temp-high-func d-list) 'high)
 
 (define d-state (list (gen-temp) (gen-temp) (gen-temp) (gen-temp) (gen-temp)))
 (define sched-dt (gen-datetime))
@@ -60,8 +60,8 @@
 (define t-window (duration 0 win-length 0 0))
 (define out-type room-temperature-grade)
 (define ab-spec
-  (list (abstraction-pair t-window grade-temp-low)
-           (abstraction-pair t-window grade-temp-high)))
+  (list (abstraction-triplet t-window grade-temp-low-pred grade-temp-low-func)
+        (abstraction-triplet t-window grade-temp-high-pred grade-temp-high-func)))
 (define proc-proxy (gen-temp-proxy))
   
 (struct sample-process analysis-process ()
@@ -104,12 +104,11 @@
    (assert
     (implies (not (null? output))
              (ormap (lambda (ab-pair)
-                      (not (void?
-                            ((abstraction-pair-abstraction-function ab-pair)
-                             (filter-ext
-                              d-state
-                              (dt- cur-dt (abstraction-pair-time-window ab-pair))
-                              cur-dt)))))
+                      ((abstraction-triplet-abstraction-predicate ab-pair)
+                       (filter-ext
+                        d-state
+                        (dt- cur-dt (abstraction-triplet-time-window ab-pair))
+                        cur-dt)))
                     ab-spec)))))
 
 (define (verify-ab-pair-sufficiency)
@@ -118,11 +117,11 @@
     (implies (and (null? output)
                   (is-proc-executed? c-state cur-dt))
              (andmap (lambda (ab-pair)
-                       (void?
-                        ((abstraction-pair-abstraction-function ab-pair)
+                       (not
+                        ((abstraction-triplet-abstraction-predicate ab-pair)
                          (filter-ext
                           d-state
-                          (dt- cur-dt (abstraction-pair-time-window ab-pair))
+                          (dt- cur-dt (abstraction-triplet-time-window ab-pair))
                           cur-dt))))
                      ab-spec)))))
 
@@ -152,15 +151,13 @@
                                          (list-ref output 0)))))
                            (and (implies (eq? (abstraction-value (list-ref output 0))
                                               'low)
-                                         (not (void?
-                                               (grade-temp-low
-                                                (filter-ext d-state
-                                                            (dt- dt-mid (duration 0 win-length 0 0))
-                                                            dt-mid)))))
+                                         (grade-temp-low-pred
+                                          (filter-ext d-state
+                                                      (dt- dt-mid (duration 0 win-length 0 0))
+                                                      dt-mid)))
                                 (implies (eq? (abstraction-value (list-ref output 0))
                                               'high)
-                                         (not (void?
-                                               (grade-temp-high
-                                                (filter-ext d-state
-                                                            (dt- dt-mid (duration 0 win-length 0 0))
-                                                            dt-mid))))))))))))
+                                         (grade-temp-high-pred
+                                          (filter-ext d-state
+                                                      (dt- dt-mid (duration 0 win-length 0 0))
+                                                      dt-mid))))))))))
