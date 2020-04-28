@@ -21,6 +21,7 @@
          get-datetime
          verify-getter
          verify-archetype
+         verify-process
          generate-list)
 
 ; This file contains the syntax of functions for verifying concrete MADE models.
@@ -144,6 +145,20 @@
                  (displayln (evaluate example solution)))
              (displayln "")
              (clear-asserts!))))]))
+
+; verify-process performs various checks on the input process depending on its type.
+; It accepts as input a process constructor, a list of list of MADE archetype instances
+; (which can be symbolic) and an execution datetime.
+(define (verify-process proc gen-list dt)
+  (let* ([example (proc null null)])
+    (cond [(monitoring-process? example)
+           (verify-monitoring proc gen-list dt)]
+          [(analysis-process? example)
+           (verify-analysis proc gen-list dt)]
+          [(decision-process? example)
+           (verify-decision proc gen-list dt)]
+          [(effectuation-process? example)
+           (verify-effectuation proc gen-list dt)])))          
 
 ; generate-list generates a list of MADE data items. It accepts as input the
 ; target archetype ID, the starting datetime and the ending datetime for the

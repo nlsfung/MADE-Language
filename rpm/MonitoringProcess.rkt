@@ -14,7 +14,8 @@
          (struct-out property-specification)
          (struct-out event-specification)
          (struct-out event-trigger))
-(provide verify-monitoring-property
+(provide verify-monitoring
+         verify-monitoring-property
          verify-monitoring-event)
 
 ; This file contains the implementation of Monitoring processes.
@@ -185,6 +186,17 @@
                  (dt-between? (measurement-valid-datetime d)
                               dt-start dt-end)))
           d-state))
+
+; verify-monitoring helps verify a Monitoring process. It accepts as input:
+; 1) The struct-constructor for the monitoring process.
+; 2) A list of measurement generators.
+; 3) The execution datetime (which can be symbolic).
+(define (verify-monitoring proc-constructor measurement-gen-list dt)
+  (let* ([proc (proc-constructor null null)])
+    (cond [(property-specification? (monitoring-process-output-specification proc))
+           (verify-monitoring-property proc-constructor measurement-gen-list dt)]
+          [(event-specification? (monitoring-process-output-specification proc))
+           (verify-monitoring-event proc-constructor measurement-gen-list dt)])))
 
 ; verify-monitoring-property helps verify a Monitoring process for observed properties.
 ; It accepts as input:

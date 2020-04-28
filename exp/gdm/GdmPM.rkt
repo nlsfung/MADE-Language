@@ -95,7 +95,7 @@
         bg-list)))
    (lambda (d-list) (glycemic-control-value-space 'poor))))
 
-;(verify-analysis
+;(verify-process
 ;   analyse-blood-glucose
 ;   (list (generate-list
 ;          blood-glucose
@@ -177,7 +177,7 @@
           2)))
    (lambda (d-list) (ketonuria-value-space 'positive))))
 
-;(verify-analysis
+;(verify-process
 ;   analyse-urinary-ketone
 ;   (list (generate-list
 ;          urinary-ketone
@@ -211,7 +211,7 @@
            2)))
    (lambda (d-list) (carbohydrates-compliance-value-space 'non-compliant))))
 
-;(verify-analysis
+;(verify-process
 ;   analyse-carbohydrates-intake
 ;   (list (generate-list
 ;          carbohydrate-intake
@@ -283,7 +283,7 @@
             d-list))
    (lambda (d-list) (hypertension-value-space 'high))))
 
-;(verify-analysis
+;(verify-process
 ;   analyse-blood-pressure
 ;   (list (generate-list
 ;          systolic-blood-pressure
@@ -339,7 +339,7 @@
                             (glycemic-control-value-space 'good))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bg-twice-weekly
 ;   (list (generate-list
 ;          glycemic-control
@@ -405,7 +405,7 @@
                       (glycemic-control-value-space 'very-poor)))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bg-daily
 ;   (list (generate-list
 ;          glycemic-control
@@ -484,7 +484,7 @@
                              (ketonuria-value-space 'positive))))
                  d-list)))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bg-insulin
 ;   (list (generate-list
 ;          glycemic-control
@@ -539,7 +539,7 @@
                             (glycemic-control-value-space 'good))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bg-twice-weekly-post-insulin
 ;   (list (generate-list
 ;          glycemic-control
@@ -599,7 +599,7 @@
                       (glycemic-control-value-space 'very-poor)))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bg-daily-post-insulin
 ;   (list (generate-list
 ;          glycemic-control
@@ -644,7 +644,7 @@
                       (glycemic-control-value-space 'very-poor)))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bg-insulin-adjust
 ;   (list (generate-list
 ;          glycemic-control
@@ -708,7 +708,7 @@
                              (ketonuria-value-space 'negative))))
                  d-list)))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bg-nutrition-change
 ;   (list (generate-list
 ;          glycemic-control
@@ -763,7 +763,7 @@
                             (glycemic-control-value-space 'good))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bg-twice-weekly-post-nutrition
 ;   (list (generate-list
 ;          glycemic-control
@@ -823,7 +823,7 @@
                       (glycemic-control-value-space 'very-poor)))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bg-daily-post-nutrition
 ;   (list (generate-list
 ;          glycemic-control
@@ -886,7 +886,7 @@
                       (glycemic-control-value-space 'very-poor)))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bg-insulin-post-nutrition
 ;   (list (generate-list
 ;          glycemic-control
@@ -931,7 +931,7 @@
                             (ketonuria-value-space 'negative))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-uk-twice-weekly
 ;   (list (generate-list
 ;          ketonuria
@@ -981,7 +981,7 @@
                             (ketonuria-value-space 'positive))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-uk-daily
 ;   (list (generate-list
 ;          ketonuria
@@ -1035,7 +1035,7 @@
                                   (carbohydrates-compliance-value-space 'insufficient))))
             d-list))))))
 
-;(verify-decision
+;(verify-process
 ;   decide-uk-dinner-increase
 ;   (list (generate-list
 ;          ketonuria
@@ -1084,7 +1084,7 @@
                             (ketonuria-value-space 'negative))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-uk-twice-weekly-post-dinner
 ;   (list (generate-list
 ;          ketonuria
@@ -1128,7 +1128,7 @@
                             (ketonuria-value-space 'positive))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-uk-daily-post-dinner
 ;   (list (generate-list
 ;          ketonuria
@@ -1177,7 +1177,7 @@
                             (hypertension-value-space 'normal))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bp-once-weekly
 ;   (list (generate-list
 ;          hypertension
@@ -1230,7 +1230,7 @@
                             (hypertension-value-space 'high))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bp-twice-weekly
 ;   (list (generate-list
 ;          hypertension
@@ -1276,7 +1276,7 @@
                             (hypertension-value-space 'sustained-high))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bp-chronic
 ;   (list (generate-list
 ;          hypertension
@@ -1336,7 +1336,7 @@
                             (hypertension-value-space 'sustained-high))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bp-gestational
 ;   (list (generate-list
 ;          hypertension
@@ -1395,7 +1395,7 @@
                             (eq? (abstraction-value d) (bool #f))))
            d-list)))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bp-once-weekly-gestational
 ;   (list (generate-list
 ;          hypertension
@@ -1465,7 +1465,7 @@
                        (eq? (abstraction-value d) (bool #t))))
       d-list))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bp-two-days-gestational
 ;   (list (generate-list
 ;          hypertension
@@ -1522,7 +1522,7 @@
                             (eq? (abstraction-value d) (bool #t))))
            d-list)))))
 
-;(verify-decision
+;(verify-process
 ;   decide-bp-hourly-gestational
 ;   (list (generate-list
 ;          hypertension
@@ -1550,7 +1550,7 @@
    #:instruction 'administer-insulin-action
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ; effectuate-administer-insulin
 ; (list (generate-list
 ;        adjust-insulin-plan
@@ -1559,7 +1559,7 @@
 ;        1))
 ; (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
 ;
-;(verify-effectuation
+;(verify-process
 ; effectuate-administer-insulin
 ; (list (generate-list
 ;        start-insulin-plan
@@ -1579,7 +1579,7 @@
    #:instruction 'change-diet-action
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-change-diet
 ;   (list (generate-list
 ;          change-nutrition-plan
@@ -1599,7 +1599,7 @@
    #:instruction 'change-dinner-action
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-change-dinner
 ;   (list (generate-list
 ;          increase-dinner-intake-plan
@@ -1623,7 +1623,7 @@
    #:instruction 'monitor-blood-glucose
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-monitor-bg
 ;   (list (generate-list
 ;          bg-twice-weekly-plan
@@ -1660,7 +1660,7 @@
    #:instruction 'decide-bg-nutrition-change
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-bg-nutrition-change
 ;   (list (generate-list
 ;          bg-twice-weekly-plan
@@ -1745,7 +1745,7 @@
    #:instruction 'decide-bg-insulin-adjust
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-bg-insulin-control
 ;   (list (generate-list
 ;          bg-twice-weekly-plan
@@ -1830,7 +1830,7 @@
    #:instruction 'decide-bg-twice-weekly-post-insulin
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-bg-twice-weekly-control
 ;   (list (generate-list
 ;          bg-twice-weekly-plan
@@ -1895,7 +1895,7 @@
    #:instruction 'decide-bg-daily-post-insulin
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-bg-daily-control
 ;   (list (generate-list
 ;          bg-twice-weekly-plan
@@ -1924,7 +1924,7 @@
    #:instruction 'monitor-urinary-ketones
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-monitor-uk-control
 ;   (list (generate-list
 ;          uk-twice-weekly-plan
@@ -1957,7 +1957,7 @@
    #:instruction 'decide-uk-dinner-increase
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-uk-dinner-increase
 ;   (list (generate-list
 ;          uk-twice-weekly-plan
@@ -2012,7 +2012,7 @@
    #:instruction 'decide-uk-twice-weekly-post-dinner
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-uk-twice-weekly-control
 ;   (list (generate-list
 ;          uk-twice-weekly-plan
@@ -2063,7 +2063,7 @@
    #:instruction 'decide-uk-daily-post-dinner
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-uk-daily-control
 ;   (list (generate-list
 ;          uk-twice-weekly-plan
@@ -2113,7 +2113,7 @@
    #:instruction 'monitor-systolic-blood-pressure
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-monitor-systolic-bp-control
 ;   (list (generate-list
 ;          bp-once-weekly-plan
@@ -2178,7 +2178,7 @@
    #:instruction 'monitor-diastolic-blood-pressure
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-monitor-diastolic-bp-control
 ;   (list (generate-list
 ;          bp-once-weekly-plan
@@ -2235,7 +2235,7 @@
    #:instruction 'decide-bp-once-weekly
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-bp-once-weekly-control
 ;   (list (generate-list
 ;          bp-once-weekly-plan
@@ -2282,7 +2282,7 @@
    #:instruction 'decide-bp-twice-weekly
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-bp-twice-weekly-control
 ;   (list (generate-list
 ;          bp-once-weekly-plan
@@ -2317,7 +2317,7 @@
    #:instruction 'decide-bp-chronic
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-bp-chronic-control
 ;   (list (generate-list
 ;          chronic-hypertension-plan
@@ -2350,7 +2350,7 @@
    #:instruction 'decide-bp-two-days-gestational
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-bp-gestational-control
 ;   (list (generate-list
 ;          gestational-hypertension-plan
@@ -2383,7 +2383,7 @@
    #:instruction 'decide-bp-once-weekly-gestational
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-bp-once-weekly-gestational-control
 ;   (list (generate-list
 ;          gestational-hypertension-plan
@@ -2421,7 +2421,7 @@
    #:instruction 'decide-bp-hourly-gestational
    #:predicate (lambda (i-list) #t)))
 
-;(verify-effectuation
+;(verify-process
 ;   effectuate-bp-hourly-gestational-control
 ;   (list (generate-list
 ;          gestational-hypertension-plan
