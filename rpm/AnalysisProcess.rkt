@@ -14,8 +14,6 @@
          (struct-out abstraction-triplet)
          filter-observations)
 (provide verify-analysis
-         (struct-out observation-generator)
-         generate-observation-list
          execute-abstraction-pair
          execute-analysis-body)
 
@@ -221,13 +219,7 @@
                      (displayln (evaluate output-2 sol)))])))
     (displayln ""))
   
-  (let* ([d-list (foldl (lambda (generator result)
-                                  (append result
-                                          (generate-observation-list
-                                           (observation-generator-getter generator)
-                                           (observation-generator-start-datetime generator)
-                                           (observation-generator-end-datetime generator)
-                                           (observation-generator-frequency generator))))
+  (let* ([d-list (foldl (lambda (d-list result) (append result d-list))
                                 null
                                 obs-gen-list)]
 
@@ -287,59 +279,3 @@
             (list-tail (member m output-num) 1))))
      output-num)
     (clear-asserts!)))
-
-; Observation generator contains the specification for generating a list of
-; symbolic observations (for verification purposes). It comprises:
-; 1) An observation getter.
-; 2) A starting date-time for the corresponding observations.
-; 3) An ending date-time for the observations.
-; 4) A frequency which can either be:
-;    a) A duration indicating how often the observations should be repeated.
-;    b) A positive integer indicating the number of observations to generate.
-;       In this case, the start date-time indicates the earliest date-time for
-;       the measurement and the end date-time latest.
-(struct observation-generator
-  (getter start-datetime end-datetime frequency)
-  #:transparent)
-
-; generate-observation-list generates a list of observations.
-(define (generate-observation-list getter start-datetime end-datetime frequency)
-  (define (generate-count total)
-    (if (or (<= total 0) (dt>? start-datetime end-datetime))
-        null
-        (let ([data (getter start-datetime end-datetime)])
-          (assert (valid? data))
-          (append (list data)
-                  (generate-count (- total 1))))))
-  
-  (define (generate-interval cur-dt)  
-    (if (dt>? cur-dt end-datetime)
-        null
-        (let ([data (getter cur-dt cur-dt)]
-              [next-dt (dt+ cur-dt frequency)])
-          (assert (valid? data))
-          (append (list data)
-                  (generate-interval next-dt)))))
-  
-  (let ([sample-data (getter)]
-        [d-list (cond [(integer? frequency) (generate-count frequency)]
-                      [(duration? frequency) (generate-interval start-datetime)])])
-    (cond [(observed-property? sample-data)
-           (assert (eq? (length d-list)
-                        (length (remove-duplicates
-                                 (map (lambda (d) (observed-property-valid-datetime d))
-                                      d-list)))))]
-          [(observed-event? sample-data)
-           (assert (and (eq? (length d-list)
-                             (length (remove-duplicates
-                                      (map (lambda (d)
-                                             (datetime-range-start
-                                              (observed-event-valid-datetime-range d)))
-                                           d-list))))
-                        (eq? (length d-list)
-                             (length (remove-duplicates
-                                      (map (lambda (d)
-                                             (datetime-range-end
-                                              (observed-event-valid-datetime-range d)))
-                                           d-list))))))])
-    d-list))

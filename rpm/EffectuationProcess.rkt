@@ -13,8 +13,6 @@
          (struct-out target-schedule)
          filter-plans)
 (provide verify-effectuation
-         (struct-out action-plan-generator)
-         generate-action-plan-list
          execute-effectuation-body)
 
 ; This file contains the implementation of Effectuation processes.
@@ -207,14 +205,7 @@
           (let* ([t-scheds (list (list-ref target-schedules n) (list-ref target-schedules m))]
                  [inst-types (map (lambda (t) (target-schedule-instruction-type t))
                                   t-scheds)]
-                 [d-list (foldl (lambda (generator result)
-                                  (append result
-                                          (generate-action-plan-list
-                                           (action-plan-generator-getter generator)
-                                           (action-plan-generator-start-datetime generator)
-                                           (action-plan-generator-end-datetime generator)
-                                           (action-plan-generator-frequency generator)
-                                           inst-types)))
+                 [d-list (foldl (lambda (d-list result) (append result d-list))
                                 null
                                 plan-gen-list)]
                  [outputs (map (lambda (t)
@@ -236,49 +227,3 @@
             (clear-asserts!)))
         (member n output-num)))
      output-num)))
-
-; Action plan generator contains the specification for generating a list of
-; symbolic action plans (for verification purposes). It comprises:
-; 1) An action plan getter.
-; 2) The earliest date-time for the action plans.
-; 3) The latest date-time for the action plans.
-; 4) A frequency which can either be:
-;    a) A duration indicating how often the action plans should be repeated.
-;    b) A positive integer indicating the number of action plans to generate.
-(struct action-plan-generator
-  (getter start-datetime end-datetime frequency)
-  #:transparent)
-
-; generate-action-plan generates a list of action plans. It accepts an extra
-; list of symbols indicating specific instruction types to include in the plan.
-; If set to #f, all instruction types will be included.
-(define (generate-action-plan-list getter start-datetime end-datetime frequency target-list)
-  (define (generate-count total)
-    (if (or (<= total 0) (dt>? start-datetime end-datetime))
-        null
-        (let ([data (if (not target-list)
-                        (getter start-datetime end-datetime)
-                        (getter start-datetime end-datetime target-list))])
-          (assert (valid? data))
-          (append (list data)
-                  (generate-count (- total 1))))))
-  
-  (define (generate-interval cur-dt)  
-    (if (dt>? cur-dt end-datetime)
-        null
-        (let ([data (if (not target-list)
-                        (getter cur-dt cur-dt)
-                        (getter cur-dt cur-dt target-list))]
-              [next-dt (dt+ cur-dt frequency)])
-          (assert (valid? data))
-          (append (list data)
-                  (generate-interval next-dt)))))
-  
-  (let ([d-list (cond [(integer? frequency) (generate-count frequency)]
-                      [(duration? frequency) (generate-interval start-datetime)])])
-    (assert (eq? (length d-list)
-                      (length (remove-duplicates
-                               (map (lambda (d)
-                                      (action-plan-valid-datetime d))
-                                    d-list)))))
-    d-list))

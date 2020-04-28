@@ -97,18 +97,18 @@
 
 ;(verify-analysis
 ;   analyse-blood-glucose
-;   (list (observation-generator
-;          get-blood-glucose
+;   (list (generate-list
+;          blood-glucose
 ;          (datetime 2019 12 2 7 0 0)
 ;          (datetime 2019 12 3 24 0 0)
 ;          (duration 0 12 0 0))
-;         (observation-generator
-;          get-meal-event
+;         (generate-list
+;          meal-event
 ;          (datetime 2019 12 2 6 0 0)
 ;          (datetime 2019 12 3 24 0 0)
 ;          (duration 0 12 0 0))
-;         (observation-generator
-;          get-carbohydrate-intake
+;         (generate-list
+;          carbohydrate-intake
 ;          (datetime 2019 12 2 6 0 0)
 ;          (datetime 2019 12 3 24 0 0)
 ;          (duration 0 12 0 0)))
@@ -179,8 +179,8 @@
 
 ;(verify-analysis
 ;   analyse-urinary-ketone
-;   (list (observation-generator
-;          get-urinary-ketone
+;   (list (generate-list
+;          urinary-ketone
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 31 24 0 0)
 ;          5))
@@ -213,8 +213,8 @@
 
 ;(verify-analysis
 ;   analyse-carbohydrates-intake
-;   (list (observation-generator
-;          get-carbohydrate-intake
+;   (list (generate-list
+;          carbohydrate-intake
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 31 24 0 0)
 ;          5))
@@ -285,13 +285,13 @@
 
 ;(verify-analysis
 ;   analyse-blood-pressure
-;   (list (observation-generator
-;          get-systolic-blood-pressure
+;   (list (generate-list
+;          systolic-blood-pressure
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2)
-;         (observation-generator
-;          get-diastolic-blood-pressure
+;         (generate-list
+;          diastolic-blood-pressure
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
@@ -341,8 +341,8 @@
 
 ;(verify-decision
 ;   decide-bg-twice-weekly
-;   (list (abstraction-generator
-;          get-glycemic-control
+;   (list (generate-list
+;          glycemic-control
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
@@ -407,8 +407,8 @@
 
 ;(verify-decision
 ;   decide-bg-daily
-;   (list (abstraction-generator
-;          get-glycemic-control
+;   (list (generate-list
+;          glycemic-control
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
@@ -486,13 +486,13 @@
 
 ;(verify-decision
 ;   decide-bg-insulin
-;   (list (abstraction-generator
-;          get-glycemic-control
+;   (list (generate-list
+;          glycemic-control
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2)
-;         (abstraction-generator
-;          get-ketonuria
+;         (generate-list
+;          ketonuria
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
@@ -541,8 +541,8 @@
 
 ;(verify-decision
 ;   decide-bg-twice-weekly-post-insulin
-;   (list (abstraction-generator
-;          get-glycemic-control
+;   (list (generate-list
+;          glycemic-control
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
@@ -601,8 +601,8 @@
 
 ;(verify-decision
 ;   decide-bg-daily-post-insulin
-;   (list (abstraction-generator
-;          get-glycemic-control
+;   (list (generate-list
+;          glycemic-control
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
@@ -646,8 +646,8 @@
 
 ;(verify-decision
 ;   decide-bg-insulin-adjust
-;   (list (abstraction-generator
-;          get-glycemic-control
+;   (list (generate-list
+;          glycemic-control
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
@@ -710,13 +710,13 @@
 
 ;(verify-decision
 ;   decide-bg-nutrition-change
-;   (list (abstraction-generator
-;          get-glycemic-control
+;   (list (generate-list
+;          glycemic-control
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2)
-;         (abstraction-generator
-;          get-ketonuria
+;         (generate-list
+;          ketonuria
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
@@ -765,8 +765,8 @@
 
 ;(verify-decision
 ;   decide-bg-twice-weekly-post-nutrition
-;   (list (abstraction-generator
-;          get-glycemic-control
+;   (list (generate-list
+;          glycemic-control
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
@@ -825,8 +825,8 @@
 
 ;(verify-decision
 ;   decide-bg-daily-post-nutrition
-;   (list (abstraction-generator
-;          get-glycemic-control
+;   (list (generate-list
+;          glycemic-control
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
@@ -888,8 +888,8 @@
 
 ;(verify-decision
 ;   decide-bg-insulin-post-nutrition
-;   (list (abstraction-generator
-;          get-glycemic-control
+;   (list (generate-list
+;          glycemic-control
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
@@ -933,8 +933,8 @@
 
 ;(verify-decision
 ;   decide-uk-twice-weekly
-;   (list (abstraction-generator
-;          get-ketonuria
+;   (list (generate-list
+;          ketonuria
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
@@ -983,8 +983,8 @@
 
 ;(verify-decision
 ;   decide-uk-daily
-;   (list (abstraction-generator
-;          get-ketonuria
+;   (list (generate-list
+;          ketonuria
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
@@ -1037,13 +1037,13 @@
 
 ;(verify-decision
 ;   decide-uk-dinner-increase
-;   (list (abstraction-generator
-;          get-ketonuria
+;   (list (generate-list
+;          ketonuria
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2)
-;         (abstraction-generator
-;          get-carbohydrates-compliance
+;         (generate-list
+;          carbohydrates-compliance
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
@@ -1086,8 +1086,8 @@
 
 ;(verify-decision
 ;   decide-uk-twice-weekly-post-dinner
-;   (list (abstraction-generator
-;          get-ketonuria
+;   (list (generate-list
+;          ketonuria
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
@@ -1130,8 +1130,8 @@
 
 ;(verify-decision
 ;   decide-uk-daily-post-dinner
-;   (list (abstraction-generator
-;          get-ketonuria
+;   (list (generate-list
+;          ketonuria
 ;          (datetime 2019 12 1 0 0 0)
 ;          (datetime 2019 12 15 24 0 0)
 ;          2))
@@ -1177,14 +1177,14 @@
                             (hypertension-value-space 'normal))))
       d-list))))
 
-(verify-decision
-   decide-bp-once-weekly
-   (list (abstraction-generator
-          get-hypertension
-          (datetime 2019 12 1 0 0 0)
-          (datetime 2019 12 15 24 0 0)
-          2))
-   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+;(verify-decision
+;   decide-bp-once-weekly
+;   (list (generate-list
+;          hypertension
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
 
 ; decide-bp-twice-weekly (DBp2Wk) relates to the decision to adjust blood
 ; pressure monitoring to twice a week instead of once a week. The decision
@@ -1230,14 +1230,14 @@
                             (hypertension-value-space 'high))))
       d-list))))
 
-(verify-decision
-   decide-bp-twice-weekly
-   (list (abstraction-generator
-          get-hypertension
-          (datetime 2019 12 1 0 0 0)
-          (datetime 2019 12 15 24 0 0)
-          2))
-   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+;(verify-decision
+;   decide-bp-twice-weekly
+;   (list (generate-list
+;          hypertension
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
 
 ; decide-bp-chronic (DBpChronic) is a proxy process for starting the chronic
 ; blood pressure monitoring plan. The decision criteria involves the following
@@ -1276,14 +1276,14 @@
                             (hypertension-value-space 'sustained-high))))
       d-list))))
 
-(verify-decision
-   decide-bp-chronic
-   (list (abstraction-generator
-          get-hypertension
-          (datetime 2019 12 1 0 0 0)
-          (datetime 2019 12 15 24 0 0)
-          2))
-   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+;(verify-decision
+;   decide-bp-chronic
+;   (list (generate-list
+;          hypertension
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
 
 ; decide-bp-gestational (DBpGestational) is a proxy process for starting the
 ; gestational blood pressure monitoring plan. The decision criteria involves
@@ -1336,14 +1336,14 @@
                             (hypertension-value-space 'sustained-high))))
       d-list))))
 
-(verify-decision
-   decide-bp-gestational
-   (list (abstraction-generator
-          get-hypertension
-          (datetime 2019 12 1 0 0 0)
-          (datetime 2019 12 15 24 0 0)
-          2))
-   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+;(verify-decision
+;   decide-bp-gestational
+;   (list (generate-list
+;          hypertension
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
 
 ; decide-bp-once-weekly-gestational (DBp1WkGestational) relates to the decision
 ; to adjust blood pressure monitoring to once a week instead of every two days
@@ -1395,19 +1395,19 @@
                             (eq? (abstraction-value d) (bool #f))))
            d-list)))))
 
-(verify-decision
-   decide-bp-once-weekly-gestational
-   (list (abstraction-generator
-          get-hypertension
-          (datetime 2019 12 1 0 0 0)
-          (datetime 2019 12 15 24 0 0)
-          2)
-         (abstraction-generator
-          get-proteinuria
-          (datetime 2019 12 1 0 0 0)
-          (datetime 2019 12 15 24 0 0)
-          2))
-   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+;(verify-decision
+;   decide-bp-once-weekly-gestational
+;   (list (generate-list
+;          hypertension
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2)
+;         (generate-list
+;          proteinuria
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
 
 ; decide-bp-two-days-gestational (DBp2DaysGest) relates to decision to adjust
 ; blood pressure monitoring to every two days instead of once a week (in the
@@ -1465,19 +1465,19 @@
                        (eq? (abstraction-value d) (bool #t))))
       d-list))))
 
-(verify-decision
-   decide-bp-two-days-gestational
-   (list (abstraction-generator
-          get-hypertension
-          (datetime 2019 12 1 0 0 0)
-          (datetime 2019 12 15 24 0 0)
-          2)
-         (abstraction-generator
-          get-proteinuria
-          (datetime 2019 12 1 0 0 0)
-          (datetime 2019 12 15 24 0 0)
-          2))
-   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+;(verify-decision
+;   decide-bp-two-days-gestational
+;   (list (generate-list
+;          hypertension
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2)
+;         (generate-list
+;          proteinuria
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
 
 ; decide-bp-hourly-gestational (DBpHoursGest) is a proxy process for deciding
 ; to adjust blood pressure monitoring to every few hours (e.g. 4) instead of
@@ -1522,19 +1522,19 @@
                             (eq? (abstraction-value d) (bool #t))))
            d-list)))))
 
-(verify-decision
-   decide-bp-hourly-gestational
-   (list (abstraction-generator
-          get-hypertension
-          (datetime 2019 12 1 0 0 0)
-          (datetime 2019 12 15 24 0 0)
-          2)
-         (abstraction-generator
-          get-proteinuria
-          (datetime 2019 12 1 0 0 0)
-          (datetime 2019 12 15 24 0 0)
-          2))
-   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
+;(verify-decision
+;   decide-bp-hourly-gestational
+;   (list (generate-list
+;          hypertension
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2)
+;         (generate-list
+;          proteinuria
+;          (datetime 2019 12 1 0 0 0)
+;          (datetime 2019 12 15 24 0 0)
+;          2))
+;   (get-datetime (datetime 2019 12 1 0 0 0) (datetime 2019 12 15 24 0 0)))
 
 ; effectuate-administer-insulin is a proxy process for administering insulin.
 (define-effectuation
@@ -1552,8 +1552,8 @@
 
 ;(verify-effectuation
 ; effectuate-administer-insulin
-; (list (action-plan-generator
-;        get-adjust-insulin-plan
+; (list (generate-list
+;        adjust-insulin-plan
 ;        (datetime 2019 12 7 0 0 0)
 ;        (datetime 2019 12 7 24 0 0)
 ;        1))
@@ -1561,8 +1561,8 @@
 ;
 ;(verify-effectuation
 ; effectuate-administer-insulin
-; (list (action-plan-generator
-;        get-start-insulin-plan
+; (list (generate-list
+;        start-insulin-plan
 ;        (datetime 2019 12 7 0 0 0)
 ;        (datetime 2019 12 7 24 0 0)
 ;        1))
@@ -1581,8 +1581,8 @@
 
 ;(verify-effectuation
 ;   effectuate-change-diet
-;   (list (action-plan-generator
-;          get-change-nutrition-plan
+;   (list (generate-list
+;          change-nutrition-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -1601,8 +1601,8 @@
 
 ;(verify-effectuation
 ;   effectuate-change-dinner
-;   (list (action-plan-generator
-;          get-increase-dinner-intake-plan
+;   (list (generate-list
+;          increase-dinner-intake-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -1625,13 +1625,13 @@
 
 ;(verify-effectuation
 ;   effectuate-monitor-bg
-;   (list (action-plan-generator
-;          get-bg-twice-weekly-plan
+;   (list (generate-list
+;          bg-twice-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-bg-daily-plan
+;         (generate-list
+;          bg-daily-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -1662,23 +1662,23 @@
 
 ;(verify-effectuation
 ;   effectuate-bg-nutrition-change
-;   (list (action-plan-generator
-;          get-bg-twice-weekly-plan
+;   (list (generate-list
+;          bg-twice-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-change-nutrition-plan
+;         (generate-list
+;          change-nutrition-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-start-insulin-plan
+;         (generate-list
+;          start-insulin-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-bg-daily-plan
+;         (generate-list
+;          bg-daily-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -1747,23 +1747,23 @@
 
 ;(verify-effectuation
 ;   effectuate-bg-insulin-control
-;   (list (action-plan-generator
-;          get-bg-twice-weekly-plan
+;   (list (generate-list
+;          bg-twice-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-change-nutrition-plan
+;         (generate-list
+;          change-nutrition-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-start-insulin-plan
+;         (generate-list
+;          start-insulin-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-bg-daily-plan
+;         (generate-list
+;          bg-daily-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -1832,23 +1832,23 @@
 
 ;(verify-effectuation
 ;   effectuate-bg-twice-weekly-control
-;   (list (action-plan-generator
-;          get-bg-twice-weekly-plan
+;   (list (generate-list
+;          bg-twice-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-change-nutrition-plan
+;         (generate-list
+;          change-nutrition-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-start-insulin-plan
+;         (generate-list
+;          start-insulin-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-bg-daily-plan
+;         (generate-list
+;          bg-daily-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -1897,13 +1897,13 @@
 
 ;(verify-effectuation
 ;   effectuate-bg-daily-control
-;   (list (action-plan-generator
-;          get-bg-twice-weekly-plan
+;   (list (generate-list
+;          bg-twice-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-bg-daily-plan
+;         (generate-list
+;          bg-daily-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -1926,13 +1926,13 @@
 
 ;(verify-effectuation
 ;   effectuate-monitor-uk-control
-;   (list (action-plan-generator
-;          get-uk-twice-weekly-plan
+;   (list (generate-list
+;          uk-twice-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-uk-daily-plan
+;         (generate-list
+;          uk-daily-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -1959,18 +1959,18 @@
 
 ;(verify-effectuation
 ;   effectuate-uk-dinner-increase
-;   (list (action-plan-generator
-;          get-uk-twice-weekly-plan
+;   (list (generate-list
+;          uk-twice-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-uk-daily-plan
+;         (generate-list
+;          uk-daily-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-increase-dinner-intake-plan
+;         (generate-list
+;          increase-dinner-intake-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -2014,18 +2014,18 @@
 
 ;(verify-effectuation
 ;   effectuate-uk-twice-weekly-control
-;   (list (action-plan-generator
-;          get-uk-twice-weekly-plan
+;   (list (generate-list
+;          uk-twice-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-uk-daily-plan
+;         (generate-list
+;          uk-daily-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-increase-dinner-intake-plan
+;         (generate-list
+;          increase-dinner-intake-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -2065,18 +2065,18 @@
 
 ;(verify-effectuation
 ;   effectuate-uk-daily-control
-;   (list (action-plan-generator
-;          get-uk-twice-weekly-plan
+;   (list (generate-list
+;          uk-twice-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-uk-daily-plan
+;         (generate-list
+;          uk-daily-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-increase-dinner-intake-plan
+;         (generate-list
+;          increase-dinner-intake-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -2115,33 +2115,33 @@
 
 ;(verify-effectuation
 ;   effectuate-monitor-systolic-bp-control
-;   (list (action-plan-generator
-;          get-bp-once-weekly-plan
+;   (list (generate-list
+;          bp-once-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-bp-twice-weekly-plan
+;         (generate-list
+;          bp-twice-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-chronic-hypertension-plan
+;         (generate-list
+;          chronic-hypertension-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-gestational-hypertension-plan
+;         (generate-list
+;          gestational-hypertension-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-gestational-weekly-plan
+;         (generate-list
+;          gestational-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-gestational-hours-plan
+;         (generate-list
+;          gestational-hours-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -2180,33 +2180,33 @@
 
 ;(verify-effectuation
 ;   effectuate-monitor-diastolic-bp-control
-;   (list (action-plan-generator
-;          get-bp-once-weekly-plan
+;   (list (generate-list
+;          bp-once-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-bp-twice-weekly-plan
+;         (generate-list
+;          bp-twice-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-chronic-hypertension-plan
+;         (generate-list
+;          chronic-hypertension-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-gestational-hypertension-plan
+;         (generate-list
+;          gestational-hypertension-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-gestational-weekly-plan
+;         (generate-list
+;          gestational-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-gestational-hours-plan
+;         (generate-list
+;          gestational-hours-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -2237,23 +2237,23 @@
 
 ;(verify-effectuation
 ;   effectuate-bp-once-weekly-control
-;   (list (action-plan-generator
-;          get-bp-once-weekly-plan
+;   (list (generate-list
+;          bp-once-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-bp-twice-weekly-plan
+;         (generate-list
+;          bp-twice-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-chronic-hypertension-plan
+;         (generate-list
+;          chronic-hypertension-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-gestational-hypertension-plan
+;         (generate-list
+;          gestational-hypertension-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -2284,23 +2284,23 @@
 
 ;(verify-effectuation
 ;   effectuate-bp-twice-weekly-control
-;   (list (action-plan-generator
-;          get-bp-once-weekly-plan
+;   (list (generate-list
+;          bp-once-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-bp-twice-weekly-plan
+;         (generate-list
+;          bp-twice-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-chronic-hypertension-plan
+;         (generate-list
+;          chronic-hypertension-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-gestational-hypertension-plan
+;         (generate-list
+;          gestational-hypertension-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -2319,8 +2319,8 @@
 
 ;(verify-effectuation
 ;   effectuate-bp-chronic-control
-;   (list (action-plan-generator
-;          get-chronic-hypertension-plan
+;   (list (generate-list
+;          chronic-hypertension-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -2352,13 +2352,13 @@
 
 ;(verify-effectuation
 ;   effectuate-bp-gestational-control
-;   (list (action-plan-generator
-;          get-gestational-hypertension-plan
+;   (list (generate-list
+;          gestational-hypertension-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-gestational-weekly-plan
+;         (generate-list
+;          gestational-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -2385,18 +2385,18 @@
 
 ;(verify-effectuation
 ;   effectuate-bp-once-weekly-gestational-control
-;   (list (action-plan-generator
-;          get-gestational-hypertension-plan
+;   (list (generate-list
+;          gestational-hypertension-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-gestational-weekly-plan
+;         (generate-list
+;          gestational-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-gestational-hours-plan
+;         (generate-list
+;          gestational-hours-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))
@@ -2423,18 +2423,18 @@
 
 ;(verify-effectuation
 ;   effectuate-bp-hourly-gestational-control
-;   (list (action-plan-generator
-;          get-gestational-hypertension-plan
+;   (list (generate-list
+;          gestational-hypertension-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-gestational-weekly-plan
+;         (generate-list
+;          gestational-weekly-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1)
-;         (action-plan-generator
-;          get-gestational-hours-plan
+;         (generate-list
+;          gestational-hours-plan
 ;          (datetime 2019 12 7 0 0 0)
 ;          (datetime 2019 12 7 24 0 0)
 ;          1))

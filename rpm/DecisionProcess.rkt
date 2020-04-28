@@ -23,8 +23,6 @@
          (struct-out culminating-action-template)
          filter-abstractions)
 (provide verify-decision
-         (struct-out abstraction-generator)
-         generate-abstraction-list
          execute-decision-body)
 
 ; This file contains the implementation of Decision processes.
@@ -293,13 +291,7 @@
           (displayln (evaluate output sol))))
     (displayln ""))
   
-  (let* ([d-list (foldl (lambda (generator result)
-                                  (append result
-                                          (generate-abstraction-list
-                                           (abstraction-generator-getter generator)
-                                           (abstraction-generator-start-datetime generator)
-                                           (abstraction-generator-end-datetime generator)
-                                           (abstraction-generator-frequency generator))))
+  (let* ([d-list (foldl (lambda (d-list result) (append result d-list))
                                 null
                                 abs-gen-list)]
 
@@ -324,53 +316,3 @@
          (display-solution d-list dt sol n output)))
      output-num)
     (clear-asserts!)))
-
-; Abstraction generator contains the specification for generating a list of
-; symbolic abstractions (for verification purposes). It comprises:
-; 1) An abstraction getter.
-; 2) A starting date-time for the corresponding abstraction.
-; 3) An ending date-time for the abstraction.
-; 4) A frequency which can either be:
-;    a) A duration indicating how often the observations should be repeated.
-;    b) A positive integer indicating the number of observations to generate.
-;       In this case, the start date-time indicates the earliest date-time for
-;       the measurement and the end date-time latest.
-(struct abstraction-generator
-  (getter start-datetime end-datetime frequency)
-  #:transparent)
-
-; generate-abstraction-list generates a list of abstractions.
-(define (generate-abstraction-list getter start-datetime end-datetime frequency)
-  (define (generate-count total)
-    (if (or (<= total 0) (dt>? start-datetime end-datetime))
-        null
-        (let ([data (getter start-datetime end-datetime)])
-          (assert (valid? data))
-          (append (list data)
-                  (generate-count (- total 1))))))
-  
-  (define (generate-interval cur-dt)  
-    (if (dt>? cur-dt end-datetime)
-        null
-        (let ([data (getter cur-dt cur-dt)]
-              [next-dt (dt+ cur-dt frequency)])
-          (assert (valid? data))
-          (append (list data)
-                  (generate-interval next-dt)))))
-  
-  (let ([d-list (cond [(integer? frequency) (generate-count frequency)]
-                      [(duration? frequency) (generate-interval start-datetime)])])
-    
-    (assert (and (eq? (length d-list)
-                      (length (remove-duplicates
-                               (map (lambda (d)
-                                      (datetime-range-start
-                                       (abstraction-valid-datetime-range d)))
-                                    d-list))))
-                 (eq? (length d-list)
-                      (length (remove-duplicates
-                               (map (lambda (d)
-                                      (datetime-range-end
-                                       (abstraction-valid-datetime-range d)))
-                                    d-list))))))
-    d-list))

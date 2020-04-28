@@ -15,9 +15,7 @@
          (struct-out event-specification)
          (struct-out event-trigger))
 (provide verify-monitoring-property
-         verify-monitoring-event
-         measurement-generator
-         generate-measurement-list)
+         verify-monitoring-event)
 
 ; This file contains the implementation of Monitoring processes.
 
@@ -206,13 +204,7 @@
          [o-type (monitoring-process-output-type proc)]
          [proxy-flag (monitoring-process-proxy-flag proc)]
          
-         [d-list (foldl (lambda (generator result)
-                          (append result
-                                  (generate-measurement-list
-                                   (measurement-generator-getter generator)
-                                   (measurement-generator-start-datetime generator)
-                                   (measurement-generator-end-datetime generator)
-                                   (measurement-generator-frequency generator))))
+         [d-list (foldl (lambda (d-list result) (append result d-list))
                         null
                         measurement-gen-list)]
 
@@ -257,13 +249,7 @@
          [end-trigger (event-specification-end-trigger
                        (monitoring-process-output-specification proc))]
 
-         [d-list (foldl (lambda (generator result)
-                          (append result
-                                  (generate-measurement-list
-                                   (measurement-generator-getter generator)
-                                   (measurement-generator-start-datetime generator)
-                                   (measurement-generator-end-datetime generator)
-                                   (measurement-generator-frequency generator))))
+         [d-list (foldl (lambda (d-list result) (append result d-list))
                         null
                         measurement-gen-list)]
 
@@ -296,41 +282,3 @@
         (displayln (unsat))
         (display-solution d-list dt both-sol))
     (displayln "")))
-
-; Measurement generator contains the specification for generating a list of
-; symbolic measurements (for verification purposes). It comprises:
-; 1) A measurement getter.
-; 2) A starting date-time for the corresponding measurements.
-; 3) An ending date-time for the measurements.
-; 4) A frequency which can either be:
-;    a) A duration indicating how often the measurements should be repeated.
-;    b) A positive integer indicating the total number of measurements between
-;       the given start date-time and end-datetime.
-(struct measurement-generator
-  (getter start-datetime end-datetime frequency)
-  #:transparent)
-
-; generate-measurement-list generates a list of measurements 
-(define (generate-measurement-list getter start-datetime end-datetime frequency)
-  (define (generate-count total)
-    (if (or (<= total 0) (dt>? start-datetime end-datetime))
-        null
-        (let ([data (getter start-datetime end-datetime)])
-          (assert (valid? data))
-          (append (list data)
-                  (generate-count (- total 1))))))
-  
-  (define (generate-interval cur-dt)  
-    (if (dt>? cur-dt end-datetime)
-        null
-        (let ([data (getter cur-dt cur-dt)]
-              [next-dt (dt+ cur-dt frequency)])
-          (assert (valid? data))
-          (append (list data)
-                  (generate-interval next-dt)))))
-  (let ([d-list (cond [(integer? frequency) (generate-count frequency)]
-                      [(duration? frequency) (generate-interval start-datetime)])])
-    (assert (eq? (length d-list)
-                 (remove-duplicates (map (lambda (d) (measurement-valid-datetime d))
-                                         d-list))))
-    d-list))
