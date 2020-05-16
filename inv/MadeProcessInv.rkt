@@ -119,7 +119,7 @@
 
 ; Verify implementation of is-proc-executed.
 (define (verify-proc-not-executed)
-  (verify (assert (implies (not (is-proc-executed? c-state cur-dt))
+  (verify (assert (implies (not (is-proc-activated? c-state cur-dt))
                            (null? d-set-out)))))
 
 (define-symbolic sched-hr-2 integer?)
@@ -128,8 +128,8 @@
 (define c-state-2 (control-state proc-sched-2 proc-status-2))
 
 (define (verify-proc-executed)
-  (verify (assert (implies (and (is-proc-executed? c-state cur-dt)
-                                (is-proc-executed? c-state-2 cur-dt))
+  (verify (assert (implies (and (is-proc-activated? c-state cur-dt)
+                                (is-proc-activated? c-state-2 cur-dt))
                            (eq? (generate-data proc in-data cur-dt)
                                 (generate-data (sample-process d-state c-state-2) in-data cur-dt))))))
 

@@ -9,7 +9,7 @@
          update-control-state valid-spec? proxy?)
 (provide gen-proc-execute gen-proc-update-data-state
          gen-proc-generate-data gen-proc-update-control-state)
-(provide is-proc-executed?)
+(provide is-proc-activated?)
 (provide (struct-out made-process))
 (provide (struct-out control-state))
 
@@ -94,7 +94,7 @@
   ; 1) Checking that the input datetime lies on the process schedule.
   ; 2) Filtering out all data for which the proxy flag is set (to #t).
   ; 3) Executing the input process function (or return void if not executed). 
-  (if (is-proc-executed? (made-process-control-state made-proc) datetime)
+  (if (is-proc-activated? (made-process-control-state made-proc) datetime)
       (let ([input
              (filter (lambda (d) (not (made-data-proxy-flag d)))
                      (remove-duplicates
@@ -105,7 +105,7 @@
 
 ; Helper function for determining if the process is executed or not given its
 ; control state as well as the current datetime.
-(define (is-proc-executed? c-state datetime)
+(define (is-proc-activated? c-state datetime)
   (let ([sched (control-state-schedule c-state)]
         [stat (control-state-status c-state)])
     (and stat (on-schedule? sched datetime))))
