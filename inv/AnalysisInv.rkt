@@ -19,6 +19,10 @@
 (define (gen-temp)
   (room-temperature (gen-temp-proxy) (gen-datetime) (gen-temp-value)))
 
+(struct body-acceleration measurement () #:transparent)
+(define (gen-body-acc)
+  (body-acceleration #f (gen-datetime) (gen-temp-value)))
+
 (struct room-temperature-grade abstraction () #:transparent)
 
 (define (grade-temp-low-pred d-list)
@@ -82,6 +86,24 @@
 
 (define output (generate-data room-temp-proc null cur-dt))
 
+; Inv. 3.6 - Verify relevance of observations for Analysis processes.
+(define output-alt (generate-data room-temp-proc (list (gen-body-acc)) cur-dt))
+(define (verify-observation-relevance)
+  (verify #:assume (assert (not (null? output)))
+          #:guarantee (assert (eq? output output-alt))))
+
+; Inv. 3.7 - Verify type of output data.
+(define (verify-output-type)
+  (verify (assert (implies (not (null? output))
+                           (andmap (lambda (d) (abstraction? d)) output)))))
+
+; Inv. 3.8 - Verify implementation of proxy flag.
+(define (verify-proxy-flag)
+  (verify (assert (implies (not (null? output))
+                           (andmap (lambda (d) (eq? (made-data-proxy-flag d)
+                                                    (analysis-process-proxy-flag room-temp-proc)))
+                                   output)))))
+
 ; Verify implementation of generate-data for Analysis processes.
 (define dt-mid
   (let ([hour (gen-dt-part)]
@@ -115,7 +137,7 @@
   (verify
    (assert
     (implies (and (null? output)
-                  (is-proc-executed? c-state cur-dt))
+                  (is-proc-activated? c-state cur-dt))
              (andmap (lambda (ab-pair)
                        (not
                         ((abstraction-triplet-abstraction-predicate ab-pair)

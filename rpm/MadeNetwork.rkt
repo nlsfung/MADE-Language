@@ -24,8 +24,8 @@
 (struct made-network (monitoring analysis decision effectuation)
   #:transparent
   #:methods gen:made-net
-  [(define-syntax-rule (update-data-state-list process-list in-data)
-     (map (lambda (p) (update-data-state p in-data)) process-list))
+  [(define-syntax-rule (update-data-state-list process-list in-data datetime)
+     (map (lambda (p) (update-data-state p in-data datetime)) process-list))
    (define-syntax-rule (generate-data-list process-list in-data datetime)
      (foldl (lambda (out-list result) (append out-list result))
             null
@@ -67,39 +67,45 @@
                                   (append in-action-plans decision-output)
                                   datetime)]
 
+            [out-data (append monitoring-output
+                              analysis-output
+                              decision-output
+                              effectuation-output)]
+
             [updated-monitoring (update-control-state-list
                                  (update-data-state-list
                                   (made-network-monitoring self)
-                                  in-measurements)
-                                 (append in-instructions effectuation-output)
+                                  (append in-data out-data)
+                                  datetime)
+                                 (append in-data out-data)
                                  datetime)]
             [updated-analysis (update-control-state-list
                                (update-data-state-list
                                 (made-network-analysis self)
-                                (append in-observations monitoring-output))
-                               (append in-instructions effectuation-output)
+                                (append in-data out-data)
+                                datetime)
+                               (append in-data out-data)
                                datetime)]
             [updated-decision (update-control-state-list
                                (update-data-state-list
                                 (made-network-decision self)
-                                (append in-abstractions analysis-output))
-                               (append in-instructions effectuation-output)
+                                (append in-data out-data)
+                                datetime)
+                               (append in-data out-data)
                                datetime)]
             [updated-effectuation (update-control-state-list
                                    (update-data-state-list
                                     (made-network-effectuation self)
-                                    (append in-action-plans decision-output))
-                                   (append in-instructions effectuation-output)
+                                    (append in-data out-data)
+                                    datetime)
+                                   (append out-data)
                                    datetime)])
 
        (list (made-network updated-monitoring
                            updated-analysis
                            updated-decision
                            updated-effectuation)
-             (append monitoring-output
-                     analysis-output
-                     decision-output
-                     effectuation-output))))])
+             out-data)))])
 
 ; A data stream item is modelled as comprising a datetime stamp and a set of data items.
 (struct stream-item (datetime dataset) #:transparent)

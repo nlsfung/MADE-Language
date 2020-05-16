@@ -5,6 +5,9 @@
          "../rim/TemporalDataTypes.rkt"
          "../rim/MadeDataStructures.rkt")
 
+; This file contains the definitions and procedures used to verify all invariants related
+; to MADE processes. For details of each invariant, please refer to the PhD thesis.
+
 ; Symbolic constants for verifying update data state and update control state
 ; on a sample MADE process.
 (struct sample-process made-process ()
@@ -68,7 +71,7 @@
 ;(assert (valid? cur-dt))
 ;(assert (valid? c-inst-sched))
 
-; Verify implementation of execute.
+; Inv. 3.1 - Verify implementation of execute.
 (define d-set-out (generate-data proc in-data cur-dt))
 (define (verify-execute)
   (verify (assert (eq? (execute proc in-data cur-dt)
@@ -79,12 +82,14 @@
                              d-set-out)))))
 
 ; Verify treatment of duplicate data items.
+; This is an extra invariant to ensure that lists are treated as sets.
 (define (verify-execute-duplicates)
   (verify (assert (implies (and (eq? in-datum-hr-1 in-datum-hr-2)
                                 (eq? val-1 val-2))
                            (eq? (execute proc in-data cur-dt)
                                 (execute proc (list in-datum-1 c-inst) cur-dt))))))
 
+; 
 ; Verify implementation of update-data-state.
 (define proc-post-data (update-data-state proc in-data cur-dt))
 (define (verify-update-data-state)
@@ -117,23 +122,24 @@
                                     (or c-inst-status-void
                                         (eq? c-inst-status proc-status))))))))
 
-; Verify implementation of is-proc-executed.
-(define (verify-proc-not-executed)
+; Inv. 3.2 - Verify implementation of is-proc-activated? (when it returns false).
+(define (verify-proc-not-activated)
   (verify (assert (implies (not (is-proc-activated? c-state cur-dt))
                            (null? d-set-out)))))
 
+; Inv. 3.3 - Verify implementation of is-proc-activated (when it returns true).
 (define-symbolic sched-hr-2 integer?)
 (define-symbolic sched-int-2 proc-status-2 boolean?)
 (define proc-sched-2 (schedule (list (datetime 2019 9 18 sched-hr-2 0 0)) sched-int-2))
 (define c-state-2 (control-state proc-sched-2 proc-status-2))
 
-(define (verify-proc-executed)
+(define (verify-proc-activated)
   (verify (assert (implies (and (is-proc-activated? c-state cur-dt)
                                 (is-proc-activated? c-state-2 cur-dt))
                            (eq? (generate-data proc in-data cur-dt)
                                 (generate-data (sample-process d-state c-state-2) in-data cur-dt))))))
 
-(define (verify-proc-executed-impl)
+(define (verify-proc-activated-impl)
   (verify (assert (implies (or (not (on-schedule? proc-sched cur-dt))
                                (not proc-status))
                            (null? d-set-out)))))

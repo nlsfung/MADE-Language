@@ -28,13 +28,20 @@
 (define (gen-body-acc)
   (body-acceleration (gen-proxy) (gen-datetime) (gen-measure-value)))
 
+(struct blood-glucose observed-property () #:transparent)
+(define (gen-blood-gluc)
+  (blood-glucose (gen-proxy) (gen-datetime) (gen-measure-value)))
+
 (struct activity-level observed-property () #:transparent)
 (struct exercise-event observed-event () #:transparent)
 
 (define (sum d-list)
-  (foldl (lambda (d result) (+ (measurement-value d) result))
+  (+ (foldl (lambda (d result) (+ (measurement-value d) result))
             0
-            (filter (lambda (d) (body-acceleration? d)) d-list)))
+            (filter (lambda (d) (body-acceleration? d)) d-list))
+     (foldl (lambda (d result) (+ (measurement-value d) result))
+            0
+            (filter (lambda (d) (blood-glucose? d)) d-list))))
 
 (define property-window (gen-window))
 (define activity-spec (property-specification property-window sum))
@@ -48,8 +55,7 @@
    (event-trigger event-start-win event-start-pred)
    (event-trigger event-end-win event-end-pred)))
 
-(define d-state
-  (list (gen-body-acc) (gen-body-acc) (gen-body-acc) (gen-body-acc)))
+(define d-state (list (gen-body-acc) (gen-body-acc)))
   
 (define sched-dt (gen-datetime))
 (define cur-dt (gen-datetime))
@@ -94,6 +100,24 @@
 (define output-1 (generate-data m-proc-1 null cur-dt))
 (define output-2 (generate-data m-proc-2 null cur-dt))
 
+; Inv. 3.6 - Verify relevance of measurements for Monitoring processes.
+(define output-1-alt (generate-data m-proc-1 (list (gen-blood-gluc)) cur-dt))
+(define (verify-measurement-relevance)
+  (verify #:assume (assert (is-proc-activated? c-state cur-dt))
+          #:guarantee (assert (eq? output-1 output-1-alt))))
+
+; Inv. 3.7 - Verify type of output data.
+(define (verify-output-type)
+  (verify (assert (implies (not (null? output-1))
+                           (andmap (lambda (d) (observation? d)) output-1)))))
+
+; Inv. 3.8 - Verify implementation of proxy flag.
+(define (verify-proxy-flag)
+  (verify (assert (implies (not (null? output-1))
+                           (andmap (lambda (d) (eq? (made-data-proxy-flag d)
+                                                    (monitoring-process-proxy-flag m-proc-1)))
+                                   output-1)))))
+
 ; Verify implementation of generate-data for the Monitoring of observed properties.
 (define (filter-ext dSet dt-start dt-end)
   (filter-measurements
@@ -107,7 +131,7 @@
 (define (verify-generate-property)
   (verify
    (assert
-    (implies (is-proc-executed? c-state cur-dt)
+    (implies (is-proc-activated? c-state cur-dt)
              (eq? output-1
                   (list (activity-level
                          sample-process-1-proxy

@@ -51,6 +51,10 @@
 (define (gen-avg-body-temp)
   (avg-body-temp (gen-proxy) (gen-dt-range) (gen-temp)))
 
+(struct body-acceleration measurement () #:transparent)
+(define (gen-body-acc)
+  (body-acceleration #f (gen-datetime) (gen-temp)))
+
 (struct fever-treatment action-plan () #:transparent)
 
 (define (gen-round) (define-symbolic* rounding integer?) rounding)
@@ -133,6 +137,24 @@
 
 (define output (generate-data d-proc null cur-dt))
 
+; Inv. 3.6 - Verify relevance of abstractions for Decision processes.
+(define output-alt (generate-data d-proc (list (gen-body-acc)) cur-dt))
+(define (verify-abstraction-relevance)
+  (verify #:assume (assert (not (null? output)))
+          #:guarantee (assert (eq? output output-alt))))
+
+; Inv. 3.7 - Verify type of output data.
+(define (verify-output-type)
+  (verify (assert (implies (not (null? output))
+                           (andmap (lambda (d) (action-plan? d)) output)))))
+
+; Inv. 3.8 - Verify implementation of proxy flag.
+(define (verify-proxy-flag)
+  (verify (assert (implies (not (null? output))
+                           (andmap (lambda (d) (eq? (made-data-proxy-flag d)
+                                                    (decision-process-proxy-flag d-proc)))
+                                   output)))))
+
 ; Verify implementation of generate-data for Decision processes.
 (define (filter-ext dSet dt)
   (filter-abstractions
@@ -154,7 +176,7 @@
   (verify
    (assert
     (implies (and (null? output)
-                  (is-proc-executed? c-state cur-dt))
+                  (is-proc-activated? c-state cur-dt))
              (andmap (lambda (d-crit)
                        (not (d-crit (filter-ext d-state cur-dt))))
                      (list decision-criterion-one decision-criterion-two))))))

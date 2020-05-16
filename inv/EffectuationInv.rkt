@@ -74,6 +74,10 @@
            (dimensioned 15 'units)
            (duration 0 2 0 0)))))
 
+(struct body-acceleration measurement () #:transparent)
+(define (gen-body-acc)
+  (body-acceleration #f (gen-datetime) 100))
+
 (define d-state
   (let* ([fever-one (list (gen-fever-treatment-one))]
          [fever-two (list (gen-fever-treatment-two) (gen-fever-treatment-two))]
@@ -121,6 +125,26 @@
 (define e-proc (sample-process d-state c-state)) 
 
 (define output (generate-data e-proc null cur-dt))
+
+; Inv. 3.6 - Verify relevance of action plans for Effectuation processes.
+(define output-alt (generate-data e-proc (list (gen-body-acc)) cur-dt))
+(define (verify-plan-relevance)
+  (verify #:assume (assert (not (null? output)))
+          #:guarantee (assert (eq? output output-alt))))
+
+; Inv. 3.7 - Verify type of output data.
+(define (verify-output-type)
+  (verify (assert (implies (not (null? output))
+                           (andmap (lambda (d) (or (action-instruction? d)
+                                                   (control-instruction? d)))
+                                   output)))))
+
+; Inv. 3.8 - Verify implementation of proxy flag.
+(define (verify-proxy-flag)
+  (verify (assert (implies (not (null? output))
+                           (andmap (lambda (d) (eq? (made-data-proxy-flag d)
+                                                    (effectuation-process-proxy-flag e-proc)))
+                                   output)))))
 
 ; Verify implementation of generate-data for Effectuation processes.
 (define (filter-ext dSet dt)
@@ -171,7 +195,7 @@
   (verify
    (assert
     (implies (and (null? output)
-                  (is-proc-executed? c-state cur-dt))
+                  (is-proc-activated? c-state cur-dt))
              (not (ormap (lambda (target)
                            (ormap (lambda (plan)
                                     (ormap (lambda (sched-inst)
