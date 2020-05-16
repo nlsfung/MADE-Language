@@ -81,53 +81,13 @@
                               cur-dt)
                              d-set-out)))))
 
-; Verify treatment of duplicate data items.
-; This is an extra invariant to ensure that lists are treated as sets.
-(define (verify-execute-duplicates)
-  (verify (assert (implies (and (eq? in-datum-hr-1 in-datum-hr-2)
-                                (eq? val-1 val-2))
-                           (eq? (execute proc in-data cur-dt)
-                                (execute proc (list in-datum-1 c-inst) cur-dt))))))
-
-; 
-; Verify implementation of update-data-state.
-(define proc-post-data (update-data-state proc in-data cur-dt))
-(define (verify-update-data-state)
-  (verify (assert (and (sample-process? proc-post-data)
-                       (eq? (made-process-control-state proc-post-data)
-                            (made-process-control-state proc))))))
-
-(define (verify-update-data-state-impl)
-  (verify (assert (implies (< (length (made-process-data-state proc-post-data))
-                              (+ (length d-state) (length in-data)))
-                           (or (eq? in-datum-1 in-datum-2)
-                               (eq? in-datum-1 (list-ref d-state 0))
-                               (eq? in-datum-2 (list-ref d-state 0)))))))
-
-; Verify implementation of update-control-state.
-(define proc-post-ctrl (update-control-state proc in-data cur-dt))
-(define (verify-update-control-state)
-  (verify (assert (and (sample-process? proc-post-ctrl)
-                       (eq? (made-process-data-state proc-post-ctrl)
-                            (made-process-data-state proc))))))
-
-(define (verify-update-control-state-impl)
-  (verify (assert (implies (eq? proc proc-post-ctrl)
-                           (or c-inst-proxy
-                               (not (eq? target-id 'sample-process))
-                               (not (eq? (control-instruction-valid-datetime c-inst)
-                                         cur-dt))
-                               (and (or c-inst-sched-void
-                                        (eq? c-inst-sched proc-sched))
-                                    (or c-inst-status-void
-                                        (eq? c-inst-status proc-status))))))))
-
-; Inv. 3.2 - Verify implementation of is-proc-activated? (when it returns false).
-(define (verify-proc-not-activated)
-  (verify (assert (implies (not (is-proc-activated? c-state cur-dt))
+; Inv. 3.2 - Verify process behaviour when is-proc-activated? evaluates to false.
+(define (verify-proc-activated-impl)
+  (verify (assert (implies (or (not (on-schedule? proc-sched cur-dt))
+                               (not proc-status))
                            (null? d-set-out)))))
 
-; Inv. 3.3 - Verify implementation of is-proc-activated (when it returns true).
+; Inv. 3.3 - Verify process behaviour when is-proc-activated? evaluates to true.
 (define-symbolic sched-hr-2 integer?)
 (define-symbolic sched-int-2 proc-status-2 boolean?)
 (define proc-sched-2 (schedule (list (datetime 2019 9 18 sched-hr-2 0 0)) sched-int-2))
@@ -139,7 +99,89 @@
                            (eq? (generate-data proc in-data cur-dt)
                                 (generate-data (sample-process d-state c-state-2) in-data cur-dt))))))
 
-(define (verify-proc-activated-impl)
-  (verify (assert (implies (or (not (on-schedule? proc-sched cur-dt))
-                               (not proc-status))
-                           (null? d-set-out)))))
+; Verify treatment of duplicate data items.
+; This is an extra invariant to ensure that lists are treated as sets.
+(define (verify-execute-duplicates)
+  (verify (assert (implies (and (eq? in-datum-hr-1 in-datum-hr-2)
+                                (eq? val-1 val-2))
+                           (eq? (execute proc in-data cur-dt)
+                                (execute proc (list in-datum-1 c-inst) cur-dt))))))
+
+; Inv. 6.1 - Verify implementation of update-data-state.
+(define (verify-update-data-state-impl)
+  (verify (assert (implies (< (length (made-process-data-state proc-post-data))
+                              (+ (length d-state) (length in-data)))
+                           (or (eq? in-datum-1 in-datum-2)
+                               (eq? in-datum-1 (list-ref d-state 0))
+                               (eq? in-datum-2 (list-ref d-state 0)))))))
+
+; Inv. 6.2 - Verify independence of process behaviour to re-arrangments of data state and input data.
+(define d-state-2 (list in-datum-1 c-inst))
+(define in-data-2 (list in-datum-2 (observed-property #f (datetime 2019 9 18 0 0 0) (proportion proc-data))))
+(define proc-2 (sample-process d-state-2 c-state))
+(define (verify-state-data-combo)
+  (verify (assert (let* ([output (execute proc in-data cur-dt)]
+                         [output-2 (execute proc-2 in-data-2 cur-dt)])
+                    (implies (not (null? (list-ref output 1)))
+                             (and (eq? (list-ref output 1)
+                                       (list-ref output-2 1))
+                                  (eq? (made-process-control-state proc)
+                                       (made-process-control-state proc-2))))))))
+
+; Inv. 6.3 - Verify implementation of is-proc-activated?
+(define (verify-activated)
+  (verify (assert (and (implies (is-proc-activated? c-state cur-dt)
+                                (and (on-schedule? proc-sched cur-dt)
+                                     proc-status))
+                       (implies (and (on-schedule? proc-sched cur-dt)
+                                     proc-status)
+                                (is-proc-activated? c-state cur-dt))))))
+
+; Inv. 6.4 - Verify implementation of on-schedule?
+(define (verify-schedule)
+  (verify (assert (eq? (on-schedule? proc-sched cur-dt)
+                       (and (implies (not sched-int)
+                                     (ormap (lambda (pat-dt) (dt=? cur-dt pat-dt))
+                                            (schedule-pattern proc-sched)))
+                            (implies sched-int
+                                     (ormap (lambda (pat-dt) (dt>=? cur-dt pat-dt))
+                                            (schedule-pattern proc-sched))))))))
+
+; Inv. 6.5 and Inv. 6.6 - Verify update of control state
+; Note: These two assertions are organised slightly differently than presented in the thesis.
+(define (verify-update-control-state-impl)
+  (verify (assert (implies (eq? proc proc-post-ctrl)
+                           (or c-inst-proxy
+                               (not (eq? target-id 'sample-process))
+                               (not (eq? (control-instruction-valid-datetime c-inst)
+                                         cur-dt))
+                               (and (or c-inst-sched-void
+                                        (eq? c-inst-sched proc-sched))
+                                    (or c-inst-status-void
+                                        (eq? c-inst-status proc-status))))))))
+
+(define (verify-update-control-state-impl-reverse)
+  (verify (assert (implies (or c-inst-proxy
+                               (not (eq? target-id 'sample-process))
+                               (not (dt=? (control-instruction-valid-datetime c-inst)
+                                          cur-dt))
+                               (and (or c-inst-sched-void
+                                        (eq? c-inst-sched proc-sched))
+                                    (or c-inst-status-void
+                                        (eq? c-inst-status proc-status))))
+                           (eq? proc proc-post-ctrl)))))
+
+; Verify separation of concerns between data state and control state.
+; These are two extra invariants to ensure that update data state does not affect
+; the control state of the process and vice versa.
+(define proc-post-data (update-data-state proc in-data cur-dt))
+(define (verify-update-data-state)
+  (verify (assert (and (sample-process? proc-post-data)
+                       (eq? (made-process-control-state proc-post-data)
+                            (made-process-control-state proc))))))
+
+(define proc-post-ctrl (update-control-state proc in-data cur-dt))
+(define (verify-update-control-state)
+  (verify (assert (and (sample-process? proc-post-ctrl)
+                       (eq? (made-process-data-state proc-post-ctrl)
+                            (made-process-data-state proc))))))

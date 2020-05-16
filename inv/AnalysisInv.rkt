@@ -104,6 +104,10 @@
                                                     (analysis-process-proxy-flag room-temp-proc)))
                                    output)))))
 
+; Inv. 6.7 - Verify length of output.
+(define (verify-output-length)
+  (verify (assert (<= (length output) 1))))
+
 ; Verify implementation of generate-data for Analysis processes.
 (define dt-mid
   (let ([hour (gen-dt-part)]

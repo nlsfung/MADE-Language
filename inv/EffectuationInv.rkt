@@ -146,6 +146,10 @@
                                                     (effectuation-process-proxy-flag e-proc)))
                                    output)))))
 
+; Inv. 6.7 - Verify length of output.
+(define (verify-output-length)
+  (verify (assert (<= (length output) 1))))
+
 ; Verify implementation of generate-data for Effectuation processes.
 (define (filter-ext dSet dt)
   (filter-plans

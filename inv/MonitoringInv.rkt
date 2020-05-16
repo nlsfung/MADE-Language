@@ -118,6 +118,10 @@
                                                     (monitoring-process-proxy-flag m-proc-1)))
                                    output-1)))))
 
+; Inv. 6.7 - Verify length of output.
+(define (verify-output-length)
+  (verify (assert (<= (length output-1) 1))))
+
 ; Verify implementation of generate-data for the Monitoring of observed properties.
 (define (filter-ext dSet dt-start dt-end)
   (filter-measurements
