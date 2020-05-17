@@ -108,7 +108,7 @@
 (define (verify-output-length)
   (verify (assert (<= (length output) 1))))
 
-; Verify implementation of generate-data for Analysis processes.
+; Inv. 6.14 - Verify conditions for outputting an abstraction.
 (define dt-mid
   (let ([hour (gen-dt-part)]
         [day (gen-dt-part)])
@@ -125,65 +125,76 @@
    dt-start
    dt-end))
 
-(define (verify-ab-pair-necessity)
+(define (verify-output-condition)
   (verify
-   (assert
-    (implies (not (null? output))
-             (ormap (lambda (ab-pair)
-                      ((abstraction-triplet-abstraction-predicate ab-pair)
-                       (filter-ext
-                        d-state
-                        (dt- cur-dt (abstraction-triplet-time-window ab-pair))
-                        cur-dt)))
-                    ab-spec)))))
+   #:assume (assert (is-proc-activated? c-state cur-dt))
+   #:guarantee (assert (eq? (null? output)
+                            (not (not (andmap (lambda (ab-pair)
+                                                (not
+                                                 ((abstraction-triplet-abstraction-predicate ab-pair)
+                                                  (filter-ext
+                                                   d-state
+                                                   (dt- cur-dt (abstraction-triplet-time-window ab-pair))
+                                                   cur-dt))))
+                                              ab-spec)))))))
 
-(define (verify-ab-pair-sufficiency)
-  (verify
-   (assert
-    (implies (and (null? output)
-                  (is-proc-activated? c-state cur-dt))
-             (andmap (lambda (ab-pair)
-                       (not
-                        ((abstraction-triplet-abstraction-predicate ab-pair)
-                         (filter-ext
-                          d-state
-                          (dt- cur-dt (abstraction-triplet-time-window ab-pair))
-                          cur-dt))))
-                     ab-spec)))))
-
+; Inv. 6.15 - Verify output type and transaction date-time of output.
 (define (verify-abstraction-id)
   (verify
    (assert
     (implies (not (null? output))
              (and (room-temperature-grade? (list-ref output 0))
+                  (dt=? (transaction-datetime (list-ref output 0))
+                        cur-dt)
+                  (dt=? (datetime-range-start
+                         (abstraction-valid-datetime-range (list-ref output 0)))
+                        cur-dt)
                   (eq? proc-proxy
                        (made-data-proxy-flag (list-ref output 0))))))))
 
+; Inv. 6.16 - Verify valid date-time range of output.
 (define (verify-abstraction-value)
   (verify
    (assert
     (implies (not (null? output))
-             (and (eq? (datetime-range-start
-                        (abstraction-valid-datetime-range
-                         (list-ref output 0)))
-                       cur-dt)
-                  (implies (and (dt>=? dt-mid
-                                       (datetime-range-start
-                                        (abstraction-valid-datetime-range
-                                         (list-ref output 0))))
-                                (dt<=? dt-mid
-                                       (datetime-range-end
-                                        (abstraction-valid-datetime-range
-                                         (list-ref output 0)))))
-                           (and (implies (eq? (abstraction-value (list-ref output 0))
-                                              'low)
-                                         (grade-temp-low-pred
-                                          (filter-ext d-state
-                                                      (dt- dt-mid (duration 0 win-length 0 0))
-                                                      dt-mid)))
-                                (implies (eq? (abstraction-value (list-ref output 0))
-                                              'high)
-                                         (grade-temp-high-pred
-                                          (filter-ext d-state
-                                                      (dt- dt-mid (duration 0 win-length 0 0))
-                                                      dt-mid))))))))))
+             (implies (dt>=? dt-mid
+                             (datetime-range-start
+                              (abstraction-valid-datetime-range
+                               (list-ref output 0))))
+                      (eq? (not (not (dt<=? dt-mid
+                                            (datetime-range-end
+                                             (abstraction-valid-datetime-range
+                                              (list-ref output 0))))))
+                           (not (not (and (implies (eq? (abstraction-value (list-ref output 0))
+                                                        'low)
+                                                   (grade-temp-low-pred
+                                                    (filter-ext d-state
+                                                                (dt- dt-mid t-window)
+                                                                dt-mid)))
+                                          (implies (eq? (abstraction-value (list-ref output 0))
+                                                        'high)
+                                                   (grade-temp-high-pred
+                                                    (filter-ext d-state
+                                                                (dt- dt-mid t-window)
+                                                                dt-mid))))))))))))
+
+; Inv. 6.17 - Verify implementation of filter.
+(define (verify-filter)
+  (verify
+   (assert
+    (eq? (filter-observations (append d-state (list (made-data #f)))
+                              (dt- cur-dt t-window)
+                              cur-dt)
+         (filter (lambda (d) (or (and (observed-property? d)
+                                      (dt>=? (observed-property-valid-datetime d)
+                                             (dt- cur-dt t-window))
+                                      (dt<=? (observed-property-valid-datetime d)
+                                             cur-dt))
+                                 (and (observed-event? d)
+                                      (dt>=? (datetime-range-end
+                                              (observed-event-valid-datetime-range d))
+                                             (dt- cur-dt t-window))
+                                      (dt<=? (datetime-range-start
+                                              (observed-event-valid-datetime-range d)
+                                             cur-dt)))))
+                 (append d-state (list (made-data #f))))))))
