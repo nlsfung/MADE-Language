@@ -150,7 +150,7 @@
 (define (verify-output-length)
   (verify (assert (<= (length output) 1))))
 
-; Verify implementation of generate-data for Effectuation processes.
+; Inv. 6.26 - Verify condition for generating an instruction.
 (define (filter-ext dSet dt)
   (filter-plans
    (remove-duplicates
@@ -159,47 +159,40 @@
             dSet))
    dt))
 
-(define (verify-target-necessity)
+(define (verify-output-condition)
   (verify
+   #:assume
+   (assert (is-proc-activated? c-state cur-dt))
+
+   #:guarantee
    (assert
     (implies (not (null? output))
-             (ormap (lambda (target)
-                      (ormap (lambda (plan)
-                               (ormap (lambda (sched-inst)
-                                        (cond [(scheduled-control? sched-inst)
-                                               (and (eq? (target-schedule-plan-type target)
-                                                         (get-type plan))
-                                                    (eq? (action-plan-valid-datetime plan) cur-dt)
-                                                    (eq? (target-schedule-instruction-type target)
-                                                         (scheduled-control-target-process sched-inst))
-                                                    ((target-schedule-instruction-predicate target) sched-inst))]
+             (not (andmap (lambda (target)
+                       (andmap (lambda (plan)
+                                 (andmap (lambda (inst)
+                                           (or (not (eq? (target-schedule-plan-type target)
+                                                         (get-type plan)))
+                                               (not (eq? (target-schedule-instruction-type target)
+                                                         (cond [(scheduled-control? inst)
+                                                                (scheduled-control-target-process inst)]
+                                                               [(scheduled-homogeneous-action? inst)
+                                                                (scheduled-homogeneous-action-action-type inst)]
+                                                               [(scheduled-culminating-action? inst)
+                                                                (scheduled-culminating-action-action-type inst)])))
+                                               (not ((target-schedule-instruction-predicate target) inst))))
+                                         (action-plan-instruction-set plan)))
+                               (filter-ext d-state cur-dt)))
+                     (effectuation-process-target-schedules e-proc)))))))
 
-                                              [(scheduled-homogeneous-action? sched-inst)
-                                               (and (eq? (target-schedule-plan-type target)
-                                                         (get-type plan))
-                                                    (eq? (target-schedule-instruction-type target)
-                                                         (scheduled-homogeneous-action-action-type sched-inst))
-                                                    (on-schedule? (scheduled-homogeneous-action-schedule sched-inst)
-                                                                  cur-dt)
-                                                    ((target-schedule-instruction-predicate target) sched-inst))]
-
-                                              [(scheduled-culminating-action? sched-inst)
-                                               (and (eq? (target-schedule-plan-type target)
-                                                         (get-type plan))
-                                                    (eq? (target-schedule-instruction-type target)
-                                                         (scheduled-culminating-action-action-type sched-inst))
-                                                    (on-schedule? (scheduled-culminating-action-schedule sched-inst)
-                                                                  cur-dt)
-                                                    ((target-schedule-instruction-predicate target) sched-inst))]))
-                                      (action-plan-instruction-set plan)))
-                             (filter-ext d-state cur-dt)))
-                    (effectuation-process-target-schedules e-proc))))))
-
-(define (verify-target-sufficiency)
+; Stricter version of Inv. 6.26 - Verify the necessary and sufficient conditions for generating an instruction.
+(define (verify-output-iff)
   (verify
+   #:assume
+   (assert (is-proc-activated? c-state cur-dt))
+
+   #:guarantee
    (assert
-    (implies (and (null? output)
-                  (is-proc-activated? c-state cur-dt))
+    (eq? (null? output)
              (not (ormap (lambda (target)
                            (ormap (lambda (plan)
                                     (ormap (lambda (sched-inst)
@@ -230,36 +223,9 @@
                                                          ((target-schedule-instruction-predicate target) sched-inst))]))
                                            (action-plan-instruction-set plan)))
                                   (filter-ext d-state cur-dt)))
-                  (effectuation-process-target-schedules e-proc)))))))
-
-(define (verify-control)
-  (verify
-   (assert
-    (implies (and (not (null? output))
-                  (control-instruction? (list-ref output 0)))
-             (and (control-analyze-heart-rate? (list-ref output 0))
-                  (eq? (made-data-proxy-flag (list-ref output 0))
-                       proc-proxy)
-                  (eq? (control-instruction-valid-datetime (list-ref output 0))
-                       cur-dt)                  
-                  (ormap (lambda (target)
-                           (ormap (lambda (plan)
-                                    (ormap (lambda (sched-inst)
-                                             (and (scheduled-control? sched-inst)
-                                                  (and (eq? (target-schedule-plan-type target)
-                                                            (get-type plan))
-                                                       (eq? (action-plan-valid-datetime plan) cur-dt)
-                                                       (eq? (target-schedule-instruction-type target)
-                                                            (scheduled-control-target-process sched-inst))
-                                                       ((target-schedule-instruction-predicate target) sched-inst)
-                                                       (eq? (control-instruction-schedule (list-ref output 0))
-                                                            (scheduled-control-schedule sched-inst))
-                                                       (eq? (control-instruction-status (list-ref output 0))
-                                                            (scheduled-control-status sched-inst)))))
-                                           (action-plan-instruction-set plan)))
-                                  (filter-ext d-state cur-dt)))
                          (effectuation-process-target-schedules e-proc)))))))
 
+; Inv. 6.27 - Verify generation of homogeneous action instructions.
 (define (verify-homogeneous-action)
   (verify
    (assert
@@ -289,6 +255,7 @@
                                   (filter-ext d-state cur-dt)))
                          (effectuation-process-target-schedules e-proc)))))))
 
+; Inv. 6.29 - Verify generation of culminating action instructions.
 (define (verify-culminating-action)
   (verify
    (assert
@@ -316,7 +283,36 @@
                                   (filter-ext d-state cur-dt)))
                          (effectuation-process-target-schedules e-proc)))))))
 
-; Verify implementation of filter-plans
+; Inv. 6.29 - Verify generation of control instructions.
+(define (verify-control)
+  (verify
+   (assert
+    (implies (and (not (null? output))
+                  (control-instruction? (list-ref output 0)))
+             (and (control-analyze-heart-rate? (list-ref output 0))
+                  (eq? (made-data-proxy-flag (list-ref output 0))
+                       proc-proxy)
+                  (eq? (control-instruction-valid-datetime (list-ref output 0))
+                       cur-dt)                  
+                  (ormap (lambda (target)
+                           (ormap (lambda (plan)
+                                    (ormap (lambda (sched-inst)
+                                             (and (scheduled-control? sched-inst)
+                                                  (and (eq? (target-schedule-plan-type target)
+                                                            (get-type plan))
+                                                       (eq? (action-plan-valid-datetime plan) cur-dt)
+                                                       (eq? (target-schedule-instruction-type target)
+                                                            (scheduled-control-target-process sched-inst))
+                                                       ((target-schedule-instruction-predicate target) sched-inst)
+                                                       (eq? (control-instruction-schedule (list-ref output 0))
+                                                            (scheduled-control-schedule sched-inst))
+                                                       (eq? (control-instruction-status (list-ref output 0))
+                                                            (scheduled-control-status sched-inst)))))
+                                           (action-plan-instruction-set plan)))
+                                  (filter-ext d-state cur-dt)))
+                         (effectuation-process-target-schedules e-proc)))))))
+
+; Inv. 6.30 - Verify implementation of filter-plans
 (define (verify-filter-plans)
   (verify
    (assert
