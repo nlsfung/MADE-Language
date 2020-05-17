@@ -159,47 +159,56 @@
 (define (verify-output-length)
   (verify (assert (<= (length output) 1))))
 
-; Verify implementation of generate-data for Decision processes.
-(define (filter-ext dSet dt)
-  (filter-abstractions
-   (remove-duplicates
-    (filter (lambda (d)
-              (not (made-data-proxy-flag d)))
-            dSet))
-   dt))
-
-(define (verify-d-crit-necessity)
+; Inv. 6.18 - Verify implementation of filter abstractions.
+(define (verify-filter)
   (verify
    (assert
-    (implies (not (null? output))
-             (ormap (lambda (d-crit)
-                      (d-crit (filter-ext d-state cur-dt)))
-                    (list decision-criterion-one decision-criterion-two))))))
+    (andmap (lambda (d)
+              (and (abstraction? d)
+                   (dt-between? cur-dt
+                                (datetime-range-start
+                                 (abstraction-valid-datetime-range d))
+                                (datetime-range-end
+                                 (abstraction-valid-datetime-range d)))
+                   (andmap (lambda (d-inner)
+                             (implies (eq? (get-type d) (get-type d-inner))
+                                      (or (not (dt-between?
+                                                cur-dt
+                                                (datetime-range-start
+                                                 (abstraction-valid-datetime-range d-inner))
+                                                (datetime-range-end
+                                                 (abstraction-valid-datetime-range d-inner))))
+                                          (dt>=? (transaction-datetime d)
+                                                 (transaction-datetime d-inner)))))
+                           (append d-state (list (made-data #f))))))
+            (filter-abstractions (append d-state (list (made-data #f)))
+                                 cur-dt)))))
 
-(define (verify-d-crit-sufficiency)
+; Inv. 6.19 - Verify implementation of plan-instantiate.
+(define (verify-plan-instantiate)
   (verify
-   (assert
-    (implies (and (null? output)
-                  (is-proc-activated? c-state cur-dt))
-             (andmap (lambda (d-crit)
-                       (not (d-crit (filter-ext d-state cur-dt))))
-                     (list decision-criterion-one decision-criterion-two))))))
+   (assert (eq? (plan-instantiate fever-treatment-template cur-dt #f)
+                (fever-treatment
+                 #f
+                 cur-dt
+                 (map (lambda (inst) (instantiate inst cur-dt))
+                      (plan-template-instruction-set
+                       fever-treatment-template)))))))
 
-(define (verify-plan-template)
+; Inv. 6.20 - Verify implementation of sched-instantiate.
+(define (verify-sched-instantiate)
   (verify
-   (assert
-    (implies (not (null? output))
-             (and (eq? output
-                       (list (plan-instantiate
-                              fever-treatment-template
-                              cur-dt
-                              proc-proxy)))
-                  (fever-treatment? (list-ref output 0))
-                  (eq? (action-plan-valid-datetime (list-ref output 0))
-                       cur-dt))))))
+   (assert (let* ([rounded-dur (get-round-amount cur-dt r-fact)]
+                  [pattern-dt (map (lambda (dur)
+                                     (dt+ cur-dt (dur+ dur rounded-dur)))
+                                   (list r-patt))]
+                  [sched-orig (sched-instantiate (relative-schedule r-fact (list r-patt) #f)
+                                                 cur-dt)])
+             (dt=? (list-ref (schedule-pattern sched-orig) 0)
+                   (list-ref pattern-dt 0))))))
 
-
-; Verify implementation of schedule instantiation.
+; The following are two extra invariants for verifying the implementation
+; of the rounding factor and relative pattern.
 (define (verify-rounding-factor)
   (verify #:assume
           (assert
@@ -242,3 +251,69 @@
                       (implies (ormap (lambda (n) (dur=? r-patt (duration n 0 0 0)))
                                       (list 0 1 2 3 4 5 6 7 8 9 10))
                                (dt=? sched-patt (dt+ cur-dt r-patt))))))))
+
+; Inv. 6.21 - Verify instantiation of homogeneous action templates.
+(define (verify-homogeneous-template)
+  (verify
+   (assert (eq? (instantiate treadmill-template cur-dt)
+                (scheduled-homogeneous-action
+                 'treadmill-exercise
+                 (sched-instantiate
+                  (homogeneous-action-template-relative-schedule treadmill-template)
+                  cur-dt)
+                 (dimensioned 10 'units)
+                 (duration 0 1 0 0))))))
+
+; Inv. 6.22 - Verify instantiation of culminating action template.
+(define (verify-culminating-template)
+  (verify
+   (assert (eq? (instantiate ibuprofen-template cur-dt)
+                (scheduled-culminating-action
+                 'ibuprofen
+                 (sched-instantiate
+                  (culminating-action-template-relative-schedule ibuprofen-template)
+                  cur-dt)
+                 (bool #t))))))
+
+; Inv. 6.23 - Verify instantiation of control instruction template.
+(define (verify-control-template)
+  (verify
+   (assert (eq? (instantiate analyze-heart-rate-template cur-dt)
+                (scheduled-control
+                 'analyze-heart-rate
+                 (sched-instantiate
+                  (control-template-relative-schedule analyze-heart-rate-template)
+                  cur-dt)
+                 #f)))))
+
+; Inv. 6.24 - Verify condition for outputting an action plan.
+(define (filter-ext dSet dt)
+  (filter-abstractions
+   (remove-duplicates
+    (filter (lambda (d)
+              (not (made-data-proxy-flag d)))
+            dSet))
+   dt))
+
+(define (verify-d-crit-sufficiency)
+  (verify
+   #:assume
+   (assert (is-proc-activated? c-state cur-dt))
+
+   #:guarantee
+   (assert
+    (eq? (null? output)
+         (not (not (andmap (lambda (d-crit)
+                             (not (d-crit (filter-ext d-state cur-dt))))
+                           (list decision-criterion-one decision-criterion-two))))))))
+
+; Inv. 6.25 - Verify output of Decision process.
+(define (verify-plan-template)
+  (verify
+   (assert
+    (implies (not (null? output))
+             (eq? output
+                       (list (plan-instantiate
+                              fever-treatment-template
+                              cur-dt
+                              proc-proxy)))))))

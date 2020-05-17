@@ -15,7 +15,7 @@
 (provide (struct-out decision-process)
          gen:plan-temp plan-instantiate
          gen:inst-template instantiate
-         gen:rel-sched sched-instantiate
+         gen:rel-sched sched-instantiate get-round-amount
          (struct-out relative-schedule)
          (struct-out plan-template)
          (struct-out control-template)
