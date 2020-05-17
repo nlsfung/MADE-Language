@@ -82,7 +82,7 @@
   #:transparent
   #:methods gen:transaction
   [(define (transaction-datetime self)
-     (datetime-range-start (observed-event-valid-datetime-range self)))]
+     (datetime-range-end (observed-event-valid-datetime-range self)))]
   
   #:methods gen:typed
   [(define/generic super-valid? valid?)

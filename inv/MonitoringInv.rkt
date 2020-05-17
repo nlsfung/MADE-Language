@@ -49,7 +49,8 @@
 (define event-start-win (gen-window))
 (define event-end-win (gen-window))
 (define event-start-pred (lambda (d-list) (> (sum d-list) 25)))
-(define event-end-pred (lambda (d-list) (< (sum d-list) 5)))
+(define event-end-pred (lambda (d-list) (and (< (sum d-list) 5)
+                                             (> (sum d-list) 0))))
 (define exercise-spec
   (event-specification
    (event-trigger event-start-win event-start-pred)
@@ -122,7 +123,7 @@
 (define (verify-output-length)
   (verify (assert (<= (length output-1) 1))))
 
-; Verify implementation of generate-data for the Monitoring of observed properties.
+; Inv. 6.8 - Verify implementation of generate-data for the Monitoring of observed properties.
 (define (filter-ext dSet dt-start dt-end)
   (filter-measurements
    (remove-duplicates
@@ -145,19 +146,68 @@
                                (dt- cur-dt property-window)
                                cur-dt)))))))))
 
-; Verify implementation of generate-data for the Monitoring of observed events.
-(define (get-event-start-dt d)
-  (datetime-range-start (observed-event-valid-datetime-range d)))
-(define (get-event-end-dt d)
-  (datetime-range-end (observed-event-valid-datetime-range d)))
+; Inv. 6.9 - Verify implementation of filter-measurements.
+(define (verify-filter)
+  (verify
+   (assert
+    (eq? (filter-measurements (append d-state (list (made-data #f)))
+                              (dt- cur-dt property-window)
+                              cur-dt)
+         (filter (lambda (d) (and (measurement? d)
+                                  (dt>=? (measurement-valid-datetime d)
+                                         (dt- cur-dt property-window))
+                                  (dt<=? (measurement-valid-datetime d)
+                                         cur-dt)))
+                 (append d-state (list (made-data #f))))))))
 
+; Inv. 6.10 - Verify output-type and transation date-time of observed events.
 (define (verify-generate-event-id)
   (verify
    (assert
     (implies (not (null? output-2))
              (and (exercise-event? (list-ref output-2 0))
+                  (dt=? (transaction-datetime (list-ref output-2 0))
+                        cur-dt)
                   (eq? sample-process-2-proxy
                        (made-data-proxy-flag (list-ref output-2 0))))))))
+
+; Inv. 6.11 - Verify necessary and sufficient conditions for outputting an observed event.
+(define (verify-event-condition)
+  (verify
+   #:assume
+   (assert (is-proc-activated? c-state cur-dt))
+
+   #:guarantee
+   (assert
+    (eq? (null? output-2)
+         (not
+          (not
+           (and (or (not (event-start-pred (filter-ext d-state
+                                                       (dt- cur-dt event-start-win)
+                                                       cur-dt)))
+                    (andmap (lambda (dt-mid) (not (and (dt<=? dt-mid cur-dt)
+                                                       (event-end-pred
+                                                        (filter-ext d-state
+                                                                    (dt- dt-mid event-end-win)
+                                                                    dt-mid)))))
+                            (map (lambda (d) (measurement-valid-datetime d))
+                                 d-state)))
+                (or (not (event-end-pred (filter-ext d-state
+                                                     (dt- cur-dt event-end-win)
+                                                     cur-dt)))
+                    (andmap (lambda (dt-mid) (not (and (dt<=? dt-mid cur-dt)
+                                                       (event-start-pred
+                                                        (filter-ext d-state
+                                                                    (dt- dt-mid event-start-win)
+                                                                    dt-mid)))))
+                            (map (lambda (d) (measurement-valid-datetime d))
+                                 d-state))))))))))
+
+; Inv. 6.12 - Verify implementation of generate-data for false events.
+(define (get-event-start-dt d)
+  (datetime-range-start (observed-event-valid-datetime-range d)))
+(define (get-event-end-dt d)
+  (datetime-range-end (observed-event-valid-datetime-range d)))
 
 (define (verify-generate-false-event)
   (verify
@@ -185,6 +235,7 @@
                                            (get-event-start-dt (list-ref output-2 0))
                                            (get-event-end-dt (list-ref output-2 0))))))))))
 
+; Inv. 6.13 - Verify implementation of generate-data for true events.
 (define (verify-generate-true-event)
   (verify
    (assert

@@ -158,26 +158,32 @@
          
          [start-event? (start-pred (filter-measurements sorted-data (dt- dt start-win) dt))]
          [end-event? (end-pred (filter-measurements sorted-data (dt- dt end-win) dt))]
-         [opposing-event (cond [start-event?
-                                (findf (lambda (d)
-                                         (let* ([ref-dt (measurement-valid-datetime d)])
-                                           (end-pred (filter-measurements sorted-data
-                                                                          (dt- ref-dt end-win)
-                                                                          ref-dt))))
-                                       (reverse sorted-data))]
-                               [end-event?
-                                (findf (lambda (d)
-                                         (let* ([ref-dt (measurement-valid-datetime d)])
-                                           (start-pred (filter-measurements sorted-data
-                                                                            (dt- ref-dt start-win)
-                                                                            ref-dt))))
-                                       (reverse sorted-data))]
-                               [else #f])])
-    (if opposing-event
+         [opposing-end-event (if start-event?
+                                 (findf (lambda (d)
+                                          (let* ([ref-dt (measurement-valid-datetime d)])
+                                            (end-pred (filter-measurements sorted-data
+                                                                           (dt- ref-dt end-win)
+                                                                           ref-dt))))
+                                        (reverse sorted-data))
+                                 #f)]
+         [opposing-start-event (if end-event?
+                                   (findf (lambda (d)
+                                            (let* ([ref-dt (measurement-valid-datetime d)])
+                                              (start-pred (filter-measurements sorted-data
+                                                                               (dt- ref-dt start-win)
+                                                                               ref-dt))))
+                                          (reverse sorted-data))
+                                   #f)])
+    
+    (if opposing-end-event
         (list (o-type proxy-flag
-                      (datetime-range (measurement-valid-datetime opposing-event) dt)
-                      (not start-event?)))
-        null)))
+                      (datetime-range (measurement-valid-datetime opposing-end-event) dt)
+                      #f))
+        (if opposing-start-event
+            (list (o-type proxy-flag
+                          (datetime-range (measurement-valid-datetime opposing-start-event) dt)
+                          #t))
+            null))))
     
 ; Helper function for filtering out data that lies outside a given range.
 (define (filter-measurements d-state dt-start dt-end)
