@@ -295,7 +295,7 @@
             dSet))
    dt))
 
-(define (verify-d-crit-sufficiency)
+(define (verify-output-condition)
   (verify
    #:assume
    (assert (is-proc-activated? c-state cur-dt))

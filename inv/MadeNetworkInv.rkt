@@ -100,11 +100,9 @@
 (define exec-out (execute-network sample-network in-data cur-dt))
 (define d-set-out (list-ref exec-out 1))
 (define (verify-gen-data)
-  (verify #:assume (and (is-proc-activated? c-state-1 cur-dt)
-                        (is-proc-activated? c-state-2 cur-dt))
-          #:guarantee (eq? d-set-out
-                           (append (generate-data proc-1 (append in-data d-set-out) cur-dt)
-                                   (generate-data proc-2 (append in-data d-set-out) cur-dt)))))
+  (verify (assert (eq? d-set-out
+                       (append (generate-data proc-1 (append in-data d-set-out) cur-dt)
+                               (generate-data proc-2 (append in-data d-set-out) cur-dt))))))
 
 ; Inv. 3.5 - Verify the update of process states when executing a MADE network.
 (define p-net-out (list-ref exec-out 0))
