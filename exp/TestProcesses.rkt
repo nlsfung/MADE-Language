@@ -23,7 +23,7 @@
 (define-observation sprint-event #:event)
 
 (define-abstraction exercise-abstraction nominal
-  'insufficient 'sufficient 'excessive)
+  'insufficient 'excessive)
 
 (define-action-plan exercise-plan
   (homogeneous-action 'sprint-action)
@@ -73,11 +73,11 @@
    (lambda (dSet) (< (count-sprints dSet) 5))
    (lambda (dSet) 
      (exercise-abstraction-value-space 'insufficient)))
-  ((duration 14 0 0 0)
-   (lambda (dSet) (and (> (count-sprints dSet) 10) 
-                       (< (count-sprints dSet) 15)))
-   (lambda (dSet) 
-     (exercise-abstraction-value-space 'sufficient))) 
+;  ((duration 14 0 0 0)
+;   (lambda (dSet) (and (> (count-sprints dSet) 10) 
+;                       (< (count-sprints dSet) 15)))
+;   (lambda (dSet) 
+;     (exercise-abstraction-value-space 'sufficient))) 
   ((duration 7 0 0 0)
    (lambda (dSet) (> (count-sprints dSet) 10))
    (lambda (dSet) 
