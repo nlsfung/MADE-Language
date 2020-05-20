@@ -409,63 +409,19 @@
                                  #f))))])
              (define get-id
                (case-lambda
-                 [()
-                  (let ([pat-length 2])
-                    (id #f
-                        (get-datetime)
-                        (append (map (lambda (i)
-                                       (scheduled-control
-                                        i (get-schedule pat-length) (get-status)))
-                                     control-list)
-                                (for/list ([inst-type (in-list homogeneous-list)]
-                                           [get-inst (in-list get-homogeneous-list)])
-                                  (let ([inst (get-inst)])
-                                    (scheduled-homogeneous-action
-                                     inst-type
-                                     (get-schedule pat-length)
-                                     (homogeneous-action-rate inst)
-                                     (homogeneous-action-duration inst))))
-                                (for/list ([inst-type (in-list culminating-list)]
-                                           [get-inst (in-list get-culminating-list)])
-                                  (let ([inst (get-inst)])
-                                    (scheduled-culminating-action
-                                     inst-type
-                                     (get-schedule pat-length)
-                                     (culminating-action-goal-state inst)))))))]
-                 [(start-dt end-dt)
-                  (let ([pat-length 2])
-                    (id #f
-                        (get-datetime start-dt end-dt)
-                        (append (map (lambda (i)
-                                       (scheduled-control
-                                        i (get-schedule start-dt end-dt pat-length) (get-status)))
-                                     control-list)
-                                (for/list ([inst-type (in-list homogeneous-list)]
-                                           [get-inst (in-list get-homogeneous-list)])
-                                  (let ([inst (get-inst)])
-                                    (scheduled-homogeneous-action
-                                     inst-type
-                                     (get-schedule start-dt end-dt pat-length)
-                                     (homogeneous-action-rate inst)
-                                     (homogeneous-action-duration inst))))
-                                (for/list ([inst-type (in-list culminating-list)]
-                                           [get-inst (in-list get-culminating-list)])
-                                  (let ([inst (get-inst)])
-                                    (scheduled-culminating-action
-                                     inst-type
-                                     (get-schedule start-dt end-dt pat-length)
-                                     (culminating-action-goal-state inst)))))))]
+                 [() (get-id (get-datetime) (get-datetime) #f)]
+                 [(start-dt end-dt) (get-id start-dt end-dt #f)]
                  [(start-dt end-dt target-ids)
                   (let ([pat-length 2])
                     (id #f
                         (get-datetime start-dt end-dt)
                         (append (for/list ([i control-list]
-                                           #:when (member i target-ids))
+                                           #:when (or (not target-ids) (member i target-ids)))
                                   (scheduled-control
                                    i (get-schedule start-dt end-dt pat-length) (get-status)))
                                 (for/list ([inst-type (in-list homogeneous-list)]
                                            [get-inst (in-list get-homogeneous-list)]
-                                           #:when (member inst-type target-ids))
+                                           #:when (or (not target-ids) (member inst-type target-ids)))
                                   (let ([inst (get-inst)])
                                     (scheduled-homogeneous-action
                                      inst-type
@@ -474,7 +430,7 @@
                                      (homogeneous-action-duration inst))))
                                 (for/list ([inst-type (in-list culminating-list)]
                                            [get-inst (in-list get-culminating-list)]
-                                           #:when (member inst-type target-ids))
+                                           #:when (or (not target-ids) (member inst-type target-ids)))
                                   (let ([inst (get-inst)])
                                     (scheduled-culminating-action
                                      inst-type
