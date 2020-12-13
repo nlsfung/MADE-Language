@@ -101,7 +101,7 @@
                       (append (made-process-data-state made-proc)
                               in-data)))])
         (proc-func input datetime))
-      null))
+  null))
 
 ; Helper function for determining if the process is executed or not given its
 ; control state as well as the current datetime.

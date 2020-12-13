@@ -83,9 +83,10 @@
 
 ; Inv. 3.2 - Verify process behaviour when is-proc-activated? evaluates to false.
 (define (verify-proc-activated-impl)
-  (verify (assert (implies (or (not (on-schedule? proc-sched cur-dt))
-                               (not proc-status))
-                           (null? d-set-out)))))
+  (verify
+   (assert
+    (implies (not (is-proc-activated? c-state cur-dt))
+             (null? d-set-out)))))
 
 ; Inv. 3.3 - Verify process behaviour when is-proc-activated? evaluates to true.
 (define-symbolic sched-hr-2 integer?)

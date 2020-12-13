@@ -6,7 +6,9 @@
 (provide gen:basic basic? get-value)
 (provide (struct-out nominal))
 (provide (struct-out enumerated) gen:enum enum>? enum<?)
-(provide (struct-out dimensioned) gen:dim dim>=? dim<=? dim<?)
+(provide (struct-out dimensioned) gen:dim
+         dim>=? dim<=? dim<?
+         dim+ dim- dim* dim/)
 (provide (struct-out bool))
 (provide (struct-out proportion))
 (provide (struct-out count))

@@ -64,7 +64,7 @@
                   (id #f (get-datetime) (get-dimensioned units))]
                  [(start-dt end-dt)
                   (id #f (get-datetime start-dt end-dt) (get-dimensioned units))]))
-;             (verify-getter get-id id)
+;             (verify-archetype id)
              )))]))
 
 ; define-observation creates a new type of observed property or observed event.
@@ -110,7 +110,7 @@
                       (datetime-range (get-datetime start-dt-1 end-dt-1)
                                       (get-datetime start-dt-2 end-dt-2))
                       (get-bool))]))
-;             (verify-getter get-id id)
+;             (verify-archetype id)
              )))]
 
     [(define-observation id type)
@@ -167,7 +167,7 @@
                   (id #f (get-datetime) (get-val))]
                  [(start-dt end-dt)
                   (id #f (get-datetime start-dt end-dt) (get-val))]))
-;             (verify-getter get-id id)
+;             (verify-archetype id)
              )))]
 
     [(define-observation id dimensioned units (... invariant))
@@ -197,7 +197,7 @@
                   (id #f (get-datetime) (get-dimensioned units))]
                  [(start-dt end-dt)
                   (id #f (get-datetime start-dt end-dt) (get-dimensioned units))]))
-;             (verify-getter get-id id)
+;             (verify-archetype id)
              )))]))
 
 ; Helper function for creating the names of nominal or enumerated data types.
@@ -282,7 +282,7 @@
                     (datetime-range (get-datetime start-dt-1 end-dt-1)
                                     (get-datetime start-dt-2 end-dt-2))
                     (get-val))]))
-;           (verify-getter get-id id)
+;           (verify-archetype id)
            )))]
 
     [(define-abstraction id dimensioned units (... invariant))
@@ -322,7 +322,7 @@
                       (datetime-range (get-datetime start-dt-1 end-dt-1)
                                       (get-datetime start-dt-2 end-dt-2))
                       (get-dimensioned units))]))
-             (verify-getter get-id id)
+;             (verify-archetype id)
              )))]))
 
 ; define-action-plan creates a new type of action plan. 
@@ -436,7 +436,7 @@
                                      inst-type
                                      (get-schedule start-dt end-dt pat-length)
                                      (culminating-action-goal-state inst)))))))]))
-;             (verify-getter get-id id)
+;             (verify-archetype id)
              )))]))
 
 ; define-action-instruction creates a new type of action instruction. 
@@ -498,7 +498,7 @@
                       (get-datetime start-dt end-dt)
                       (get-dimensioned units)
                       (get-duration))]))
-;             (verify-getter get-id id)
+;             (verify-archetype id)
              )))]))
 
 ; Helper function for creating new culminating action instruction types.
@@ -558,7 +558,7 @@
                   (id #f (get-datetime) (get-val))]
                  [(start-dt end-dt)
                   (id #f (get-datetime start-dt end-dt) (get-val))]))
-;             (verify-getter get-id id)
+;             (verify-archetype id)
              )))]
 
     [(_ id dimensioned units (... invariant))
@@ -588,7 +588,7 @@
                   (id #f (get-datetime) (get-dimensioned units))]
                  [(start-dt end-dt)
                   (id #f (get-datetime start-dt end-dt) (get-dimensioned units))]))
-;             (verify-getter get-id id)
+;             (verify-archetype id)
              )))]))
 
 ; define-control-instruction creates a new type of control instruction. 
@@ -647,5 +647,5 @@
                       (get-datetime start-dt end-dt)
                       (if (get-void-sched) (void) (get-schedule start-dt end-dt pat-length))
                       (if (get-void-stat) (void) (get-status)))]))
-;             (verify-getter get-id id)
+;             (verify-archetype id)
              )))]))
