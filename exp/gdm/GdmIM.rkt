@@ -13,25 +13,24 @@
 ; This file contains the specification of the information model for the clinical
 ; guideline for gestational diabetes mellitus (GDM).
 
-; Only one measurement type is needed for the GDM workflow, namely bodily
-; acceleration, which is for computing physical activity levels.
-(define-measurement body-acceleration 'm/s2)
+; No measurement types are specified by the guideline.
 
 ; Eight different types of observations can be identified from the GDM 
 ; workflows, namely for capturing:
-; 1) Blood glucose levels
-; 2) Urinary ketone levels (referred to as ketonuria in the guideline but 
-;    renamed here avoid confusion with the ketonuria abstraction)
-; 3) Events of meals (which is implicitly required in the guideline to detect
-;    abnormal blood glucose measurements)
-; 4) Carbohydrates intake of a single meal (which is qualified relative to 
-;    the recommended intake levels)
-; 5) Exercise intensity (in terms of METs)
-; 6) Systolic blood pressure
-; 7) Diastolic blood pressure (which must be distinguished from systolic BP
-;    as each observation can only be associated with one value).
-; 8) Events of conception, i.e. becoming pregnant (which is required to 
-;    determine the gestational age of the patient)
+; 1) Blood glucose levels (blood-glucocse).
+; 2) Urinary ketone levels (urinary-ketone) (referred to as ketonuria in the
+;    guideline but renamed here avoid confusion with the ketonuria abstraction).
+; 3) Events of meals (meal-event) (which is implicitly required in the
+;    guideline to detect abnormal blood glucose measurements).
+; 4) Carbohydrates intake (carbohydrates-compliance) of a single meal (which
+;    is qualified relative to the recommended intake levels).
+; 5) Exercise intensity (exercise-intensity) (in terms of METs).
+; 6) Systolic blood pressure (systolic-blood-pressure).
+; 7) Diastolic blood pressure (diastolic-blood-pressure) (which must be
+;    distinguished from systolic BP as each observation can only be
+;    associated with one value).
+; 8) Events of conception, i.e. becoming pregnant (conception-event) (which is
+;    required to determine the gestational age of the patient).
 (define-observation blood-glucose dimensioned 'mg/dL)
 
 (define-observation urinary-ketone enumerated '-- '- '-/+ '+ '++)
@@ -50,14 +49,15 @@
 
 ; Nine different types of abstractions can be identified from the GDM 
 ; workflows, namely for capturing:
-; 1) Degree of glycemic control
-; 2) Severity of ketonuria in the patient.
-; 3) Degree of non-compliance to the recommended carbohydrates intake.
-; 4) Exercise compliance in the resting context.
-; 5) Exercise compliance in the active context.
-; 6) Degree of hypertension.
-; 7) Target organ damage.
-; 8) Proteinuria.
+; 1) Degree of glycemic control (glycemic-control).
+; 2) Severity of ketonuria in the patient (ketonuria).
+; 3) Degree of non-compliance to the recommended carbohydrates intake
+;    (carbohydrates-compliance).
+; 4) Exercise compliance in the resting context (exercise-compliance-resting).
+; 5) Exercise compliance in the active context (exercise-compliance-active).
+; 6) Degree of hypertension (hypertension).
+; 7) Target organ damage (target-organ-damage).
+; 8) Proteinuria (proteinuria).
 (define-abstraction glycemic-control nominal 'good 'poor 'meal-compliant-poor
   'meal-incompliant-poor 'non-related-poor 'very-poor)
 
@@ -80,11 +80,12 @@
 ; Three different types of action instructions can be identified from the 
 ; GDM workflows, namely for effectuating:
 ; 1) Administrations of insulin, which is assumed to be measured in 
-;    International Units (of insulin). 
+;    International Units of insulin (administer-insulin-action). 
 ; 2) Changes in the diet (i.e. nutritional prescription), which is assumed 
-;    to be measured in grams (of carbohydrates).
-; 3) Increases in carbohydrates intake at dinner (Note: It is assumed that
-;    this instruction can occur in conjunction with instruction 2).
+;    to be measured in grams of carbohydrates (change-diet-action).
+; 3) Increases in carbohydrates intake at dinner (change-dinner-action)
+;    (Note: It is assumed that this instruction can occur in conjunction
+;    with instruction 2).
 (define-action-instruction administer-insulin-action #:culminating dimensioned 'IU)
 
 (define-action-instruction change-diet-action #:culminating dimensioned 'g)
@@ -93,23 +94,36 @@
 
 ; 17 different types of control instructions can be identified from 
 ; the GDM workflows, namely for controlling:
-; 1) Blood glucose (BG) measurements.
-; 2) The workflow associated with changing nutritional prescription.
-; 3) The workflow associated with starting or changing insulin therapy.
-; 4) The workflow associated with monitoring BG for two days each week.
-; 5) The workflow associated with monitoring BG every day.
-; 6) Urinary ketone measurements.
-; 7) The workflow associated with increasing dincarbohydrates intake at dinner.
-; 8) The workflow associated with monitoring urinary ketones twice weekly.
-; 9) The workflow associated with monitoring urinary ketones daily.
-; 10) Systolic blood pressure measurements.
-; 11) Diastolic blood pressure measurements.
-; 11) The workflow associated with monitoring blood pressure once each week.
-; 12) The workflow associated with monitoring blood pressure twice each week.
-; 13) The workflow associated with chronic hypertension.
-; 14) The workflow associated with gestational hypertension (every 2 days).
-; 15) The workflow associated with gestational hypertension (every week).
-; 16) The workflow associated with deciding to monitor BP every few hours.
+; 1) Blood glucose (BG) measurements (monitor-bg-control).
+; 2) The workflow associated with changing nutritional prescription
+;    (bg-nutrition-change-control).
+; 3) The workflow associated with starting or changing insulin therapy
+;    (bg-insulin-control).
+; 4) The workflow associated with monitoring BG for two days each week
+;    (bg-twice-weekly-control).
+; 5) The workflow associated with monitoring BG every day
+;    (bg-daily-control).
+; 6) Urinary ketone measurements (monitor-uk-control).
+; 7) The workflow associated with increasing dincarbohydrates intake at dinner
+;    (uk-dinner-increase-control).
+; 8) The workflow associated with monitoring urinary ketones twice weekly
+;    (uk-twice-weekly-control).
+; 9) The workflow associated with monitoring urinary ketones daily
+;    (uk-daily-control).
+; 10) Systolic blood pressure measurements (monitor-systolic-bp-control).
+; 11) Diastolic blood pressure measurements (monitor-diastolic-bp-control).
+; 12) The workflow associated with monitoring blood pressure once each week
+;     (bp-once-weekly-control).
+; 13) The workflow associated with monitoring blood pressure twice each week
+;     (bp-twice-weekly-control).
+; 14) The workflow associated with chronic hypertension
+;     (bp-chronic-control).
+; 15) The workflow associated with gestational hypertension (every 2 days)
+;     (bp-gestational-control).
+; 16) The workflow associated with gestational hypertension (every week)
+;     (bp-once-weekly-gestational-control).
+; 17) The workflow associated with deciding to monitor BP every few hours
+;     (bp-hourly-gestational-control).
 (define-control-instruction monitor-bg-control
   'monitor-blood-glucose)
 
@@ -172,21 +186,27 @@
 
 ; The twenty three different instruction archetypes constitute 14 different
 ; types of action plans, namely for:
-; 1) Monitoring blood glucose for two days every week.
-; 2) Adjusting the prescribed insulin therapy.
-; 3) Changing the nutritional prescription.
-; 4) Starting insulin therapy.
-; 5) Monitoring blood glucose daily.
-; 6) Monitoring urinary ketones twice a week.
+; 1) Monitoring blood glucose for two days every week (bg-twice-weekly-plan).
+; 2) Adjusting the prescribed insulin therapy (adjust-insulin-plan).
+; 3) Changing the nutritional prescription (change-nutrition-plan).
+; 4) Starting insulin therapy (start-insulin-plan).
+; 5) Monitoring blood glucose daily (bg-daily-plan).
+; 6) Monitoring urinary ketones twice a week (uk-twice-weekly-plan).
 ; 7) Changing the carbohydrates intake at dinner (or before bed-time)
-; 8) Monitoring urinary ketones daily.
-; 9) Monitoring blood pressure once a week (for no hypertension).
-; 10) Monitoring blood pressure in the context of chronic hypertension.
-; 11) Monitoring blood pressure every two days for gestational hypertension.
-; 12) Monitoring blood pressure twice a week (for no hypertension).
-; 13) Monitoring blood pressure once a week (for gestational hypertension).
+;    (increase-dinner-intake-plan)
+; 8) Monitoring urinary ketones daily (uk-daily-plan).
+; 9) Monitoring blood pressure once a week (for no hypertension)
+;    (bp-once-weekly-plan).
+; 10) Monitoring blood pressure in the context of chronic hypertension
+;     (chronic-hypertension-plan).
+; 11) Monitoring blood pressure every two days for gestational hypertension
+;     (gestational-hypertension-plan).
+; 12) Monitoring blood pressure twice a week (for no hypertension)
+;     (bp-twice-weekly-plan).
+; 13) Monitoring blood pressure once a week (for gestational hypertension)
+;     (gestational-weekly-plan).
 ; 14) Monitoring blood pressure every few hours in the context of 
-;     gestational hypertension. 
+;     gestational hypertension (gestational-hours-plan). 
 (define-action-plan bg-twice-weekly-plan
   (control 'monitor-blood-glucose
            'decide-bg-nutrition-change
