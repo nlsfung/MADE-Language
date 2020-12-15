@@ -152,13 +152,13 @@
 (define (verify-process proc gen-list dt)
   (let* ([example (proc null null)])
     (cond [(monitoring-process? example)
-           (verify-monitoring proc (list gen-list) dt)]
+           (verify-monitoring proc gen-list dt)]
           [(analysis-process? example)
-           (verify-analysis proc (list gen-list) dt)]
+           (verify-analysis proc gen-list dt)]
           [(decision-process? example)
-           (verify-decision proc (list gen-list) dt)]
+           (verify-decision proc gen-list dt)]
           [(effectuation-process? example)
-           (verify-effectuation proc (list gen-list) dt)])))
+           (verify-effectuation proc gen-list dt)])))
 
 ; generate-list generates a list of MADE data items. It accepts as input the
 ; target archetype ID, the starting datetime and the ending datetime for the
