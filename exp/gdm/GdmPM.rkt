@@ -1684,8 +1684,10 @@
 ;          1))
 ;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
 
-; effectuate-bg-insulin-control is responsible for effectuating the 'decide-bg-
-; insulin process (including its variants).
+; effectuate-bg-insulin-control and its two variants,
+; effectuate-bg-insulin-post-nutrition-control and
+; effectuate-bg-insulin-adjust-control, are responsible for effectuating
+; the 'decide-bg-insulin process.
 (define-effectuation
   effectuate-bg-insulin-control
   #f
@@ -1769,8 +1771,10 @@
 ;          1))
 ;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
 
-; effectuate-bg-twice-weekly-control is responsible for effectuating the decide-
-; bg-twice-weekly process (and its variants).
+; effectuate-bg-twice-weekly-control and its two variants,
+; effectuate-bg-twice-weekly-post-nutrition-control and
+; effectuate-bg-twice-weekly-post-insulin-control,
+; are responsible for effectuating the decide-bg-twice-weekly process.
 (define-effectuation
   effectuate-bg-twice-weekly-control
   #f
@@ -1854,8 +1858,10 @@
 ;          1))
 ;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
 
-; effectuate-bg-daily-control is responsible for effectuating the decide-bg-
-; daily process (and its variants).
+; effectuate-bg-daily-control and its two variants,
+; effectuate-bg-daily-post-nutrition-control and
+; effectuate-bg-daily-post-insulin-control,
+; are responsible for effectuating the decide-bg-daily process.
 (define-effectuation
   effectuate-bg-daily-control
   #f
@@ -1976,8 +1982,9 @@
 ;          1))
 ;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
 
-; effectuate-uk-twice-weekly-control is responsible for effectuating the
-; 'decide-uk-twice-weekly process and its variants.
+; effectuate-uk-twice-weekly-control and its variant,
+; effectuate-uk-twice-weekly-post-dinner-control, are
+; responsible for effectuating the 'decide-uk-twice-weekly process.
 (define-effectuation
   effectuate-uk-twice-weekly-control
   #f
@@ -2031,8 +2038,9 @@
 ;          1))
 ;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
 
-; effectuate-uk-daily-control is responsible for effectuating the 'decide-uk
-; daily process and its variants.
+; effectuate-uk-daily-control and its variant,
+; effectuate-uk-daily-post-dinner-control, are responsible for effectuating the
+; 'decide-uk-daily process.
 (define-effectuation
   effectuate-uk-daily-control
   #f
@@ -2326,8 +2334,9 @@
 ;          1))
 ;   (get-datetime (datetime 2019 12 7 20 0 0) (datetime 2019 12 7 20 0 0)))
 
-; effectuate-bp-gestational-control is responsible for effectuating the decide-
-; bp-gestational process and its variants.
+; effectuate-bp-gestational-control and its variant,
+; effectuate-bp-two-days-gestational-control, are responsible for
+; effectuating the decide-bp-gestational process.
 (define-effectuation
   effectuate-bp-gestational-control
   #f

@@ -47,7 +47,7 @@
 
 (define-observation conception-event #:event)
 
-; Nine different types of abstractions can be identified from the GDM 
+; Eight different types of abstractions can be identified from the GDM 
 ; workflows, namely for capturing:
 ; 1) Degree of glycemic control (glycemic-control).
 ; 2) Severity of ketonuria in the patient (ketonuria).
@@ -184,7 +184,7 @@
 (define-control-instruction bp-hourly-gestational-control
   'decide-bp-hourly-gestational)
 
-; The twenty three different instruction archetypes constitute 14 different
+; The twenty different instruction archetypes constitute 14 different
 ; types of action plans, namely for:
 ; 1) Monitoring blood glucose for two days every week (bg-twice-weekly-plan).
 ; 2) Adjusting the prescribed insulin therapy (adjust-insulin-plan).
